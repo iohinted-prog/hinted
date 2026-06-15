@@ -136,7 +136,6 @@ export default function LoginPage() {
           <nav className="hidden items-center gap-9 text-[15px] text-slate-600 lg:flex">
             <Link href="/">Features</Link>
             <Link href="/">How it works</Link>
-            <Link href="/">Pricing</Link>
             <Link href="/">Blog</Link>
           </nav>
 
