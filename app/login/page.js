@@ -106,13 +106,13 @@ function EventPill({ event, tone }) {
 
   return (
     <div
-      className={`mt-2 inline-flex items-center gap-2 rounded-full px-1 py-1 pr-2 text-[10px] leading-tight text-slate-600 shadow-sm ${toneBg}`}
+      className={`mt-1 inline-flex w-full items-center gap-1.5 rounded-full px-1 py-1 pr-1.5 text-[9px] leading-tight text-slate-600 shadow-sm ${toneBg}`}
     >
-      <span className={`h-5 w-5 rounded-full bg-gradient-to-b ${toneDot}`} />
-      <span className="whitespace-nowrap">
-        {event[0]}
-        <br />
-        {event[1]}
+      <span
+        className={`h-3.5 w-3.5 shrink-0 rounded-full bg-gradient-to-b ${toneDot}`}
+      />
+      <span className="truncate">
+        {event[0]} {event[1]}
       </span>
     </div>
   );
@@ -120,7 +120,7 @@ function EventPill({ event, tone }) {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fffaf7] text-slate-800">
+    <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1320px] px-5 pb-10 pt-6 md:px-8">
         <header className="flex flex-wrap items-center justify-between gap-6 pb-8">
           <div className="flex items-center gap-3.5">
@@ -153,7 +153,7 @@ export default function LoginPage() {
           </div>
         </header>
 
-        <section className="grid min-h-[calc(100vh-120px)] items-center gap-8 lg:grid-cols-[1.02fr_1.16fr] lg:gap-11">
+        <section className="grid items-center gap-8 lg:grid-cols-[1.02fr_1.16fr] lg:gap-11">
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
@@ -170,7 +170,7 @@ export default function LoginPage() {
               Hinted helps you remember the important moments and find better gift ideas with a little help from your friends.
             </p>
 
-            <div className="mt-8 max-w-[540px] rounded-[30px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
+            <div className="mt-8 max-w-[540px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
@@ -261,10 +261,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="relative py-5">
+          <div className="relative py-5 pb-16 lg:pb-5">
             <div className="rounded-[34px] border border-white/70 bg-white/80 p-3 shadow-2xl md:p-5">
-              <div className="grid min-h-[540px] overflow-hidden rounded-[28px] border border-slate-200 bg-white lg:grid-cols-[168px_1fr_250px]">
-                <aside className="border-b border-slate-200 bg-[#fffaf7] p-5 lg:border-b-0 lg:border-r">
+              <div className="grid gap-px overflow-hidden rounded-[28px] border border-slate-200 bg-slate-200 sm:grid-cols-[160px_1fr] lg:grid-cols-[160px_1fr_240px]">
+                <aside className="bg-[#fffaf7] p-5">
                   <div className="flex h-[42px] w-[42px] items-center justify-center rounded-[14px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-xl text-white shadow-md">
                     🎁
                   </div>
@@ -308,19 +308,19 @@ export default function LoginPage() {
                     <div className="text-[13px] text-slate-400">Calendar view</div>
                   </div>
 
-                  <div className="grid grid-cols-7 gap-2 px-1 text-[12px] text-slate-400">
+                  <div className="grid grid-cols-7 gap-1.5 px-1 text-center text-[11px] text-slate-400 sm:gap-2">
                     {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
                       <div key={day}>{day}</div>
                     ))}
                   </div>
 
-                  <div className="mt-3 grid grid-cols-7 gap-2">
+                  <div className="mt-3 grid grid-cols-7 gap-1.5 sm:gap-2">
                     {calendarCells.map((item, index) => (
                       <div
                         key={`${item.day}-${index}`}
-                        className={`min-h-[66px] rounded-[18px] px-2 py-2 text-[14px] ${
+                        className={`flex min-h-[58px] flex-col items-center rounded-[14px] px-1 py-2 text-center text-[13px] sm:min-h-[66px] sm:items-start sm:px-2 sm:text-left sm:text-[14px] ${
                           item.selected
-                            ? "grid place-items-center bg-gradient-to-b from-[#ff895d] to-[#ff7b4e] font-extrabold text-white shadow-lg"
+                            ? "items-center justify-center bg-gradient-to-b from-[#ff895d] to-[#ff7b4e] font-extrabold text-white shadow-lg"
                             : item.soft
                               ? "bg-[#fff5f2] text-slate-700"
                               : item.muted
@@ -328,22 +328,16 @@ export default function LoginPage() {
                                 : "text-slate-700"
                         }`}
                       >
-                        {item.selected ? (
-                          item.day
-                        ) : (
-                          <div>
-                            <div>{item.day}</div>
-                            {item.event ? (
-                              <EventPill event={item.event} tone={item.tone} />
-                            ) : null}
-                          </div>
-                        )}
+                        <div>{item.day}</div>
+                        {!item.selected && item.event ? (
+                          <EventPill event={item.event} tone={item.tone} />
+                        ) : null}
                       </div>
                     ))}
                   </div>
                 </div>
 
-                <aside className="border-t border-slate-200 bg-[#fffdfb] p-5 lg:border-l lg:border-t-0">
+                <aside className="border-t border-slate-200 bg-[#fffdfb] p-5 sm:col-span-2 sm:border-t lg:col-span-1 lg:border-l lg:border-t-0">
                   <div className="mb-6 flex items-center justify-end gap-3 text-[13px] text-slate-500">
                     <span>🔔</span>
                     <span className="h-[34px] w-[34px] rounded-full bg-gradient-to-b from-[#f7c7ad] to-[#d68c71]" />
@@ -359,7 +353,7 @@ export default function LoginPage() {
                     </Link>
                   </div>
 
-                  <div className="grid gap-3">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                     {reminders.map((item) => (
                       <div
                         key={item.title}
@@ -396,25 +390,25 @@ export default function LoginPage() {
                   </div>
                 </aside>
               </div>
+            </div>
 
-              <div className="mt-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-xl lg:absolute lg:-bottom-7 lg:left-[170px] lg:mt-0 lg:w-[374px]">
-                <div className="flex items-center gap-3.5">
-                  <div className="flex items-center">
-                    <span className="h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#efc3af] to-[#ae6e57]" />
-                    <span className="-ml-2 h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#809168] to-[#41512e]" />
-                    <span className="-ml-2 h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#c1a79a] to-[#765549]" />
-                    <span className="-ml-2 grid h-[30px] w-[30px] place-items-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] text-[13px] text-white">
-                      ❤
-                    </span>
+            <div className="relative mt-4 rounded-[24px] border border-slate-200 bg-white p-4 shadow-xl lg:absolute lg:-bottom-7 lg:left-[170px] lg:mt-0 lg:w-[374px]">
+              <div className="flex items-center gap-3.5">
+                <div className="flex items-center">
+                  <span className="h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#efc3af] to-[#ae6e57]" />
+                  <span className="-ml-2 h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#809168] to-[#41512e]" />
+                  <span className="-ml-2 h-8 w-8 rounded-full border-2 border-white bg-gradient-to-b from-[#c1a79a] to-[#765549]" />
+                  <span className="-ml-2 grid h-[30px] w-[30px] place-items-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] text-[13px] text-white">
+                    ❤
+                  </span>
+                </div>
+
+                <div>
+                  <div className="text-[15px] font-semibold leading-[1.35] text-slate-900">
+                    Friends often add the best ideas.
                   </div>
-
-                  <div>
-                    <div className="text-[15px] font-semibold leading-[1.35] text-slate-900">
-                      Friends often add the best ideas.
-                    </div>
-                    <div className="mt-1 text-[14px] text-slate-500">
-                      Collaborate and make gifting meaningful.
-                    </div>
+                  <div className="mt-1 text-[14px] text-slate-500">
+                    Collaborate and make gifting meaningful.
                   </div>
                 </div>
               </div>
