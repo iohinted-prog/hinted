@@ -138,9 +138,6 @@ export default function LoginPage() {
           </nav>
 
           <div className="flex w-full items-center justify-center gap-4 sm:w-auto">
-            <Link href="/" className="text-[15px] font-semibold text-slate-800">
-              Home
-            </Link>
             <Link
               href="/onboarding"
               className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg"
