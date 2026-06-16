@@ -32,6 +32,11 @@ const reminders = [
     date: "July 6",
     colors: "from-[#809168] to-[#41512e]",
   },
+  {
+    title: "Alex's Birthday",
+    date: "July 16",
+    colors: "from-[#c1a79a] to-[#765549]",
+  },
 ];
 
 const calendarCells = [
@@ -39,7 +44,7 @@ const calendarCells = [
   { day: "26", muted: true },
   { day: "27", muted: true },
   { day: "28", muted: true },
-  { day: "29", muted: true, dot: true, tone: "pink" },
+  { day: "29", muted: true, event: "Sarah Birthday", tone: "pink" },
   { day: "30", muted: true },
   { day: "31", muted: true },
 
@@ -48,19 +53,19 @@ const calendarCells = [
   { day: "3" },
   { day: "4" },
   { day: "5" },
-  { day: "6", dot: true, tone: "blue" },
+  { day: "6", event: "James Promotion", tone: "blue" },
   { day: "7" },
 
   { day: "8" },
   { day: "9" },
-  { day: "10", dot: true, tone: "peach" },
+  { day: "10", event: "Mom & Dad", tone: "peach" },
   { day: "11" },
   { day: "12" },
   { day: "13", selected: true },
   { day: "14" },
 
   { day: "15" },
-  { day: "16", dot: true, tone: "pink" },
+  { day: "16", soft: true, event: "Alex Birthday", tone: "pink" },
   { day: "17" },
   { day: "18" },
   { day: "19" },
@@ -69,7 +74,7 @@ const calendarCells = [
 
   { day: "22" },
   { day: "23" },
-  { day: "24", dot: true, tone: "peach" },
+  { day: "24", event: "Olivia Grad", tone: "peach" },
   { day: "25" },
   { day: "26" },
   { day: "27" },
@@ -85,6 +90,33 @@ const calendarCells = [
 ];
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function EventPill({ event, tone }) {
+  const toneBg =
+    tone === "blue"
+      ? "bg-sky-50 text-sky-700"
+      : tone === "peach"
+        ? "bg-[#fff4ec] text-[#9a624d]"
+        : "bg-[#fff3ef] text-[#9b6151]";
+
+  const toneDot =
+    tone === "blue"
+      ? "from-[#8fb9d4] to-[#4d7399]"
+      : tone === "peach"
+        ? "from-[#d9b8a4] to-[#8a5946]"
+        : "from-[#d0ab96] to-[#7b4a39]";
+
+  return (
+    <div
+      className={`mt-1 hidden rounded-full px-2 py-1 text-[10px] font-medium leading-tight md:flex md:items-center md:gap-1.5 ${toneBg}`}
+    >
+      <span
+        className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-b ${toneDot}`}
+      />
+      <span className="truncate">{event}</span>
+    </div>
+  );
+}
 
 function AvatarStack() {
   const avatars = [
@@ -107,17 +139,6 @@ function AvatarStack() {
       ))}
     </div>
   );
-}
-
-function CalendarDot({ tone }) {
-  const color =
-    tone === "blue"
-      ? "bg-[#7fa7c7]"
-      : tone === "peach"
-        ? "bg-[#c89d86]"
-        : "bg-[#a77563]";
-
-  return <span className={`mt-2 block h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
 export default function HomePage() {
@@ -157,7 +178,7 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section className="grid items-start gap-8 xl:grid-cols-[minmax(420px,0.95fr)_minmax(520px,1.05fr)] xl:gap-8">
+        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(620px,1.08fr)]">
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
@@ -211,7 +232,7 @@ export default function HomePage() {
                   <label
                     className="block text-sm font-medium text-slate-900"
                     htmlFor="password"
-                    >
+                  >
                     Password
                   </label>
                   <input
@@ -254,20 +275,20 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="relative min-w-0 xl:pl-2">
+          <div className="relative min-w-0">
             <div className="relative overflow-hidden rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-3 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-4">
-              <div className="grid gap-4 lg:grid-cols-[210px_minmax(0,1fr)]">
+              <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
                 <aside className="rounded-[28px] bg-[#fcf1ea] p-4 sm:p-5">
                   <div className="flex items-center gap-3 border-b border-[#ead7cd] pb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-b from-[#ffab88] to-[#ff875f] text-lg text-white shadow-md">
-                      🎁
+                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#f5c7b6] to-[#d99172] text-sm font-bold text-white shadow-md">
+                      M
                     </div>
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        Hinted
+                        Maya
                       </p>
                       <p className="text-xs text-slate-500">
-                        Thoughtful planning
+                        Social calendar
                       </p>
                     </div>
                   </div>
@@ -276,7 +297,7 @@ export default function HomePage() {
                     {sideNav.map((item) => (
                       <div
                         key={item.label}
-                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium ${
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
                           item.active
                             ? "bg-white text-slate-900 shadow-sm"
                             : "text-slate-500"
@@ -315,7 +336,7 @@ export default function HomePage() {
                 </aside>
 
                 <div className="min-w-0 rounded-[28px] bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
                         Dashboard
@@ -335,15 +356,15 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_250px]">
+                  <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
                     <div className="rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
                       <div className="mb-3 grid grid-cols-7 gap-2">
                         {weekDays.map((day) => (
                           <div
                             key={day}
-                            className="text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
+                            className="min-w-0 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
                           >
-                            {day}
+                            <span className="block truncate">{day}</span>
                           </div>
                         ))}
                       </div>
@@ -352,10 +373,12 @@ export default function HomePage() {
                         {calendarCells.map((cell, index) => (
                           <div
                             key={`${cell.day}-${index}`}
-                            className={`min-h-[68px] rounded-[18px] border p-2 sm:min-h-[76px] ${
+                            className={`min-h-[72px] min-w-0 rounded-[18px] border p-2 sm:min-h-[88px] ${
                               cell.selected
                                 ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
-                                : "border-slate-100 bg-white"
+                                : cell.soft
+                                  ? "border-[#f3e5de] bg-[#fff8f4]"
+                                  : "border-slate-100 bg-white"
                             }`}
                           >
                             <div
@@ -366,7 +389,14 @@ export default function HomePage() {
                               {cell.day}
                             </div>
 
-                            {cell.dot ? <CalendarDot tone={cell.tone} /> : null}
+                            {cell.event ? (
+                              <>
+                                <EventPill event={cell.event} tone={cell.tone} />
+                                <div className="mt-1 text-[9px] font-medium leading-tight text-slate-500 md:hidden">
+                                  {cell.event.split(" ")[0]}
+                                </div>
+                              </>
+                            ) : null}
                           </div>
                         ))}
                       </div>
