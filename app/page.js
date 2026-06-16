@@ -11,25 +11,41 @@ const hints = [
     id: 1,
     title: "Favorite coffee",
     text: "Likes oat milk lattes and always tries new cafés when travelling.",
-    tone: "bg-[#fff6f1]",
+    image: "from-[#e8d5c4] to-[#c4a882]",
+    tag: "Food & drink",
+    starred: true,
+    rotate: "-rotate-1",
+    size: "col-span-1",
   },
   {
     id: 2,
     title: "Birthday idea",
     text: "Been hinting at a ceramics workshop and soft cashmere throw.",
-    tone: "bg-white",
+    image: "from-[#f5cfc4] to-[#e8a090]",
+    tag: "Gift idea",
+    starred: false,
+    rotate: "rotate-1",
+    size: "col-span-1",
   },
   {
     id: 3,
     title: "Last conversation",
     text: "Talked about a promotion dinner in July and a weekend away.",
-    tone: "bg-[#f8f5ff]",
+    image: "from-[#cdd4e8] to-[#a0aacf]",
+    tag: "Memory",
+    starred: false,
+    rotate: "-rotate-[0.5deg]",
+    size: "col-span-1",
   },
   {
     id: 4,
     title: "Reminder",
     text: "Check in next Friday and ask how the new role is going.",
-    tone: "bg-white",
+    image: "from-[#cce4d4] to-[#90c4a4]",
+    tag: "Follow-up",
+    starred: false,
+    rotate: "rotate-[1.5deg]",
+    size: "col-span-1",
   },
 ];
 
@@ -52,41 +68,11 @@ const lowerReminders = [
 ];
 
 const calendarDays = [
-  "25",
-  "26",
-  "27",
-  "28",
-  "29",
-  "30",
-  "31",
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7",
-  "8",
-  "9",
-  "10",
-  "11",
-  "12",
-  "13",
-  "14",
-  "15",
-  "16",
-  "17",
-  "18",
-  "19",
-  "20",
-  "21",
-  "22",
-  "23",
-  "24",
-  "25",
-  "26",
-  "27",
-  "28",
+  "25","26","27","28","29","30","31",
+  "1","2","3","4","5","6","7",
+  "8","9","10","11","12","13","14",
+  "15","16","17","18","19","20","21",
+  "22","23","24","25","26","27","28",
 ];
 
 function AvatarStack() {
@@ -112,24 +98,45 @@ function AvatarStack() {
   );
 }
 
-function HintCard({ title, text, tone, large = false }) {
+function HintCard({ title, text, image, tag, starred, rotate }) {
   return (
     <article
-      className={`rounded-[28px] border border-slate-200 ${
-        tone || "bg-white"
-      } p-5 shadow-sm ${large ? "min-h-[170px]" : "min-h-[138px]"}`}
+      className={`group relative flex flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-transform duration-200 hover:scale-[1.02] hover:shadow-md ${rotate}`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-[16px] font-semibold tracking-[-0.03em] text-slate-900">
-            {title}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+      <div className={`h-[140px] w-full bg-gradient-to-br ${image}`} />
+
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
+              {title}
+            </h3>
+            <p className="mt-1.5 text-[13px] leading-[1.6] text-slate-500">
+              {text}
+            </p>
+          </div>
+          <button
+            className={`mt-0.5 shrink-0 text-[18px] transition-transform duration-150 hover:scale-125 ${
+              starred ? "text-[#f36f64]" : "text-slate-200 hover:text-[#f36f64]"
+            }`}
+            aria-label={starred ? "Unstar hint" : "Star hint"}
+          >
+            ★
+          </button>
         </div>
 
-        <button className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-500">
-          Edit
-        </button>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+            {tag}
+          </span>
+          <button className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-700">
+            Edit
+          </button>
+        </div>
+      </div>
+
+      <div className="absolute right-3 top-3 flex h-5 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
+        <span className="text-[10px] text-slate-400">⠿</span>
       </div>
     </article>
   );
@@ -144,7 +151,6 @@ export default function HomePage() {
             <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
               🎁
             </div>
-
             <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
               Hinted<span className="text-[#f36f64]">.io</span>
             </div>
@@ -156,13 +162,9 @@ export default function HomePage() {
           </nav>
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
-            <Link
-              href="/login"
-              className="shrink-0 text-[15px] font-semibold text-slate-800"
-            >
+            <Link href="/login" className="shrink-0 text-[15px] font-semibold text-slate-800">
               Log in
             </Link>
-
             <Link
               href="/onboarding"
               className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg"
@@ -176,7 +178,7 @@ export default function HomePage() {
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
-              <span>Social gifting & reminders, made simple</span>
+              <span>Gifting & social reminders made easy, without the awkward part</span>
             </div>
 
             <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
@@ -200,7 +202,6 @@ export default function HomePage() {
                     Keep your circles, hints, and reminders connected.
                   </p>
                 </div>
-
                 <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
                   Welcome back
                 </div>
@@ -208,10 +209,7 @@ export default function HomePage() {
 
               <form className="space-y-4">
                 <div>
-                  <label
-                    className="block text-sm font-medium text-slate-900"
-                    htmlFor="email"
-                  >
+                  <label className="block text-sm font-medium text-slate-900" htmlFor="email">
                     Email
                   </label>
                   <input
@@ -221,12 +219,8 @@ export default function HomePage() {
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
                 </div>
-
                 <div>
-                  <label
-                    className="block text-sm font-medium text-slate-900"
-                    htmlFor="password"
-                  >
+                  <label className="block text-sm font-medium text-slate-900" htmlFor="password">
                     Password
                   </label>
                   <input
@@ -236,7 +230,6 @@ export default function HomePage() {
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
                 </div>
-
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="submit"
@@ -244,7 +237,6 @@ export default function HomePage() {
                   >
                     Sign in
                   </button>
-
                   <Link
                     href="/onboarding"
                     className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700"
@@ -255,16 +247,14 @@ export default function HomePage() {
               </form>
 
               <p className="mt-4 text-xs leading-5 text-slate-500">
-                You can use an email and password now, then connect other sign-in
-                methods later.
+                You can use an email and password now, then connect other sign-in methods later.
               </p>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
               <AvatarStack />
               <p className="max-w-[320px]">
-                Join thoughtful gifters staying on top of birthdays, milestones,
-                and group surprises.
+                Join thoughtful gifters staying on top of birthdays, milestones, and group surprises.
               </p>
             </div>
           </div>
@@ -272,19 +262,19 @@ export default function HomePage() {
           <div className="relative min-w-0">
             <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
               <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+
                 <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff2ea] shadow-sm ring-1 ring-[#f3dfd4]">
-                      <span className="text-lg">💬</span>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[18px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
+                      M
                     </div>
                     <div>
                       <div className="text-sm font-semibold tracking-tight text-slate-900">
-                        Hinted.io
+                        Maya
                       </div>
                       <div className="text-xs text-slate-500">Hints</div>
                     </div>
                   </div>
-
                   <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
                     <span>Home</span>
                     <span>Feed</span>
@@ -293,41 +283,72 @@ export default function HomePage() {
                 </div>
 
                 <div className="pt-5">
-                  <div className="inline-flex rounded-full bg-[#f8f4ef] px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                    Saved context
-                  </div>
-
-                  <h2 className="mt-4 text-[34px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[42px]">
+                  <h2 className="mt-1 text-[34px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[42px]">
                     Your hints.
                   </h2>
-
                   <p className="mt-3 max-w-[540px] text-[15px] leading-7 text-slate-600 sm:text-[16px]">
                     Keep the useful details that help you remember people,
                     conversations, gift ideas, and follow-ups.
                   </p>
 
-                  <div className="mt-8 grid gap-4 md:grid-cols-2">
-                    <HintCard
-                      title={hints[0].title}
-                      text={hints[0].text}
-                      tone={hints[0].tone}
-                    />
+                  <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
+                    <article className="group relative col-span-2 flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-transform duration-200 hover:scale-[1.01] hover:shadow-md -rotate-[0.4deg]">
+                      <div className="h-[130px] w-[160px] shrink-0 bg-gradient-to-br from-[#e8d5c4] to-[#c4a882]" />
+                      <div className="flex flex-1 flex-col justify-between p-4">
+                        <div>
+                          <div className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-[#fff3ee] px-2.5 py-1 text-[11px] font-semibold text-[#f36f64]">
+                            ★ Highlighted
+                          </div>
+                          <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
+                            Favorite coffee
+                          </h3>
+                          <p className="mt-1 text-[13px] leading-[1.6] text-slate-500">
+                            Likes oat milk lattes and always tries new cafés when travelling.
+                          </p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                            Food & drink
+                          </span>
+                          <button className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-700">
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                      <div className="absolute right-3 top-3 flex h-5 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
+                        <span className="text-[10px] text-slate-400">⠿</span>
+                      </div>
+                    </article>
+
                     <HintCard
                       title={hints[1].title}
                       text={hints[1].text}
-                      tone={hints[1].tone}
+                      image={hints[1].image}
+                      tag={hints[1].tag}
+                      starred={hints[1].starred}
+                      rotate={hints[1].rotate}
                     />
                     <HintCard
                       title={hints[2].title}
                       text={hints[2].text}
-                      tone={hints[2].tone}
-                      large
+                      image={hints[2].image}
+                      tag={hints[2].tag}
+                      starred={hints[2].starred}
+                      rotate={hints[2].rotate}
                     />
                     <HintCard
                       title={hints[3].title}
                       text={hints[3].text}
-                      tone={hints[3].tone}
+                      image={hints[3].image}
+                      tag={hints[3].tag}
+                      starred={hints[3].starred}
+                      rotate={hints[3].rotate}
                     />
+
+                    <article className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-slate-200 bg-[#fafaf9] text-slate-400 transition-colors hover:border-[#f36f64]/40 hover:bg-[#fff8f6] rotate-[0.5deg]">
+                      <span className="text-2xl">+</span>
+                      <span className="text-[13px] font-medium">Add a hint</span>
+                    </article>
                   </div>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -361,7 +382,6 @@ export default function HomePage() {
                 without squeezing the experience into the hero.
               </p>
             </div>
-
             <button className="inline-flex rounded-full bg-[#2f3b2d] px-5 py-3 text-sm font-semibold text-white">
               View full planner
             </button>
@@ -378,25 +398,14 @@ export default function HomePage() {
                     July calendar
                   </h3>
                 </div>
-
                 <div className="flex items-center gap-2">
-                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                    ←
-                  </button>
-                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                    →
-                  </button>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">←</button>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">→</button>
                 </div>
               </div>
 
               <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-                <div>Fri</div>
-                <div>Sat</div>
-                <div>Sun</div>
+                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
               </div>
 
               <div className="grid grid-cols-7 gap-2">
@@ -404,19 +413,12 @@ export default function HomePage() {
                   <div
                     key={`${day}-${index}`}
                     className={`min-h-[88px] rounded-[20px] border p-3 ${
-                      day === "13"
-                        ? "border-[#f5b49a] bg-[#fff1ea]"
-                        : "border-slate-100 bg-[#fffdfa]"
+                      day === "13" ? "border-[#f5b49a] bg-[#fff1ea]" : "border-slate-100 bg-[#fffdfa]"
                     }`}
                   >
-                    <div
-                      className={`text-sm font-semibold ${
-                        index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"
-                      }`}
-                    >
+                    <div className={`text-sm font-semibold ${index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"}`}>
                       {day}
                     </div>
-
                     {["29", "6", "10", "16", "24"].includes(day) ? (
                       <div className="mt-2 h-2.5 w-2.5 rounded-full bg-[#b78671]" />
                     ) : null}
@@ -427,28 +429,17 @@ export default function HomePage() {
 
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-slate-900">
-                  Upcoming reminders
-                </h3>
-                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  3 soon
-                </span>
+                <h3 className="text-base font-semibold text-slate-900">Upcoming reminders</h3>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">3 soon</span>
               </div>
 
               <div className="mt-4 space-y-3">
                 {lowerReminders.map((item) => (
-                  <div
-                    key={item.title}
-                    className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm"
-                  >
+                  <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm">
                     <div className="flex items-start gap-3">
-                      <div
-                        className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
-                      />
+                      <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-800">
-                          {item.title}
-                        </p>
+                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
                         <p className="mt-1 text-xs text-slate-500">{item.date}</p>
                       </div>
                     </div>
@@ -457,12 +448,9 @@ export default function HomePage() {
               </div>
 
               <div className="mt-5 rounded-[24px] bg-[#2f3b2d] p-5 text-white">
-                <p className="text-xs uppercase tracking-[0.14em] text-white/60">
-                  Gift prompt
-                </p>
+                <p className="text-xs uppercase tracking-[0.14em] text-white/60">Gift prompt</p>
                 <p className="mt-2 text-sm leading-7 text-white/90">
-                  Sarah saved “ceramic dinnerware” and “weekend city break” to
-                  her wishlist.
+                  Sarah saved "ceramic dinnerware" and "weekend city break" to her wishlist.
                 </p>
                 <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
                   View ideas
