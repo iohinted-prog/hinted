@@ -9,43 +9,63 @@ export const metadata = {
 const hints = [
   {
     id: 1,
-    title: "Favorite coffee",
-    text: "Likes oat milk lattes and always tries new cafés when travelling.",
+    title: "Noise-cancelling headphones",
+    text: "From: amazon.co.uk · ~£120",
     image: "from-[#e8d5c4] to-[#c4a882]",
-    tag: "Food & drink",
+    tag: "Tech",
+    tag2: "Birthday",
     starred: true,
     rotate: "-rotate-1",
-    size: "col-span-1",
   },
   {
     id: 2,
-    title: "Birthday idea",
-    text: "Been hinting at a ceramics workshop and soft cashmere throw.",
+    title: "Weekend cabin stay",
+    text: "From: airbnb.co.uk · Price varies",
     image: "from-[#f5cfc4] to-[#e8a090]",
-    tag: "Gift idea",
+    tag: "Experiences",
+    tag2: "Travel",
     starred: false,
     rotate: "rotate-1",
-    size: "col-span-1",
   },
   {
     id: 3,
-    title: "Last conversation",
-    text: "Talked about a promotion dinner in July and a weekend away.",
+    title: "Cast-iron casserole dish",
+    text: "From: johnlewis.com · ~£85",
     image: "from-[#cdd4e8] to-[#a0aacf]",
-    tag: "Memory",
+    tag: "Home",
+    tag2: "Cooking",
     starred: false,
     rotate: "-rotate-[0.5deg]",
-    size: "col-span-1",
   },
   {
     id: 4,
-    title: "Reminder",
-    text: "Check in next Friday and ask how the new role is going.",
+    title: "Kindle or similar e-reader",
+    text: "From: amazon.co.uk · ~£100",
     image: "from-[#cce4d4] to-[#90c4a4]",
-    tag: "Follow-up",
+    tag: "Books",
+    tag2: "Everyday",
     starred: false,
     rotate: "rotate-[1.5deg]",
-    size: "col-span-1",
+  },
+  {
+    id: 5,
+    title: "Art print for the living room",
+    text: "From: etsy.com · ~£40",
+    image: "from-[#e8cde8] to-[#c4a0c4]",
+    tag: "Home",
+    tag2: "Under £50",
+    starred: false,
+    rotate: "-rotate-[0.8deg]",
+  },
+  {
+    id: 6,
+    title: "Nice pourover coffee set",
+    text: "From: hasbean.co.uk · ~£60",
+    image: "from-[#c4dde8] to-[#90b4c4]",
+    tag: "Home",
+    tag2: "Coffee",
+    starred: false,
+    rotate: "rotate-[0.6deg]",
   },
 ];
 
@@ -98,45 +118,52 @@ function AvatarStack() {
   );
 }
 
-function HintCard({ title, text, image, tag, starred, rotate }) {
+function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
   return (
     <article
       className={`group relative flex flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-transform duration-200 hover:scale-[1.02] hover:shadow-md ${rotate}`}
     >
-      <div className={`h-[140px] w-full bg-gradient-to-br ${image}`} />
+      <div className={`h-[120px] w-full bg-gradient-to-br ${image}`}>
+        <div className="flex justify-end p-3">
+          <div className="h-4 w-7 rounded-full bg-white/50" />
+        </div>
+      </div>
 
-      <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
-              {title}
-            </h3>
-            <p className="mt-1.5 text-[13px] leading-[1.6] text-slate-500">
-              {text}
-            </p>
+      <div className="flex flex-1 flex-col p-3.5">
+        <h3 className="text-[13px] font-semibold tracking-[-0.02em] text-slate-900 leading-tight">
+          {title}
+        </h3>
+        <p className="mt-1 text-[12px] text-slate-400">{text}</p>
+
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2 py-0.5 text-[10px] font-medium text-slate-500">
+            {tag}
+          </span>
+          {tag2 && (
+            <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2 py-0.5 text-[10px] font-medium text-slate-500">
+              {tag2}
+            </span>
+          )}
+        </div>
+
+        <div className="mt-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[9px] font-bold text-white">
+              M
+            </div>
+            <span className="text-[10px] text-slate-400">
+              {starred ? "Top pick" : "Nice to have"}
+            </span>
           </div>
           <button
-            className={`mt-0.5 shrink-0 text-[18px] transition-transform duration-150 hover:scale-125 ${
+            className={`text-[16px] transition-transform duration-150 hover:scale-125 ${
               starred ? "text-[#f36f64]" : "text-slate-200 hover:text-[#f36f64]"
             }`}
-            aria-label={starred ? "Unstar hint" : "Star hint"}
+            aria-label={starred ? "Unstar" : "Star"}
           >
             ★
           </button>
         </div>
-
-        <div className="mt-3 flex items-center justify-between gap-2">
-          <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
-            {tag}
-          </span>
-          <button className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-700">
-            Edit
-          </button>
-        </div>
-      </div>
-
-      <div className="absolute right-3 top-3 flex h-5 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-        <span className="text-[10px] text-slate-400">⠿</span>
       </div>
     </article>
   );
@@ -263,15 +290,13 @@ export default function HomePage() {
             <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
               <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
 
-                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[18px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
                       M
                     </div>
                     <div>
-                      <div className="text-sm font-semibold tracking-tight text-slate-900">
-                        Maya
-                      </div>
+                      <div className="text-sm font-semibold tracking-tight text-slate-900">Maya</div>
                       <div className="text-xs text-slate-500">Hints</div>
                     </div>
                   </div>
@@ -282,76 +307,30 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="pt-5">
-                  <h2 className="mt-1 text-[34px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[42px]">
+                <div className="pt-4">
+                  <h2 className="text-[28px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[34px]">
                     Your hints.
                   </h2>
-                  <p className="mt-3 max-w-[540px] text-[15px] leading-7 text-slate-600 sm:text-[16px]">
-                    Keep the useful details that help you remember people,
-                    conversations, gift ideas, and follow-ups.
+                  <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                    Keep the useful details that help you remember people, conversations, gift ideas, and follow-ups.
                   </p>
 
-                  <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4">
-                    <article className="group relative col-span-2 flex overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-transform duration-200 hover:scale-[1.01] hover:shadow-md -rotate-[0.4deg]">
-                      <div className="h-[130px] w-[160px] shrink-0 bg-gradient-to-br from-[#e8d5c4] to-[#c4a882]" />
-                      <div className="flex flex-1 flex-col justify-between p-4">
-                        <div>
-                          <div className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-[#fff3ee] px-2.5 py-1 text-[11px] font-semibold text-[#f36f64]">
-                            ★ Highlighted
-                          </div>
-                          <h3 className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
-                            Favorite coffee
-                          </h3>
-                          <p className="mt-1 text-[13px] leading-[1.6] text-slate-500">
-                            Likes oat milk lattes and always tries new cafés when travelling.
-                          </p>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                            Food & drink
-                          </span>
-                          <button className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-700">
-                            Edit
-                          </button>
-                        </div>
-                      </div>
-                      <div className="absolute right-3 top-3 flex h-5 w-8 items-center justify-center rounded-full bg-white/70 backdrop-blur-sm">
-                        <span className="text-[10px] text-slate-400">⠿</span>
-                      </div>
-                    </article>
-
-                    <HintCard
-                      title={hints[1].title}
-                      text={hints[1].text}
-                      image={hints[1].image}
-                      tag={hints[1].tag}
-                      starred={hints[1].starred}
-                      rotate={hints[1].rotate}
-                    />
-                    <HintCard
-                      title={hints[2].title}
-                      text={hints[2].text}
-                      image={hints[2].image}
-                      tag={hints[2].tag}
-                      starred={hints[2].starred}
-                      rotate={hints[2].rotate}
-                    />
-                    <HintCard
-                      title={hints[3].title}
-                      text={hints[3].text}
-                      image={hints[3].image}
-                      tag={hints[3].tag}
-                      starred={hints[3].starred}
-                      rotate={hints[3].rotate}
-                    />
-
-                    <article className="flex min-h-[220px] flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-slate-200 bg-[#fafaf9] text-slate-400 transition-colors hover:border-[#f36f64]/40 hover:bg-[#fff8f6] rotate-[0.5deg]">
-                      <span className="text-2xl">+</span>
-                      <span className="text-[13px] font-medium">Add a hint</span>
-                    </article>
+                  <div className="mt-5 grid grid-cols-3 gap-3">
+                    {hints.map((hint) => (
+                      <HintCard
+                        key={hint.id}
+                        title={hint.title}
+                        text={hint.text}
+                        image={hint.image}
+                        tag={hint.tag}
+                        tag2={hint.tag2}
+                        starred={hint.starred}
+                        rotate={hint.rotate}
+                      />
+                    ))}
                   </div>
 
-                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
                     <div className="rounded-full bg-[#2f3b2d] px-4 py-2 text-sm font-semibold text-white">
                       Add hint
                     </div>
