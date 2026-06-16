@@ -388,7 +388,6 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
-                    <span>Home</span>
                     <span>Feed</span>
                     <span>Offers</span>
                   </div>
