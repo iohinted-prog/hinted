@@ -273,11 +273,10 @@ export default function HomePage() {
 
           <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex">
             <Link href="#how-it-works">How it works</Link>
-            <Link href="#offers">Offers</Link>
           </nav>
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
-            <Link href="/login" className="shrink-0 text-[15px] font-semibold text-slate-800">
+            <Link href="/feed" className="shrink-0 text-[15px] font-semibold text-slate-800">
               Log in
             </Link>
             <Link
@@ -389,7 +388,6 @@ export default function HomePage() {
                   </div>
                   <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
                     <span>Feed</span>
-                    <span>Offers</span>
                   </div>
                 </div>
 
@@ -433,7 +431,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* CALENDAR + FEED SECTION */}
         <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-[#fff7f2] px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.1)] md:px-8 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -453,8 +450,6 @@ export default function HomePage() {
           </div>
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_2fr_300px]">
-
-            {/* FEED COLUMN */}
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -481,7 +476,6 @@ export default function HomePage() {
               </button>
             </div>
 
-            {/* CALENDAR COLUMN */}
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -521,7 +515,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* REMINDERS COLUMN */}
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-slate-900">Upcoming reminders</h3>
