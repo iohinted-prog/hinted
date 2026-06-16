@@ -219,4 +219,272 @@ export default function HomePage() {
                   >
                     Email
                   </label>
-                  <i
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    className="block text-sm font-medium text-slate-900"
+                    htmlFor="password"
+                  >
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Your password"
+                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="inline-flex h-[52px] min-w-[145px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
+                  >
+                    Sign in
+                  </button>
+
+                  <Link
+                    href="/onboarding"
+                    className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700"
+                  >
+                    Create account
+                  </Link>
+                </div>
+              </form>
+
+              <p className="mt-4 text-xs leading-5 text-slate-500">
+                You can use an email and password now, then connect other sign-in
+                methods later.
+              </p>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
+              <AvatarStack />
+              <p className="max-w-[320px]">
+                Join thoughtful gifters staying on top of birthdays, milestones,
+                and group surprises.
+              </p>
+            </div>
+          </div>
+
+          <div className="relative min-w-0">
+            <div className="relative overflow-hidden rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-3 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-4">
+              <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
+                <aside className="rounded-[28px] bg-[#fcf1ea] p-4 sm:p-5">
+                  <div className="flex items-center gap-3 border-b border-[#ead7cd] pb-4">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-b from-[#ffab88] to-[#ff875f] text-lg text-white shadow-md">
+                      🎁
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        Hinted
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Thoughtful planning
+                      </p>
+                    </div>
+                  </div>
+
+                  <nav className="mt-5 space-y-1.5">
+                    {sideNav.map((item) => (
+                      <div
+                        key={item.label}
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
+                          item.active
+                            ? "bg-white text-slate-900 shadow-sm"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        <span className="text-base">{item.icon}</span>
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </nav>
+
+                  <div className="mt-5 rounded-[24px] bg-white p-4 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Upcoming
+                    </p>
+
+                    <div className="mt-3 space-y-3">
+                      {reminders.slice(0, 2).map((item) => (
+                        <div
+                          key={item.title}
+                          className="rounded-2xl border border-[#f1e2da] bg-[#fffaf7] p-3"
+                        >
+                          <div
+                            className={`mb-2 h-2 w-16 rounded-full bg-gradient-to-r ${item.colors}`}
+                          />
+                          <p className="text-sm font-semibold text-slate-800">
+                            {item.title}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {item.date}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </aside>
+
+                <div className="min-w-0 rounded-[28px] bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        Dashboard
+                      </p>
+                      <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[30px]">
+                        July calendar
+                      </h2>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+                        ←
+                      </button>
+                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+                        →
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 space-y-4">
+                    <div className="rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
+                      <div className="mb-3 grid grid-cols-7 gap-2">
+                        {weekDays.map((day) => (
+                          <div
+                            key={day}
+                            className="min-w-0 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
+                          >
+                            <span className="block truncate">{day}</span>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-2">
+                        {calendarCells.map((cell, index) => (
+                          <div
+                            key={`${cell.day}-${index}`}
+                            className={`min-h-[72px] min-w-0 rounded-[18px] border p-2 sm:min-h-[88px] ${
+                              cell.selected
+                                ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
+                                : cell.soft
+                                  ? "border-[#f3e5de] bg-[#fff8f4]"
+                                  : "border-slate-100 bg-white"
+                            }`}
+                          >
+                            <div
+                              className={`text-sm font-semibold ${
+                                cell.muted ? "text-slate-300" : "text-slate-700"
+                              }`}
+                            >
+                              {cell.day}
+                            </div>
+
+                            {cell.event ? (
+                              <>
+                                <EventPill event={cell.event} tone={cell.tone} />
+                                <div className="mt-1 text-[9px] font-medium leading-tight text-slate-500 md:hidden">
+                                  {cell.event.split(" ")[0]}
+                                </div>
+                              </>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
+                      <div className="grid gap-4 md:grid-cols-3">
+                        <div className="rounded-[22px] bg-[#fff4ee] p-4">
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
+                            People tracked
+                          </p>
+                          <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
+                            28
+                          </p>
+                        </div>
+
+                        <div className="rounded-[22px] bg-[#f7f3ef] p-4">
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
+                            Events this month
+                          </p>
+                          <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
+                            12
+                          </p>
+                        </div>
+
+                        <div className="rounded-[22px] bg-[#eef3e8] p-4">
+                          <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
+                            Gift ideas saved
+                          </p>
+                          <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
+                            46
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-[24px] border border-slate-100 bg-[#fffaf7] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-base font-semibold text-slate-900">
+                            Reminders
+                          </h3>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#e77756] shadow-sm">
+                            4 coming up
+                          </span>
+                        </div>
+
+                        <div className="mt-4 space-y-3">
+                          {reminders.map((item) => (
+                            <div
+                              key={item.title}
+                              className="rounded-[20px] border border-[#f1e4dc] bg-white p-3 shadow-sm"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div
+                                  className={`mt-1 h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-slate-800">
+                                    {item.title}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {item.date}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="mt-4 rounded-[20px] bg-[#2f3b2d] p-4 text-white">
+                          <p className="text-xs uppercase tracking-[0.14em] text-white/60">
+                            Gift prompt
+                          </p>
+                          <p className="mt-2 text-sm leading-7 text-white/90">
+                            Sarah saved “ceramic dinnerware” and “weekend city
+                            break” to her wishlist.
+                          </p>
+                          <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
+                            View ideas
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
