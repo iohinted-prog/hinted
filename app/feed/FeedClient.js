@@ -621,14 +621,14 @@ export default function FeedClient() {
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
 <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
   <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
-    <div className="flex items-center gap-8">
-      <Link href="/feed" className="flex items-center gap-3.5">
-        <LogoMark />
-        <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
-          Hinted<span className="text-[#f36f64]">.io</span>
-        </div>
-      </Link>
+    <Link href="/feed" className="flex items-center gap-3.5">
+      <LogoMark />
+      <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
+        Hinted<span className="text-[#f36f64]">.io</span>
+      </div>
+    </Link>
 
+    <div className="flex items-center gap-3">
       <nav className="flex items-center gap-3">
         <Link
           href="/circles"
@@ -636,7 +636,6 @@ export default function FeedClient() {
         >
           Circles
         </Link>
-
         <Link
           href="/hints"
           className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
@@ -644,9 +643,9 @@ export default function FeedClient() {
           Hints
         </Link>
       </nav>
-    </div>
 
-    <AvatarMenu />
+      <AvatarMenu />
+    </div>
   </div>
 </header>
 
