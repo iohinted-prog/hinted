@@ -107,7 +107,7 @@ const feedItems = [
     id: 4,
     type: "hint",
     avatar: "J",
-    avatarColors: "from-[#4e596d] to-[#212a3c]"],
+    avatarColors: "from-[#4e596d] to-[#212a3c]",
     name: "James",
     action: "starred a hint in your shared circle",
     detail: "Weekend cabin stay · Experiences",
