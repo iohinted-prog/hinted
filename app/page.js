@@ -69,6 +69,86 @@ const hints = [
   },
 ];
 
+const feedItems = [
+  {
+    id: 1,
+    type: "hint",
+    avatar: "M",
+    avatarColors: "from-[#eac8b8] to-[#9d6957]",
+    name: "Mum",
+    action: "added a new hint",
+    detail: "Silk pillowcase set",
+    time: "2m ago",
+    icon: "🎁",
+  },
+  {
+    id: 2,
+    type: "reminder",
+    avatar: "S",
+    avatarColors: "from-[#efc3af] to-[#ae6e57]",
+    name: "Sarah's Birthday",
+    action: "is 2 weeks away",
+    detail: "June 29 · She hinted at a ceramics workshop",
+    time: "Just now",
+    icon: "🎂",
+  },
+  {
+    id: 3,
+    type: "circle",
+    avatar: "MF",
+    avatarColors: "from-[#809168] to-[#41512e]",
+    name: "Max & Fiona",
+    action: "Wedding Circle Pot is 80% full",
+    detail: "£320 of £400 raised · 4 contributors",
+    time: "1h ago",
+    icon: "💍",
+  },
+  {
+    id: 4,
+    type: "hint",
+    avatar: "J",
+    avatarColors: "from-[#4e596d] to-[#212a3c]"],
+    name: "James",
+    action: "starred a hint in your shared circle",
+    detail: "Weekend cabin stay · Experiences",
+    time: "3h ago",
+    icon: "★",
+  },
+  {
+    id: 5,
+    type: "reminder",
+    avatar: "📅",
+    avatarColors: "from-[#c4dde8] to-[#90b4c4]",
+    name: "Mom & Dad Anniversary",
+    action: "is coming up",
+    detail: "July 10 · No hints added yet",
+    time: "Today",
+    icon: "💐",
+  },
+  {
+    id: 6,
+    type: "hint",
+    avatar: "L",
+    avatarColors: "from-[#e8cde8] to-[#c4a0c4]",
+    name: "Lily",
+    action: "updated her hintlist",
+    detail: "Added 3 new items including a Le Creuset pot",
+    time: "Yesterday",
+    icon: "✏️",
+  },
+  {
+    id: 7,
+    type: "circle",
+    avatar: "OF",
+    avatarColors: "from-[#cce4d4] to-[#90c4a4]",
+    name: "Office Farewell",
+    action: "circle is now active",
+    detail: "8 people joined · Target: £150",
+    time: "Yesterday",
+    icon: "🎉",
+  },
+];
+
 const lowerReminders = [
   {
     title: "Sarah's Birthday",
@@ -163,6 +243,47 @@ function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
           >
             ★
           </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function FeedItem({ item }) {
+  const typeBg =
+    item.type === "reminder"
+      ? "bg-[#fff3ee]"
+      : item.type === "circle"
+        ? "bg-[#f0f7ee]"
+        : "bg-[#f5f3ff]";
+
+  const typeText =
+    item.type === "reminder"
+      ? "text-[#e07c54]"
+      : item.type === "circle"
+        ? "text-[#4a7a3a]"
+        : "text-[#7c5cbf]";
+
+  return (
+    <article className="flex gap-3 rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
+      >
+        {item.avatar}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[13px] leading-[1.5] text-slate-700">
+            <span className="font-semibold text-slate-900">{item.name}</span>{" "}
+            {item.action}
+          </p>
+          <span className="shrink-0 text-[10px] text-slate-400">{item.time}</span>
+        </div>
+
+        <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeBg} ${typeText}`}>
+          <span>{item.icon}</span>
+          <span className="truncate max-w-[160px]">{item.detail}</span>
         </div>
       </div>
     </article>
@@ -289,7 +410,6 @@ export default function HomePage() {
           <div className="relative min-w-0">
             <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
               <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
-
                 <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
@@ -347,6 +467,7 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* CALENDAR + FEED SECTION */}
         <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-[#fff7f2] px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.1)] md:px-8 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
@@ -357,8 +478,7 @@ export default function HomePage() {
                 Calendar and reminders
               </h2>
               <p className="mt-3 max-w-[680px] text-[16px] leading-7 text-slate-600">
-                Track birthdays, anniversaries, and follow-ups in one calm view,
-                without squeezing the experience into the hero.
+                Track birthdays, anniversaries, and follow-ups in one calm view.
               </p>
             </div>
             <button className="inline-flex rounded-full bg-[#2f3b2d] px-5 py-3 text-sm font-semibold text-white">
@@ -366,7 +486,36 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+          <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_2fr_300px]">
+
+            {/* FEED COLUMN */}
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Live updates
+                  </p>
+                  <h3 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                    Your feed
+                  </h3>
+                </div>
+                <span className="flex h-2 w-2 rounded-full bg-[#f36f64]">
+                  <span className="h-2 w-2 animate-ping rounded-full bg-[#f36f64] opacity-75" />
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {feedItems.map((item) => (
+                  <FeedItem key={item.id} item={item} />
+                ))}
+              </div>
+
+              <button className="mt-4 w-full rounded-[18px] border border-slate-200 py-2.5 text-[13px] font-medium text-slate-500 hover:bg-slate-50">
+                See all activity
+              </button>
+            </div>
+
+            {/* CALENDAR COLUMN */}
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
@@ -391,7 +540,7 @@ export default function HomePage() {
                 {calendarDays.map((day, index) => (
                   <div
                     key={`${day}-${index}`}
-                    className={`min-h-[88px] rounded-[20px] border p-3 ${
+                    className={`min-h-[72px] rounded-[16px] border p-2 ${
                       day === "13" ? "border-[#f5b49a] bg-[#fff1ea]" : "border-slate-100 bg-[#fffdfa]"
                     }`}
                   >
@@ -399,13 +548,14 @@ export default function HomePage() {
                       {day}
                     </div>
                     {["29", "6", "10", "16", "24"].includes(day) ? (
-                      <div className="mt-2 h-2.5 w-2.5 rounded-full bg-[#b78671]" />
+                      <div className="mt-1.5 h-2 w-2 rounded-full bg-[#b78671]" />
                     ) : null}
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* REMINDERS COLUMN */}
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-base font-semibold text-slate-900">Upcoming reminders</h3>
