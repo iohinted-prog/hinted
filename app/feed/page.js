@@ -5,221 +5,252 @@ export const metadata = {
   description: "Your Hinted feed with updates, reminders, and activity in one place.",
 };
 
-const feedFilters = ["All", "Hints", "Reminders", "Circles", "Saved", "Soon"];
+const demoMode = true;
+const hasContacts = false;
 
-const activityGroups = [
+const filters = [
+  { label: "All activity", active: true },
+  { label: "Reminders", active: false },
+  { label: "Hints", active: false },
+  { label: "Circles", active: false },
+  { label: "Celebrations", active: false },
+];
+
+const onboardingSteps = [
   {
-    label: "Today",
-    items: [
-      {
-        id: 1,
-        type: "hint",
-        avatar: "M",
-        avatarColors: "from-[#eac8b8] to-[#9d6957]",
-        name: "Mum",
-        action: "added a new hint",
-        detail: "Silk pillowcase set",
-        meta: "2m ago",
-        badge: "New hint",
-        badgeBg: "bg-[#fff3ee]",
-        badgeText: "text-[#e07c54]",
-        preview: {
-          title: "Silk pillowcase set",
-          subtitle: "Soft, practical, and easy to buy later.",
-        },
-      },
-      {
-        id: 2,
-        type: "reminder",
-        avatar: "S",
-        avatarColors: "from-[#efc3af] to-[#ae6e57]",
-        name: "Sarah's Birthday",
-        action: "is 2 weeks away",
-        detail: "June 29 · She hinted at a ceramics workshop",
-        meta: "Just now",
-        badge: "Reminder",
-        badgeBg: "bg-[#fff3ee]",
-        badgeText: "text-[#e07c54]",
-        preview: {
-          title: "Gift angle",
-          subtitle: "Ceramics workshop, dinnerware, or a thoughtful card.",
-        },
-      },
-      {
-        id: 3,
-        type: "circle",
-        avatar: "MF",
-        avatarColors: "from-[#809168] to-[#41512e]",
-        name: "Max & Fiona",
-        action: "wedding circle pot is 80% full",
-        detail: "£320 of £400 raised · 4 contributors",
-        meta: "1h ago",
-        badge: "Circle",
-        badgeBg: "bg-[#f0f7ee]",
-        badgeText: "text-[#4a7a3a]",
-        preview: {
-          title: "Progress update",
-          subtitle: "Two contributors left before the group gift is ready.",
-        },
-      },
-    ],
+    id: 1,
+    title: "Add your people",
+    text: "Start by adding contacts so Hinted can turn birthdays, plans, and gift moments into useful updates.",
   },
   {
-    label: "This week",
-    items: [
-      {
-        id: 4,
-        type: "hint",
-        avatar: "J",
-        avatarColors: "from-[#4e596d] to-[#212a3c]",
-        name: "James",
-        action: "starred a hint in your shared circle",
-        detail: "Weekend cabin stay · Experiences",
-        meta: "3h ago",
-        badge: "Saved",
-        badgeBg: "bg-[#f5f3ff]",
-        badgeText: "text-[#7c5cbf]",
-        preview: {
-          title: "Shared save",
-          subtitle: "Looks like a strong option for the group trip pot.",
-        },
-      },
-      {
-        id: 5,
-        type: "reminder",
-        avatar: "P",
-        avatarColors: "from-[#c4dde8] to-[#90b4c4]",
-        name: "Priya",
-        action: "updated her wishlist",
-        detail: "Added: coffee set, framed print, small lamp",
-        meta: "5h ago",
-        badge: "Wishlist",
-        badgeBg: "bg-[#f4f0ff]",
-        badgeText: "text-[#6f58b7]",
-        preview: {
-          title: "Worth remembering",
-          subtitle: "New items added this week may shape the next gift idea.",
-        },
-      },
-    ],
+    id: 2,
+    title: "Save hints as you go",
+    text: "Hints you save for friends and family will begin to shape this feed automatically.",
+  },
+  {
+    id: 3,
+    title: "Watch the feed fill itself",
+    text: "Once contacts are added, demo activity is replaced by real reminders, shared circle updates, and reactions.",
   },
 ];
 
-const rightRailCards = [
+const feedItems = [
   {
-    title: "Upcoming reminders",
-    badge: "3 soon",
-    items: [
-      { name: "Sarah's Birthday", date: "June 29", tone: "from-[#efc3af] to-[#ae6e57]" },
-      { name: "Mom & Dad Anniversary", date: "July 10", tone: "from-[#eac8b8] to-[#9d6957]" },
-      { name: "James Promotion", date: "July 6", tone: "from-[#809168] to-[#41512e]" },
+    id: 1,
+    type: "reminder",
+    avatar: "S",
+    avatarColors: "from-[#efc3af] to-[#ae6e57]",
+    name: "Sarah",
+    action: "has a birthday coming up in 2 weeks",
+    detail: "June 29 · She saved a ceramics workshop and linen bedding.",
+    time: "Just now",
+    icon: "🎂",
+    badge: "Reminder",
+    comments: [
+      { id: 1, name: "You", text: "Need to sort this early this time." },
+      { id: 2, name: "Maya", text: "I can help with ideas if you want to split something." },
     ],
+    reactions: ["🎉", "❤️", "👏"],
   },
   {
-    title: "Circle status",
-    badge: "Live",
-    items: [
-      { name: "Wedding Circle", date: "80% full", tone: "from-[#809168] to-[#41512e]" },
-      { name: "Cabin Trip", date: "4 contributors", tone: "from-[#c4dde8] to-[#90b4c4]" },
+    id: 2,
+    type: "hint",
+    avatar: "M",
+    avatarColors: "from-[#eac8b8] to-[#9d6957]",
+    name: "Mum",
+    action: "saved a new hint",
+    detail: "Silk pillowcase set · From John Lewis · Around £45.",
+    time: "12m ago",
+    icon: "🎁",
+    badge: "Hint",
+    comments: [
+      { id: 1, name: "You", text: "This is actually a very solid option." },
     ],
+    reactions: ["✨", "😍", "👏"],
+  },
+  {
+    id: 3,
+    type: "circle",
+    avatar: "MF",
+    avatarColors: "from-[#809168] to-[#41512e]",
+    name: "Max & Fiona",
+    action: "have a wedding circle that is nearly funded",
+    detail: "£320 of £400 raised · 4 contributors · 80% full.",
+    time: "1h ago",
+    icon: "💍",
+    badge: "Circle",
+    comments: [
+      { id: 1, name: "James", text: "Nearly there — I’ll add the last bit tonight." },
+    ],
+    reactions: ["🥂", "💚", "🎉"],
+  },
+  {
+    id: 4,
+    type: "celebration",
+    avatar: "J",
+    avatarColors: "from-[#4e596d] to-[#212a3c]",
+    name: "James",
+    action: "reacted to a shared hint in your circle",
+    detail: "Weekend cabin stay · Marked as a top pick.",
+    time: "3h ago",
+    icon: "⭐",
+    badge: "Celebration",
+    comments: [],
+    reactions: ["🔥", "🙌", "💛"],
   },
 ];
 
-function AvatarStack() {
-  const avatars = [
-    ["AB", "from-[#efb19d] to-[#b25f54]"],
-    ["JM", "from-[#4e596d] to-[#212a3c]"],
-    ["SL", "from-[#e8c5ad] to-[#a86752]"],
-    ["PT", "from-[#6f7d54] to-[#324421]"],
-  ];
+const reminders = [
+  {
+    title: "Sarah's Birthday",
+    date: "June 29",
+    subtitle: "2 weeks away",
+    colors: "from-[#efc3af] to-[#ae6e57]",
+  },
+  {
+    title: "Mum & Dad Anniversary",
+    date: "July 10",
+    subtitle: "Plan gift ideas",
+    colors: "from-[#eac8b8] to-[#9d6957]",
+  },
+  {
+    title: "James Promotion",
+    date: "July 16",
+    subtitle: "Congratulate him",
+    colors: "from-[#809168] to-[#41512e]",
+  },
+];
 
+const calendarDays = [
+  "30", "1", "2", "3", "4", "5", "6",
+  "7", "8", "9", "10", "11", "12", "13",
+  "14", "15", "16", "17", "18", "19", "20",
+  "21", "22", "23", "24", "25", "26", "27",
+  "28", "29", "30", "31", "1", "2", "3",
+];
+
+function LogoMark() {
   return (
-    <div className="flex items-center">
-      {avatars.map(([label, colors], index) => (
-        <div
-          key={label}
-          className={`-ml-2.5 flex h-10 w-10 items-center justify-center rounded-full border-[3px] border-[#fff8f4] bg-gradient-to-b text-[12px] font-bold text-white first:ml-0 ${colors}`}
-          style={{ zIndex: avatars.length - index }}
-        >
-          {label}
-        </div>
-      ))}
+    <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
+      <span className="text-lg">🎁</span>
     </div>
   );
 }
 
-function SectionHeader({ title, badge }) {
+function AvatarMenu() {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-          {badge}
-        </p>
-        <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-          {title}
-        </h2>
+    <div className="relative group">
+      <button
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#4e596d] to-[#212a3c] text-sm font-bold text-white ring-4 ring-white/70"
+        aria-label="Open account menu"
+      >
+        CG
+      </button>
+
+      <div className="invisible absolute right-0 top-[calc(100%+10px)] z-20 w-56 translate-y-1 rounded-[22px] border border-[#ecdcd2] bg-white p-2 opacity-0 shadow-[0_18px_45px_rgba(123,84,64,0.14)] transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
+        <Link href="/account" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">
+          Account details
+        </Link>
+        <Link href="/settings" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">
+          Settings
+        </Link>
+        <Link href="/billing" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">
+          Payment details
+        </Link>
       </div>
     </div>
   );
 }
 
-function ActivityCard({ item }) {
-  const typeBg =
+function FeedItem({ item }) {
+  const typeStyles =
     item.type === "reminder"
-      ? "bg-[#fff3ee]"
+      ? {
+          chip: "bg-[#fff3ee] text-[#e07c54]",
+          border: "border-[#f6ddd2]",
+        }
       : item.type === "circle"
-        ? "bg-[#f0f7ee]"
-        : "bg-[#f5f3ff]";
-
-  const typeText =
-    item.type === "reminder"
-      ? "text-[#e07c54]"
-      : item.type === "circle"
-        ? "text-[#4a7a3a]"
-        : "text-[#7c5cbf]";
+        ? {
+            chip: "bg-[#edf6eb] text-[#4a7a3a]",
+            border: "border-[#deebda]",
+          }
+        : item.type === "celebration"
+          ? {
+              chip: "bg-[#fff7e8] text-[#af7b14]",
+              border: "border-[#f3e3b8]",
+            }
+          : {
+              chip: "bg-[#f5f3ff] text-[#7c5cbf]",
+              border: "border-[#e5defa]",
+            };
 
   return (
-    <article className="rounded-[24px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-transform duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex gap-3">
+    <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${typeStyles.border}`}>
+      <div className="flex items-start gap-4">
         <div
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
         >
           {item.avatar}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <p className="text-[13px] leading-[1.55] text-slate-700">
-              <span className="font-semibold text-slate-900">{item.name}</span>{" "}
-              {item.action}
-            </p>
-            <span className="shrink-0 text-[11px] text-slate-400">{item.meta}</span>
-          </div>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeStyles.chip}`}>
+                  {item.icon} {item.badge}
+                </span>
+                {demoMode && (
+                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    Demo data
+                  </span>
+                )}
+              </div>
 
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeBg} ${typeText}">
-            <span>{item.type === "circle" ? "💍" : item.type === "reminder" ? "🎂" : "🎁"}</span>
-            <span className="truncate max-w-[160px]">{item.detail}</span>
-          </div>
-
-          {item.preview && (
-            <div className="mt-3 rounded-[18px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
-              <p className="text-[12px] font-semibold text-slate-800">{item.preview.title}</p>
-              <p className="mt-1 text-[12px] leading-6 text-slate-500">
-                {item.preview.subtitle}
+              <p className="mt-3 text-[15px] leading-7 text-slate-700">
+                <span className="font-semibold text-slate-900">{item.name}</span> {item.action}
               </p>
+              <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.detail}</p>
             </div>
-          )}
 
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50">
-              Save
+            <span className="shrink-0 text-[12px] text-slate-400">{item.time}</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {item.reactions.map((reaction) => (
+              <button
+                key={reaction}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-[#fffaf7] px-3 text-sm text-slate-700 hover:bg-[#fff2eb]"
+                aria-label={`React with ${reaction}`}
+              >
+                {reaction}
+              </button>
+            ))}
+
+            <button className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              Comment
             </button>
-            <button className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50">
-              Mark done
-            </button>
-            <button className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-slate-50">
-              View
-            </button>
+          </div>
+
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            {item.comments.map((comment) => (
+              <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
+                <p className="text-[13px] leading-6 text-slate-600">
+                  <span className="font-semibold text-slate-900">{comment.name}</span> {comment.text}
+                </p>
+              </div>
+            ))}
+
+            <div className="flex gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#4e596d] to-[#212a3c] text-[11px] font-bold text-white">
+                Y
+              </div>
+              <input
+                type="text"
+                placeholder="Write a comment..."
+                className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -227,179 +258,244 @@ function ActivityCard({ item }) {
   );
 }
 
-function SidebarCard({ title, badge, items }) {
+function MiniCalendar() {
   return (
-    <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
-      <div className="flex items-center justify-between gap-3">
-        <h3 className="text-base font-semibold text-slate-900">{title}</h3>
-        <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-          {badge}
-        </span>
+    <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Planner
+          </p>
+          <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+            July
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+            ←
+          </button>
+          <button className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+            →
+          </button>
+        </div>
       </div>
 
-      <div className="mt-4 space-y-3">
-        {items.map((item) => (
-          <div key={item.name} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.tone}`} />
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-slate-800">{item.name}</p>
-                <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+      <div className="mt-4 grid grid-cols-7 gap-2 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-7 gap-2">
+        {calendarDays.map((day, index) => {
+          const highlighted = ["10", "16", "24", "29"].includes(day);
+          const active = day === "16";
+
+          return (
+            <div
+              key={`${day}-${index}`}
+              className={`min-h-[58px] rounded-[16px] border p-2 ${
+                active ? "border-[#f2b39a] bg-[#fff2ea]" : "border-slate-100 bg-[#fffdfa]"
+              }`}
+            >
+              <div className={`text-[13px] font-semibold ${index < 1 || index > 31 ? "text-slate-300" : "text-slate-700"}`}>
+                {day}
               </div>
+              {highlighted ? <div className="mt-1.5 h-2 w-2 rounded-full bg-[#b78671]" /> : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
 }
 
 export default function FeedPage() {
+  const showDemoGuide = demoMode && !hasContacts;
+
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
-      <header className="sticky top-0 z-20 border-b border-[#eeddd3] bg-[#fffaf7]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-5 py-4 md:px-8">
-          <div className="flex items-center gap-3.5">
-            <div className="relative flex h-[48px] w-[48px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
-              🎁
-            </div>
-            <div>
-              <div className="text-[18px] font-extrabold tracking-[-0.04em] text-slate-900">
+    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+          <div className="flex items-center gap-8">
+            <Link href="/feed" className="flex items-center gap-3.5">
+              <LogoMark />
+              <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
                 Hinted<span className="text-[#f36f64]">.io</span>
               </div>
-              <div className="text-[12px] text-slate-500">Feed</div>
-            </div>
-          </div>
+            </Link>
 
-          <div className="hidden items-center gap-2 lg:flex">
-            {["All", "Hints", "Reminders", "Circles"].map((item, index) => (
-              <button
-                key={item}
-                className={`rounded-full px-4 py-2 text-sm font-medium ${
-                  index === 0
-                    ? "bg-[#2f3b2d] text-white"
-                    : "border border-slate-200 bg-white text-slate-600"
-                }`}
+            <nav className="flex items-center gap-3">
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
               >
-                {item}
-              </button>
-            ))}
+                Hints
+              </Link>
+            </nav>
           </div>
 
-          <div className="flex items-center gap-3">
-            <Link href="/" className="hidden text-sm font-medium text-slate-600 lg:block">
-              Home
-            </Link>
-            <Link href="/hints" className="hidden text-sm font-medium text-slate-600 lg:block">
-              Hints
-            </Link>
-            <button className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-5 text-sm font-semibold text-white">
-              Add update
-            </button>
-          </div>
+          <AvatarMenu />
         </div>
       </header>
 
-      <section className="mx-auto max-w-[1320px] px-5 py-8 md:px-8 md:py-10">
+      <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
         <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_320px]">
-          <aside className="space-y-4">
-            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#fff5ef] px-3 py-1 text-xs font-medium text-[#e77756] ring-1 ring-[#f3dfd4]">
-                Live stream
+          <aside className="space-y-5">
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Filters
+                  </p>
+                  <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                    Activity
+                  </h1>
+                </div>
+
+                {demoMode && (
+                  <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
+                    Demo
+                  </span>
+                )}
               </div>
 
-              <h1 className="mt-4 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
-                Your feed.
-              </h1>
-
-              <p className="mt-3 text-[14px] leading-7 text-slate-600">
-                Keep track of hints, reminders, and group gifting activity in one calm view.
-              </p>
-
-              <div className="mt-5 flex items-center gap-3">
-                <AvatarStack />
-                <span className="text-[13px] text-slate-500">12 people active this week</span>
-              </div>
-            </section>
-
-            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Filters
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                {feedFilters.map((filter, index) => (
+              <div className="mt-4 flex flex-col gap-2">
+                {filters.map((filter) => (
                   <button
-                    key={filter}
-                    className={`rounded-full px-3.5 py-2 text-sm font-medium ${
-                      index === 0
+                    key={filter.label}
+                    className={`rounded-[18px] px-4 py-3 text-left text-sm font-medium ${
+                      filter.active
                         ? "bg-[#2f3b2d] text-white"
-                        : "border border-slate-200 bg-white text-slate-600"
+                        : "border border-[#efe4dd] bg-[#fffdfa] text-slate-600 hover:bg-[#faf7f5]"
                     }`}
                   >
-                    {filter}
+                    {filter.label}
                   </button>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Quick actions
-              </p>
-              <div className="mt-4 space-y-2">
-                {["Add hint", "Create reminder", "Start circle"].map((action) => (
-                  <button
-                    key={action}
-                    className="flex h-12 w-full items-center justify-between rounded-[18px] border border-slate-200 bg-[#fffdfa] px-4 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <span>{action}</span>
-                    <span className="text-slate-400">→</span>
-                  </button>
-                ))}
-              </div>
+            {showDemoGuide && (
+              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  First look
+                </p>
+                <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                  How this feed will work
+                </h2>
+                <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                  You’re seeing a demo version of your feed so you can understand the layout before real activity starts appearing.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {onboardingSteps.map((step) => (
+                    <div key={step.id} className="rounded-[20px] bg-[#faf7f4] p-4">
+                      <div className="flex gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f3b2d] text-[12px] font-semibold text-white">
+                          {step.id}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
+                          <p className="mt-1 text-[13px] leading-6 text-slate-600">{step.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Link
+                  href="/contacts"
+                  className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-semibold text-white shadow-lg"
+                >
+                  Add contacts
+                </Link>
+              </section>
+            )}
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <h2 className="text-base font-semibold text-slate-900">What shows up here</h2>
+              <ul className="mt-4 space-y-3 text-[14px] leading-6 text-slate-600">
+                <li>Birthdays and milestones approaching.</li>
+                <li>New hints saved by your people.</li>
+                <li>Circle pot progress and reactions.</li>
+                <li>Shared activity you can comment on or celebrate.</li>
+              </ul>
             </section>
           </aside>
 
-          <main className="space-y-6">
-            {activityGroups.map((group) => (
-              <section
-                key={group.label}
-                className="rounded-[32px] border border-[#f0dfd6] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.08)] sm:p-5"
-              >
-                <SectionHeader title={group.label} badge="Activity" />
-                <div className="mt-4 space-y-3">
-                  {group.items.map((item) => (
-                    <ActivityCard key={item.id} item={item} />
+          <section className="min-w-0">
+            <div className="rounded-[32px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
+              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <div className="inline-flex rounded-full bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e07c54]">
+                      Activity stream
+                    </div>
+                    <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
+                      Your people, moments, and nudges.
+                    </h2>
+                    <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
+                      This feed updates automatically as reminders get closer, hints are added, and shared gift moments start moving.
+                    </p>
+                  </div>
+
+                  {demoMode && (
+                    <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
+                      Demo mode is on now. Once contacts are added, this area will switch to real activity.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {feedItems.map((item) => (
+                    <FeedItem key={item.id} item={item} />
                   ))}
                 </div>
-              </section>
-            ))}
-          </main>
+              </div>
+            </div>
+          </section>
 
-          <aside className="space-y-4">
-            {rightRailCards.map((card) => (
-              <SidebarCard
-                key={card.title}
-                title={card.title}
-                badge={card.badge}
-                items={card.items}
-              />
-            ))}
+          <aside className="space-y-5">
+            <MiniCalendar />
 
-            <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white">
-              <p className="text-[11px] uppercase tracking-[0.16em] text-white/60">
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">Upcoming reminders</h2>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  3 soon
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {reminders.map((item) => (
+                  <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                        <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
                 Gift prompt
               </p>
-              <p className="mt-3 text-[15px] leading-7 text-white/90">
-                Sarah saved "ceramic dinnerware" and "weekend city break" to her wishlist.
+              <p className="mt-3 text-sm leading-7 text-white/90">
+                Sarah has recently saved “ceramic dinnerware” and “weekend city break”, so experience-led gifts may be the strongest route.
               </p>
               <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
-                View ideas
+                View related hints
               </button>
             </section>
           </aside>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
