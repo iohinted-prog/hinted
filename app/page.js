@@ -44,7 +44,7 @@ const calendarCells = [
   { day: "26", muted: true },
   { day: "27", muted: true },
   { day: "28", muted: true },
-  { day: "29", muted: true, event: ["Sarah", "Birthday"], tone: "pink" },
+  { day: "29", muted: true, event: "Sarah Birthday", tone: "pink" },
   { day: "30", muted: true },
   { day: "31", muted: true },
 
@@ -53,19 +53,19 @@ const calendarCells = [
   { day: "3" },
   { day: "4" },
   { day: "5" },
-  { day: "6", event: ["James", "Promotion"], tone: "blue" },
+  { day: "6", event: "James Promotion", tone: "blue" },
   { day: "7" },
 
   { day: "8" },
   { day: "9" },
-  { day: "10", event: ["Mom & Dad", "Anniversary"], tone: "peach" },
+  { day: "10", event: "Mom & Dad", tone: "peach" },
   { day: "11" },
   { day: "12" },
   { day: "13", selected: true },
   { day: "14" },
 
   { day: "15" },
-  { day: "16", soft: true, event: ["Alex", "Birthday"], tone: "pink" },
+  { day: "16", soft: true, event: "Alex Birthday", tone: "pink" },
   { day: "17" },
   { day: "18" },
   { day: "19" },
@@ -74,7 +74,7 @@ const calendarCells = [
 
   { day: "22" },
   { day: "23" },
-  { day: "24", event: ["Olivia", "Graduation"], tone: "peach" },
+  { day: "24", event: "Olivia Grad", tone: "peach" },
   { day: "25" },
   { day: "26" },
   { day: "27" },
@@ -94,10 +94,10 @@ const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 function EventPill({ event, tone }) {
   const toneBg =
     tone === "blue"
-      ? "bg-sky-50"
+      ? "bg-sky-50 text-sky-700"
       : tone === "peach"
-        ? "bg-[#fff4ec]"
-        : "bg-[#fff3ef]";
+        ? "bg-[#fff4ec] text-[#9a624d]"
+        : "bg-[#fff3ef] text-[#9b6151]";
 
   const toneDot =
     tone === "blue"
@@ -108,12 +108,12 @@ function EventPill({ event, tone }) {
 
   return (
     <div
-      className={`mt-1 flex w-full items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-medium leading-tight text-slate-600 ${toneBg}`}
+      className={`mt-1 hidden rounded-full px-2 py-1 text-[10px] font-medium leading-tight md:flex md:items-center md:gap-1.5 ${toneBg}`}
     >
       <span
         className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-b ${toneDot}`}
       />
-      <span className="truncate">{event.join(" ")}</span>
+      <span className="truncate">{event}</span>
     </div>
   );
 }
@@ -177,7 +177,7 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(540px,1.08fr)] xl:gap-10">
+        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(620px,1.08fr)]">
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
@@ -219,271 +219,4 @@ export default function HomePage() {
                   >
                     Email
                   </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="block text-sm font-medium text-slate-900"
-                    htmlFor="password"
-                  >
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="Your password"
-                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="inline-flex h-[52px] min-w-[145px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
-                  >
-                    Sign in
-                  </button>
-
-                  <Link
-                    href="/onboarding"
-                    className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700"
-                  >
-                    Create account
-                  </Link>
-                </div>
-              </form>
-
-              <p className="mt-4 text-xs leading-5 text-slate-500">
-                You can use an email and password now, then connect other sign-in
-                methods later.
-              </p>
-            </div>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
-              <AvatarStack />
-              <p className="max-w-[320px]">
-                Join thoughtful gifters staying on top of birthdays, milestones,
-                and group surprises.
-              </p>
-            </div>
-          </div>
-
-          <div className="relative min-w-0 xl:pl-2">
-            <div className="absolute left-10 top-10 hidden h-40 w-40 rounded-full bg-[#ffd8c8]/50 blur-3xl xl:block" />
-            <div className="absolute bottom-10 right-6 hidden h-44 w-44 rounded-full bg-[#f0dfd6]/60 blur-3xl xl:block" />
-
-            <div className="relative overflow-hidden rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-3 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-4">
-              <div className="grid gap-4 xl:grid-cols-[220px_minmax(0,1fr)]">
-                <aside className="rounded-[28px] bg-[#fcf1ea] p-4 sm:p-5">
-                  <div className="flex items-center gap-3 border-b border-[#ead7cd] pb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-b from-[#ffab88] to-[#ff875f] text-lg text-white shadow-md">
-                      🎁
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Hinted
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Thoughtful planning
-                      </p>
-                    </div>
-                  </div>
-
-                  <nav className="mt-5 space-y-1.5">
-                    {sideNav.map((item) => (
-                      <div
-                        key={item.label}
-                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
-                          item.active
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        <span className="text-base">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </nav>
-
-                  <div className="mt-5 rounded-[24px] bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                      Upcoming
-                    </p>
-                    <div className="mt-3 space-y-3">
-                      {reminders.slice(0, 2).map((item) => (
-                        <div
-                          key={item.title}
-                          className="rounded-2xl border border-[#f1e2da] bg-[#fffaf7] p-3"
-                        >
-                          <div
-                            className={`mb-2 h-2 w-16 rounded-full bg-gradient-to-r ${item.colors}`}
-                          />
-                          <p className="text-sm font-semibold text-slate-800">
-                            {item.title}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {item.date}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </aside>
-
-                <div className="min-w-0 rounded-[28px] bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        Dashboard
-                      </p>
-                      <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
-                        July calendar
-                      </h2>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                        ←
-                      </button>
-                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                        →
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-                    <div className="min-w-0 rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
-                      <div className="mb-3 grid grid-cols-7 gap-2">
-                        {weekDays.map((day) => (
-                          <div
-                            key={day}
-                            className="text-center text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400"
-                          >
-                            {day}
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-2">
-                        {calendarCells.map((cell, index) => (
-                          <div
-                            key={`${cell.day}-${index}`}
-                            className={`min-w-0 rounded-[18px] border p-2 transition ${
-                              cell.selected
-                                ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
-                                : cell.soft
-                                  ? "border-[#f3e5de] bg-[#fff8f4]"
-                                  : "border-slate-100 bg-white"
-                            }`}
-                          >
-                            <div
-                              className={`text-sm font-semibold ${
-                                cell.muted
-                                  ? "text-slate-300"
-                                  : "text-slate-700"
-                              }`}
-                            >
-                              {cell.day}
-                            </div>
-
-                            <div className="min-h-[34px]">
-                              {cell.event ? (
-                                <EventPill event={cell.event} tone={cell.tone} />
-                              ) : null}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="min-w-0 rounded-[24px] border border-slate-100 bg-[#fffaf7] p-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold text-slate-900">
-                          Reminders
-                        </h3>
-                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#e77756] shadow-sm">
-                          4 coming up
-                        </span>
-                      </div>
-
-                      <div className="mt-4 space-y-3">
-                        {reminders.map((item) => (
-                          <div
-                            key={item.title}
-                            className="rounded-[20px] border border-[#f1e4dc] bg-white p-3 shadow-sm"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`mt-1 h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-800">
-                                  {item.title}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {item.date}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-4 rounded-[20px] bg-[#2f3b2d] p-4 text-white">
-                        <p className="text-xs uppercase tracking-[0.14em] text-white/60">
-                          Gift prompt
-                        </p>
-                        <p className="mt-2 text-sm leading-6 text-white/90">
-                          Sarah saved “ceramic dinnerware” and “weekend city
-                          break” to her wishlist.
-                        </p>
-                        <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
-                          View ideas
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 grid gap-4 md:grid-cols-3">
-                    <div className="rounded-[22px] bg-[#fff4ee] p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                        People tracked
-                      </p>
-                      <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
-                        28
-                      </p>
-                    </div>
-
-                    <div className="rounded-[22px] bg-[#f7f3ef] p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                        Events this month
-                      </p>
-                      <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
-                        12
-                      </p>
-                    </div>
-
-                    <div className="rounded-[22px] bg-[#eef3e8] p-4">
-                      <p className="text-xs uppercase tracking-[0.14em] text-slate-400">
-                        Gift ideas saved
-                      </p>
-                      <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-slate-900">
-                        46
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
-  );
-}
+                  <i
