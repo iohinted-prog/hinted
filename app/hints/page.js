@@ -2,89 +2,105 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Hints | Hinted.io",
-  description: "Collect and organise gift ideas in one clean visual board.",
+  description: "Collect, organise, and move gift ideas around a visual hints board.",
 };
 
 const hints = [
   {
     id: 1,
-    title: "Noise-cancelling headphones",
-    retailer: "amazon.co.uk",
-    priceLabel: "£249",
-    image: "from-[#ead8cb] via-[#d9bda6] to-[#b88969]",
-    tags: ["Tech", "Birthday"],
+    title: "Weekend cabin stay",
+    retailer: "airbnb.co.uk",
+    priceLabel: "From £320",
+    priceBand: "high",
+    image: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
+    tags: ["Travel", "Big gift"],
     starred: true,
+    private: false,
     size: "tall",
   },
   {
     id: 2,
-    title: "Weekend cabin stay",
-    retailer: "airbnb.co.uk",
-    priceLabel: "£320",
-    image: "from-[#d8dfcf] via-[#b8c5aa] to-[#90a37d]",
-    tags: ["Travel", "Circle"],
+    title: "Noise-cancelling headphones",
+    retailer: "amazon.co.uk",
+    priceLabel: "About £249",
+    priceBand: "high",
+    image: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
+    tags: ["Tech", "Birthday"],
     starred: true,
+    private: false,
     size: "tall",
   },
   {
     id: 3,
-    title: "Silk pillowcase set",
-    retailer: "johnlewis.com",
-    priceLabel: "£45",
-    image: "from-[#f1e6df] via-[#e5d2c5] to-[#cfad98]",
-    tags: ["Home", "Under £50"],
+    title: "Ceramics workshop for two",
+    retailer: "classbento.co.uk",
+    priceLabel: "About £78",
+    priceBand: "mid",
+    image: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
+    tags: ["Experience", "Couples"],
     starred: false,
-    size: "short",
+    private: false,
+    size: "portrait",
   },
   {
     id: 4,
-    title: "Kindle Paperwhite",
-    retailer: "amazon.co.uk",
-    priceLabel: "£159",
-    image: "from-[#d3d9ea] via-[#bcc6dd] to-[#97a6c9]",
-    tags: ["Books", "Everyday"],
+    title: "Silk pillowcase set",
+    retailer: "johnlewis.com",
+    priceLabel: "About £45",
+    priceBand: "small",
+    image: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
+    tags: ["Home", "Under £50"],
     starred: false,
-    size: "medium",
+    private: true,
+    size: "square",
   },
   {
     id: 5,
-    title: "Ceramics workshop",
-    retailer: "classbento.co.uk",
-    priceLabel: "£78",
-    image: "from-[#f3d5ca] via-[#ecb7a6] to-[#db907a]",
-    tags: ["Experiences", "Birthday"],
+    title: "Kindle Paperwhite",
+    retailer: "amazon.co.uk",
+    priceLabel: "About £159",
+    priceBand: "premium",
+    image: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
+    tags: ["Books", "Everyday"],
     starred: false,
-    size: "medium",
+    private: false,
+    size: "portrait",
   },
   {
     id: 6,
     title: "Art print for the living room",
     retailer: "etsy.com",
-    priceLabel: "£38",
-    image: "from-[#e9dce9] via-[#d6c0d5] to-[#b996b6]",
-    tags: ["Home", "Smaller gift"],
+    priceLabel: "About £38",
+    priceBand: "small",
+    image: "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+    tags: ["Home", "Art"],
     starred: false,
-    size: "short",
+    private: false,
+    size: "square",
   },
   {
     id: 7,
     title: "Cast-iron casserole dish",
     retailer: "johnlewis.com",
-    priceLabel: "£89",
-    image: "from-[#ddd5cf] via-[#c0b0a4] to-[#957c69]",
+    priceLabel: "About £89",
+    priceBand: "mid",
+    image: "from-[#d9d1cb] via-[#bcaea1] to-[#8a7566]",
     tags: ["Cooking", "Home"],
     starred: false,
-    size: "medium",
+    private: false,
+    size: "portrait",
   },
   {
     id: 8,
     title: "Pourover coffee set",
     retailer: "hasbean.co.uk",
-    priceLabel: "£62",
-    image: "from-[#d6e5ea] via-[#bad0d7] to-[#94b4c3]",
+    priceLabel: "About £62",
+    priceBand: "mid",
+    image: "from-[#d6e7eb] via-[#b5ced7] to-[#8fb3c5]",
     tags: ["Coffee", "Home"],
     starred: false,
-    size: "short",
+    private: true,
+    size: "square",
   },
 ];
 
@@ -100,7 +116,7 @@ function AvatarMenu() {
   return (
     <div className="relative group">
       <button
-        className="flex h-11 w-11 items-center justify-center rounded-full border border-[#ead9cf] bg-[#fff4ec] text-sm font-bold text-[#d77352] shadow-sm"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-sm font-bold text-white ring-4 ring-white/70"
         aria-label="Open account menu"
       >
         CG
@@ -121,37 +137,51 @@ function AvatarMenu() {
   );
 }
 
-function HintCard({ hint }) {
-  const heightClass =
-    hint.size === "tall"
-      ? "min-h-[420px]"
-      : hint.size === "medium"
-        ? "min-h-[320px]"
-        : "min-h-[250px]";
+function getTileClass(size) {
+  if (size === "tall") return "md:col-span-3 md:row-span-8";
+  if (size === "portrait") return "md:col-span-3 md:row-span-6";
+  return "md:col-span-3 md:row-span-4";
+}
 
+function getPricePill(priceBand) {
+  if (priceBand === "high") return "bg-[#2f3b2d] text-white";
+  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
+  return "bg-[#f1f5ec] text-[#627f53]";
+}
+
+function HintTile({ hint }) {
   return (
     <article
-      className={`mb-8 break-inside-avoid overflow-hidden rounded-[28px] border ${
-        hint.starred
-          ? "border-[#efcfbf] bg-[#fffaf7] shadow-[0_14px_30px_rgba(184,122,92,0.12)]"
+      className={`group relative flex h-full min-h-[220px] cursor-move flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
+        hint.private
+          ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
           : "border-[#f0dfd6] bg-white shadow-sm"
-      } transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_36px_rgba(171,114,84,0.14)] ${heightClass}`}
+      }`}
+      draggable
     >
-      <div className={`relative h-[170px] w-full bg-gradient-to-br ${hint.image}`}>
-        <div className="flex items-start justify-between p-4">
-          <div className="flex flex-wrap gap-2">
-            {hint.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full border border-white/40 bg-white/65 px-2.5 py-1 text-[11px] font-medium text-slate-700 backdrop-blur-sm"
-              >
-                {tag}
-              </span>
-            ))}
+      <div className={`relative flex-1 bg-gradient-to-br ${hint.image} ${hint.private ? "opacity-80" : ""}`}>
+        <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <div className="rounded-full bg-white/72 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
+              ⋮⋮ Drag
+            </div>
+
+            {hint.starred && (
+              <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+                Top pick
+              </div>
+            )}
+
+            {hint.private && (
+              <div className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                Private
+              </div>
+            )}
           </div>
 
           <button
-            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/70 backdrop-blur-sm ${
+            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/68 text-[16px] backdrop-blur-sm ${
               hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
             }`}
             aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
@@ -159,27 +189,37 @@ function HintCard({ hint }) {
             ★
           </button>
         </div>
-      </div>
 
-      <div className="flex flex-1 flex-col p-5">
-        {hint.starred && (
-          <span className="mb-3 inline-flex w-fit rounded-full bg-[#fff0e9] px-2.5 py-1 text-[11px] font-semibold text-[#e27956]">
-            Top pick
-          </span>
-        )}
+        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+          <div className={`rounded-[24px] p-4 backdrop-blur-md ${hint.private ? "bg-white/62" : "bg-white/82"}`}>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(hint.priceBand)}`}>
+                {hint.priceLabel}
+              </span>
+              {hint.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-[#f8f5f2] px-2.5 py-1 text-[11px] font-medium text-slate-500"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
 
-        <h2 className="text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-          {hint.title}
-        </h2>
+            <h2 className="mt-3 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+              {hint.title}
+            </h2>
 
-        <p className="mt-2 text-[14px] text-slate-500">
-          {hint.retailer} · {hint.priceLabel}
-        </p>
+            <p className="mt-1 text-[13px] text-slate-500">
+              {hint.retailer}
+            </p>
 
-        <div className="mt-auto pt-6">
-          <button className="rounded-full border border-[#ebddd5] px-4 py-2 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]">
-            View hint
-          </button>
+            <div className="mt-4 flex items-center justify-end">
+              <button className="rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]">
+                Open
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </article>
@@ -191,67 +231,91 @@ export default function HintsPage() {
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
         <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
-          <div className="flex items-center gap-8">
-            <Link href="/feed" className="flex items-center gap-3.5">
-              <LogoMark />
-              <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
-                Hinted<span className="text-[#f36f64]">.io</span>
-              </div>
+          <Link href="/feed" className="flex items-center gap-3.5">
+            <LogoMark />
+            <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
+              Hinted<span className="text-[#f36f64]">.io</span>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-3">
+            <Link
+              href="/feed"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
+            >
+              Feed
             </Link>
-
-            <nav className="flex items-center gap-3">
-              <Link
-                href="/hints"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-900 shadow-sm"
-              >
-                Hints
-              </Link>
-              <Link
-                href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-600 hover:bg-[#fff5f0]"
-              >
-                Circles
-              </Link>
-            </nav>
+            <Link
+              href="/circles"
+              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
+            >
+              Circles
+            </Link>
+            <AvatarMenu />
           </div>
-
-          <AvatarMenu />
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1480px] px-5 py-8 md:px-8">
-        <section className="mb-8">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h1 className="text-[34px] font-semibold tracking-[-0.06em] text-slate-900 sm:text-[42px]">
-                Your hints
-              </h1>
-              <p className="mt-2 text-[15px] leading-7 text-slate-600">
-                Save gift ideas from anywhere and keep the best ones close.
-              </p>
-            </div>
+      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8">
+        <section>
+          <h1 className="text-[14px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Paste a hint to begin...
+          </h1>
 
-            <div className="w-full max-w-[620px]">
-              <div className="flex h-14 items-center gap-3 rounded-full border border-[#ebddd5] bg-white px-3 shadow-sm">
-                <input
-                  id="hint-link"
-                  type="url"
-                  placeholder="Paste a gift or product link"
-                  className="h-full w-full bg-transparent px-2 text-sm text-slate-700 outline-none"
-                />
-                <button className="inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg">
-                  Add
-                </button>
-              </div>
+          <div className="mt-5">
+            <div className="flex w-full flex-col gap-3 sm:flex-row">
+              <input
+                id="hint-link"
+                type="url"
+                placeholder="Paste any product, wishlist, or experience link"
+                className="h-[72px] w-full rounded-full border border-[#eadcd3] bg-white px-8 text-[16px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              />
+              <button className="inline-flex h-[72px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-8 text-sm font-semibold text-white shadow-lg sm:min-w-[170px]">
+                Add hint
+              </button>
             </div>
           </div>
         </section>
 
-        <section>
-          <div className="columns-1 gap-8 sm:columns-2 xl:columns-3 2xl:columns-4">
-            {hints.map((hint) => (
-              <HintCard key={hint.id} hint={hint} />
-            ))}
+        <section className="mt-12">
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-[12px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Personal board
+              </p>
+              <p className="mt-1 text-[15px] text-slate-600">
+                Drag things around and shape the board how you want to see it.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-[#eadfd8] bg-white px-3 py-2 text-[12px] font-medium text-slate-500">
+                Larger cards = bigger spends
+              </span>
+              <span className="rounded-full border border-[#eadfd8] bg-white px-3 py-2 text-[12px] font-medium text-slate-500">
+                Private hints fade back
+              </span>
+            </div>
+          </div>
+
+          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
+            <div
+              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
+              style={{
+                backgroundImage: `
+                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
+                `,
+                backgroundSize: "76px 76px",
+                backgroundPosition: "center center",
+              }}
+            />
+
+            <div className="relative grid auto-rows-[42px] grid-cols-1 gap-6 md:grid-cols-12">
+              {hints.map((hint) => (
+                <HintTile key={hint.id} hint={hint} />
+              ))}
+            </div>
           </div>
         </section>
       </div>
