@@ -44,7 +44,7 @@ const calendarCells = [
   { day: "26", muted: true },
   { day: "27", muted: true },
   { day: "28", muted: true },
-  { day: "29", muted: true, event: "Sarah Birthday", tone: "pink" },
+  { day: "29", muted: true, dot: true, tone: "pink" },
   { day: "30", muted: true },
   { day: "31", muted: true },
 
@@ -53,19 +53,19 @@ const calendarCells = [
   { day: "3" },
   { day: "4" },
   { day: "5" },
-  { day: "6", event: "James Promotion", tone: "blue" },
+  { day: "6", dot: true, tone: "blue" },
   { day: "7" },
 
   { day: "8" },
   { day: "9" },
-  { day: "10", event: "Mom & Dad", tone: "peach" },
+  { day: "10", dot: true, tone: "peach" },
   { day: "11" },
   { day: "12" },
   { day: "13", selected: true },
   { day: "14" },
 
   { day: "15" },
-  { day: "16", soft: true, event: "Alex Birthday", tone: "pink" },
+  { day: "16", dot: true, tone: "pink" },
   { day: "17" },
   { day: "18" },
   { day: "19" },
@@ -74,7 +74,7 @@ const calendarCells = [
 
   { day: "22" },
   { day: "23" },
-  { day: "24", event: "Olivia Grad", tone: "peach" },
+  { day: "24", dot: true, tone: "peach" },
   { day: "25" },
   { day: "26" },
   { day: "27" },
@@ -90,33 +90,6 @@ const calendarCells = [
 ];
 
 const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-function EventPill({ event, tone }) {
-  const toneBg =
-    tone === "blue"
-      ? "bg-sky-50 text-sky-700"
-      : tone === "peach"
-        ? "bg-[#fff4ec] text-[#9a624d]"
-        : "bg-[#fff3ef] text-[#9b6151]";
-
-  const toneDot =
-    tone === "blue"
-      ? "from-[#8fb9d4] to-[#4d7399]"
-      : tone === "peach"
-        ? "from-[#d9b8a4] to-[#8a5946]"
-        : "from-[#d0ab96] to-[#7b4a39]";
-
-  return (
-    <div
-      className={`mt-1 hidden rounded-full px-2 py-1 text-[10px] font-medium leading-tight md:flex md:items-center md:gap-1.5 ${toneBg}`}
-    >
-      <span
-        className={`h-2.5 w-2.5 shrink-0 rounded-full bg-gradient-to-b ${toneDot}`}
-      />
-      <span className="truncate">{event}</span>
-    </div>
-  );
-}
 
 function AvatarStack() {
   const avatars = [
@@ -139,6 +112,17 @@ function AvatarStack() {
       ))}
     </div>
   );
+}
+
+function CalendarDot({ tone }) {
+  const color =
+    tone === "blue"
+      ? "bg-[#7fa7c7]"
+      : tone === "peach"
+        ? "bg-[#c89d86]"
+        : "bg-[#a77563]";
+
+  return <span className={`mt-2 block h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
 export default function HomePage() {
@@ -297,7 +281,7 @@ export default function HomePage() {
                     {sideNav.map((item) => (
                       <div
                         key={item.label}
-                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium transition ${
+                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium ${
                           item.active
                             ? "bg-white text-slate-900 shadow-sm"
                             : "text-slate-500"
@@ -356,88 +340,83 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_280px]">
-                    <div className="rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
-                      <div className="mb-3 grid grid-cols-7 gap-2">
-                        {weekDays.map((day) => (
-                          <div
-                            key={day}
-                            className="min-w-0 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
-                          >
-                            <span className="block truncate">{day}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="grid grid-cols-7 gap-2">
-                        {calendarCells.map((cell, index) => (
-                          <div
-                            key={`${cell.day}-${index}`}
-                            className={`min-h-[72px] min-w-0 rounded-[18px] border p-2 sm:min-h-[88px] ${
-                              cell.selected
-                                ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
-                                : cell.soft
-                                  ? "border-[#f3e5de] bg-[#fff8f4]"
-                                  : "border-slate-100 bg-white"
-                            }`}
-                          >
+                  <div className="mt-4 flex flex-col gap-4 2xl:flex-row">
+                    <div className="min-w-0 flex-1 2xl:min-w-[520px]">
+                      <div className="rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
+                        <div className="mb-3 grid grid-cols-7 gap-2">
+                          {weekDays.map((day) => (
                             <div
-                              className={`text-sm font-semibold ${
-                                cell.muted ? "text-slate-300" : "text-slate-700"
+                              key={day}
+                              className="min-w-0 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
+                            >
+                              <span className="block truncate">{day}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-2">
+                          {calendarCells.map((cell, index) => (
+                            <div
+                              key={`${cell.day}-${index}`}
+                              className={`min-h-[72px] min-w-0 rounded-[18px] border p-2 sm:min-h-[88px] ${
+                                cell.selected
+                                  ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
+                                  : "border-slate-100 bg-white"
                               }`}
                             >
-                              {cell.day}
-                            </div>
+                              <div
+                                className={`text-sm font-semibold ${
+                                  cell.muted ? "text-slate-300" : "text-slate-700"
+                                }`}
+                              >
+                                {cell.day}
+                              </div>
 
-                            {cell.event ? (
-                              <>
-                                <EventPill event={cell.event} tone={cell.tone} />
-                                <div className="mt-1 text-[9px] font-medium leading-tight text-slate-500 md:hidden">
-                                  {cell.event.split(" ")[0]}
-                                </div>
-                              </>
-                            ) : null}
-                          </div>
-                        ))}
+                              {cell.dot ? <CalendarDot tone={cell.tone} /> : null}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
 
-                    <div className="rounded-[24px] border border-slate-100 bg-[#fffaf7] p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <h3 className="text-base font-semibold text-slate-900">
-                          Reminders
-                        </h3>
-                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#e77756] shadow-sm">
-                          4 coming up
-                        </span>
-                      </div>
+                    <div className="w-full 2xl:w-[280px] 2xl:flex-none">
+                      <div className="rounded-[24px] border border-slate-100 bg-[#fffaf7] p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-base font-semibold text-slate-900">
+                            Reminders
+                          </h3>
+                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#e77756] shadow-sm">
+                            4 coming up
+                          </span>
+                        </div>
 
-                      <div className="mt-4 space-y-3">
-                        {reminders.map((item) => (
-                          <div
-                            key={item.title}
-                            className="rounded-[20px] border border-[#f1e4dc] bg-white p-3 shadow-sm"
-                          >
-                            <div className="flex items-start gap-3">
-                              <div
-                                className={`mt-1 h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
-                              />
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-semibold text-slate-800">
-                                  {item.title}
-                                </p>
-                                <p className="mt-1 text-xs text-slate-500">
-                                  {item.date}
-                                </p>
+                        <div className="mt-4 space-y-3">
+                          {reminders.map((item) => (
+                            <div
+                              key={item.title}
+                              className="rounded-[20px] border border-[#f1e4dc] bg-white p-3 shadow-sm"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div
+                                  className={`mt-1 h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
+                                />
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-slate-800">
+                                    {item.title}
+                                  </p>
+                                  <p className="mt-1 text-xs text-slate-500">
+                                    {item.date}
+                                  </p>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
 
-                      <button className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#2f3b2d] px-4 py-3 text-sm font-semibold text-white">
-                        View ideas
-                      </button>
+                        <button className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#2f3b2d] px-4 py-3 text-sm font-semibold text-white">
+                          View ideas
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
