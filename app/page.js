@@ -6,17 +6,34 @@ export const metadata = {
     "Hinted helps you remember important moments and find better gift ideas with a little help from your friends.",
 };
 
-const sideNav = [
-  { label: "Calendar", icon: "📅", active: true },
-  { label: "Reminders", icon: "🔔", active: false },
-  { label: "People", icon: "👥", active: false },
-  { label: "Gift ideas", icon: "🎁", active: false },
-  { label: "Collections", icon: "♡", active: false },
-  { label: "Activity", icon: "↗", active: false },
-  { label: "Settings", icon: "⚙", active: false },
+const hints = [
+  {
+    id: 1,
+    title: "Favorite coffee",
+    text: "Likes oat milk lattes and always tries new cafés when travelling.",
+    tone: "bg-[#fff6f1]",
+  },
+  {
+    id: 2,
+    title: "Birthday idea",
+    text: "Been hinting at a ceramics workshop and soft cashmere throw.",
+    tone: "bg-white",
+  },
+  {
+    id: 3,
+    title: "Last conversation",
+    text: "Talked about a promotion dinner in July and a weekend away.",
+    tone: "bg-[#f8f5ff]",
+  },
+  {
+    id: 4,
+    title: "Reminder",
+    text: "Check in next Friday and ask how the new role is going.",
+    tone: "bg-white",
+  },
 ];
 
-const reminders = [
+const lowerReminders = [
   {
     title: "Sarah's Birthday",
     date: "June 29",
@@ -32,64 +49,45 @@ const reminders = [
     date: "July 6",
     colors: "from-[#809168] to-[#41512e]",
   },
-  {
-    title: "Alex's Birthday",
-    date: "July 16",
-    colors: "from-[#c1a79a] to-[#765549]",
-  },
 ];
 
-const calendarCells = [
-  { day: "25", muted: true },
-  { day: "26", muted: true },
-  { day: "27", muted: true },
-  { day: "28", muted: true },
-  { day: "29", muted: true, dot: true, tone: "pink" },
-  { day: "30", muted: true },
-  { day: "31", muted: true },
-
-  { day: "1" },
-  { day: "2" },
-  { day: "3" },
-  { day: "4" },
-  { day: "5" },
-  { day: "6", dot: true, tone: "blue" },
-  { day: "7" },
-
-  { day: "8" },
-  { day: "9" },
-  { day: "10", dot: true, tone: "peach" },
-  { day: "11" },
-  { day: "12" },
-  { day: "13", selected: true },
-  { day: "14" },
-
-  { day: "15" },
-  { day: "16", dot: true, tone: "pink" },
-  { day: "17" },
-  { day: "18" },
-  { day: "19" },
-  { day: "20" },
-  { day: "21" },
-
-  { day: "22" },
-  { day: "23" },
-  { day: "24", dot: true, tone: "peach" },
-  { day: "25" },
-  { day: "26" },
-  { day: "27" },
-  { day: "28" },
-
-  { day: "29" },
-  { day: "30" },
-  { day: "1", muted: true },
-  { day: "2", muted: true },
-  { day: "3", muted: true },
-  { day: "4", muted: true },
-  { day: "5", muted: true },
+const calendarDays = [
+  "25",
+  "26",
+  "27",
+  "28",
+  "29",
+  "30",
+  "31",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
+  "27",
+  "28",
 ];
-
-const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 function AvatarStack() {
   const avatars = [
@@ -114,21 +112,33 @@ function AvatarStack() {
   );
 }
 
-function CalendarDot({ tone }) {
-  const color =
-    tone === "blue"
-      ? "bg-[#7fa7c7]"
-      : tone === "peach"
-        ? "bg-[#c89d86]"
-        : "bg-[#a77563]";
+function HintCard({ title, text, tone, large = false }) {
+  return (
+    <article
+      className={`rounded-[28px] border border-slate-200 ${
+        tone || "bg-white"
+      } p-5 shadow-sm ${large ? "min-h-[170px]" : "min-h-[138px]"}`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-[16px] font-semibold tracking-[-0.03em] text-slate-900">
+            {title}
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{text}</p>
+        </div>
 
-  return <span className={`mt-2 block h-2.5 w-2.5 rounded-full ${color}`} />;
+        <button className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-500">
+          Edit
+        </button>
+      </div>
+    </article>
+  );
 }
 
 export default function HomePage() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
-      <div className="mx-auto max-w-[1320px] px-5 pb-10 pt-6 md:px-8">
+      <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
         <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
           <div className="flex items-center gap-3.5">
             <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
@@ -162,7 +172,7 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(620px,1.08fr)]">
+        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(560px,1.08fr)] xl:gap-10">
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
@@ -260,166 +270,203 @@ export default function HomePage() {
           </div>
 
           <div className="relative min-w-0">
-            <div className="relative overflow-hidden rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-3 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-4">
-              <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)]">
-                <aside className="rounded-[28px] bg-[#fcf1ea] p-4 sm:p-5">
-                  <div className="flex items-center gap-3 border-b border-[#ead7cd] pb-4">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#f5c7b6] to-[#d99172] text-sm font-bold text-white shadow-md">
-                      M
+            <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
+              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#fff2ea] shadow-sm ring-1 ring-[#f3dfd4]">
+                      <span className="text-lg">💬</span>
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">
-                        Maya
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        Social calendar
-                      </p>
+                      <div className="text-sm font-semibold tracking-tight text-slate-900">
+                        Hinted.io
+                      </div>
+                      <div className="text-xs text-slate-500">Hints</div>
                     </div>
                   </div>
 
-                  <nav className="mt-5 space-y-1.5">
-                    {sideNav.map((item) => (
-                      <div
-                        key={item.label}
-                        className={`flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium ${
-                          item.active
-                            ? "bg-white text-slate-900 shadow-sm"
-                            : "text-slate-500"
-                        }`}
-                      >
-                        <span className="text-base">{item.icon}</span>
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </nav>
-
-                  <div className="mt-5 rounded-[24px] bg-white p-4 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                      Upcoming
-                    </p>
-
-                    <div className="mt-3 space-y-3">
-                      {reminders.slice(0, 2).map((item) => (
-                        <div
-                          key={item.title}
-                          className="rounded-2xl border border-[#f1e2da] bg-[#fffaf7] p-3"
-                        >
-                          <div
-                            className={`mb-2 h-2 w-16 rounded-full bg-gradient-to-r ${item.colors}`}
-                          />
-                          <p className="text-sm font-semibold text-slate-800">
-                            {item.title}
-                          </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {item.date}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
+                  <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
+                    <span>Home</span>
+                    <span>Feed</span>
+                    <span>Offers</span>
                   </div>
-                </aside>
+                </div>
 
-                <div className="min-w-0 rounded-[28px] bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
-                        Dashboard
-                      </p>
-                      <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[30px]">
-                        July calendar
-                      </h2>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                        ←
-                      </button>
-                      <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
-                        →
-                      </button>
-                    </div>
+                <div className="pt-5">
+                  <div className="inline-flex rounded-full bg-[#f8f4ef] px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                    Saved context
                   </div>
 
-                  <div className="mt-4 flex flex-col gap-4 2xl:flex-row">
-                    <div className="min-w-0 flex-1 2xl:min-w-[520px]">
-                      <div className="rounded-[24px] border border-slate-100 bg-[#fffdfa] p-4">
-                        <div className="mb-3 grid grid-cols-7 gap-2">
-                          {weekDays.map((day) => (
-                            <div
-                              key={day}
-                              className="min-w-0 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400 sm:text-[11px]"
-                            >
-                              <span className="block truncate">{day}</span>
-                            </div>
-                          ))}
-                        </div>
+                  <h2 className="mt-4 text-[34px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[42px]">
+                    Your hints.
+                  </h2>
 
-                        <div className="grid grid-cols-7 gap-2">
-                          {calendarCells.map((cell, index) => (
-                            <div
-                              key={`${cell.day}-${index}`}
-                              className={`min-h-[72px] min-w-0 rounded-[18px] border p-2 sm:min-h-[88px] ${
-                                cell.selected
-                                  ? "border-[#f5b49a] bg-[#fff1ea] shadow-sm"
-                                  : "border-slate-100 bg-white"
-                              }`}
-                            >
-                              <div
-                                className={`text-sm font-semibold ${
-                                  cell.muted ? "text-slate-300" : "text-slate-700"
-                                }`}
-                              >
-                                {cell.day}
-                              </div>
+                  <p className="mt-3 max-w-[540px] text-[15px] leading-7 text-slate-600 sm:text-[16px]">
+                    Keep the useful details that help you remember people,
+                    conversations, gift ideas, and follow-ups.
+                  </p>
 
-                              {cell.dot ? <CalendarDot tone={cell.tone} /> : null}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="mt-8 grid gap-4 md:grid-cols-2">
+                    <HintCard
+                      title={hints[0].title}
+                      text={hints[0].text}
+                      tone={hints[0].tone}
+                    />
+                    <HintCard
+                      title={hints[1].title}
+                      text={hints[1].text}
+                      tone={hints[1].tone}
+                    />
+                    <HintCard
+                      title={hints[2].title}
+                      text={hints[2].text}
+                      tone={hints[2].tone}
+                      large
+                    />
+                    <HintCard
+                      title={hints[3].title}
+                      text={hints[3].text}
+                      tone={hints[3].tone}
+                    />
+                  </div>
+
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
+                    <div className="rounded-full bg-[#2f3b2d] px-4 py-2 text-sm font-semibold text-white">
+                      Add hint
                     </div>
-
-                    <div className="w-full 2xl:w-[280px] 2xl:flex-none">
-                      <div className="rounded-[24px] border border-slate-100 bg-[#fffaf7] p-4">
-                        <div className="flex items-center justify-between gap-3">
-                          <h3 className="text-base font-semibold text-slate-900">
-                            Reminders
-                          </h3>
-                          <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-[#e77756] shadow-sm">
-                            4 coming up
-                          </span>
-                        </div>
-
-                        <div className="mt-4 space-y-3">
-                          {reminders.map((item) => (
-                            <div
-                              key={item.title}
-                              className="rounded-[20px] border border-[#f1e4dc] bg-white p-3 shadow-sm"
-                            >
-                              <div className="flex items-start gap-3">
-                                <div
-                                  className={`mt-1 h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
-                                />
-                                <div className="min-w-0">
-                                  <p className="truncate text-sm font-semibold text-slate-800">
-                                    {item.title}
-                                  </p>
-                                  <p className="mt-1 text-xs text-slate-500">
-                                    {item.date}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <button className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-[#2f3b2d] px-4 py-3 text-sm font-semibold text-white">
-                          View ideas
-                        </button>
-                      </div>
+                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+                      Organise cards
+                    </div>
+                    <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
+                      Customise view
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-[#fff7f2] px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.1)] md:px-8 md:py-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                Plan ahead
+              </div>
+              <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[38px]">
+                Calendar and reminders
+              </h2>
+              <p className="mt-3 max-w-[680px] text-[16px] leading-7 text-slate-600">
+                Track birthdays, anniversaries, and follow-ups in one calm view,
+                without squeezing the experience into the hero.
+              </p>
+            </div>
+
+            <button className="inline-flex rounded-full bg-[#2f3b2d] px-5 py-3 text-sm font-semibold text-white">
+              View full planner
+            </button>
+          </div>
+
+          <div className="mt-8 grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_320px]">
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Dashboard
+                  </p>
+                  <h3 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
+                    July calendar
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+                    ←
+                  </button>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">
+                    →
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, index) => (
+                  <div
+                    key={`${day}-${index}`}
+                    className={`min-h-[88px] rounded-[20px] border p-3 ${
+                      day === "13"
+                        ? "border-[#f5b49a] bg-[#fff1ea]"
+                        : "border-slate-100 bg-[#fffdfa]"
+                    }`}
+                  >
+                    <div
+                      className={`text-sm font-semibold ${
+                        index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"
+                      }`}
+                    >
+                      {day}
+                    </div>
+
+                    {["29", "6", "10", "16", "24"].includes(day) ? (
+                      <div className="mt-2 h-2.5 w-2.5 rounded-full bg-[#b78671]" />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-slate-900">
+                  Upcoming reminders
+                </h3>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  3 soon
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {lowerReminders.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          {item.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-[24px] bg-[#2f3b2d] p-5 text-white">
+                <p className="text-xs uppercase tracking-[0.14em] text-white/60">
+                  Gift prompt
+                </p>
+                <p className="mt-2 text-sm leading-7 text-white/90">
+                  Sarah saved “ceramic dinnerware” and “weekend city break” to
+                  her wishlist.
+                </p>
+                <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
+                  View ideas
+                </button>
               </div>
             </div>
           </div>
