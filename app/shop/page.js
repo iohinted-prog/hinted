@@ -2,12 +2,6 @@
 
 import { useMemo, useState } from "react";
 
-const currencyOptions = [
-  { code: "GBP", symbol: "£", label: "GBP £" },
-  { code: "USD", symbol: "$", label: "USD $" },
-  { code: "EUR", symbol: "€", label: "EUR €" },
-];
-
 const products = [
   {
     id: "prod-001",
