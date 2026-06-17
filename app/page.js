@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Hinted.io | Never forget. Always thoughtful.",
   description:
-    "Hinted helps you remember important moments and find better gift ideas with a little help from your friends.",
+    "Hinted helps you remember important moments, save better gift ideas, build circles, and explore curated shopping with help from your friends.",
 };
 
 const hints = [
@@ -31,7 +31,7 @@ const hints = [
     id: 3,
     title: "Cast-iron casserole dish",
     text: "From: johnlewis.com · ~£85",
-    image: "from-[#cdd4e8] to-[#a0aacf]",
+    image: "from-[#d9d7c7] to-[#b8aa8a]",
     tag: "Home",
     tag2: "Cooking",
     starred: false,
@@ -41,7 +41,7 @@ const hints = [
     id: 4,
     title: "Kindle or similar e-reader",
     text: "From: amazon.co.uk · ~£100",
-    image: "from-[#cce4d4] to-[#90c4a4]",
+    image: "from-[#d7e4d5] to-[#9eb293]",
     tag: "Books",
     tag2: "Everyday",
     starred: false,
@@ -51,7 +51,7 @@ const hints = [
     id: 5,
     title: "Art print for the living room",
     text: "From: etsy.com · ~£40",
-    image: "from-[#e8cde8] to-[#c4a0c4]",
+    image: "from-[#edd8cf] to-[#d0a18f]",
     tag: "Home",
     tag2: "Under £50",
     starred: false,
@@ -61,7 +61,7 @@ const hints = [
     id: 6,
     title: "Nice pourover coffee set",
     text: "From: hasbean.co.uk · ~£60",
-    image: "from-[#c4dde8] to-[#90b4c4]",
+    image: "from-[#dce7e0] to-[#b0c5ba]",
     tag: "Home",
     tag2: "Coffee",
     starred: false,
@@ -74,7 +74,7 @@ const feedItems = [
     id: 1,
     type: "hint",
     avatar: "M",
-    avatarColors: "from-[#eac8b8] to-[#9d6957]",
+    avatarColors: "from-[#e7cab8] to-[#b97d66]",
     name: "Mum",
     action: "added a new hint",
     detail: "Silk pillowcase set",
@@ -85,7 +85,7 @@ const feedItems = [
     id: 2,
     type: "reminder",
     avatar: "S",
-    avatarColors: "from-[#efc3af] to-[#ae6e57]",
+    avatarColors: "from-[#efcdbf] to-[#c88c73]",
     name: "Sarah's Birthday",
     action: "is 2 weeks away",
     detail: "June 29 · She hinted at a ceramics workshop",
@@ -96,7 +96,7 @@ const feedItems = [
     id: 3,
     type: "circle",
     avatar: "MF",
-    avatarColors: "from-[#809168] to-[#41512e]",
+    avatarColors: "from-[#98a47d] to-[#5f7046]",
     name: "Max & Fiona",
     action: "Wedding Circle Pot is 80% full",
     detail: "£320 of £400 raised · 4 contributors",
@@ -107,7 +107,7 @@ const feedItems = [
     id: 4,
     type: "hint",
     avatar: "J",
-    avatarColors: "from-[#4e596d] to-[#212a3c]",
+    avatarColors: "from-[#dcc4b5] to-[#b78972]",
     name: "James",
     action: "starred a hint in your shared circle",
     detail: "Weekend cabin stay · Experiences",
@@ -120,17 +120,17 @@ const lowerReminders = [
   {
     title: "Sarah's Birthday",
     date: "June 29",
-    colors: "from-[#efc3af] to-[#ae6e57]",
+    colors: "from-[#efcdbf] to-[#c88c73]",
   },
   {
     title: "Mom & Dad Anniversary",
     date: "July 10",
-    colors: "from-[#eac8b8] to-[#9d6957]",
+    colors: "from-[#e7cab8] to-[#b97d66]",
   },
   {
     title: "James Promotion",
     date: "July 6",
-    colors: "from-[#809168] to-[#41512e]",
+    colors: "from-[#98a47d] to-[#5f7046]",
   },
 ];
 
@@ -142,12 +142,43 @@ const calendarDays = [
   "22","23","24","25","26","27","28",
 ];
 
+const circleContributors = [
+  ["CG", "from-[#efcdbf] to-[#bb8168]"],
+  ["MF", "from-[#98a47d] to-[#5f7046]"],
+  ["JM", "from-[#dcc4b5] to-[#b78972]"],
+  ["SL", "from-[#e7cab8] to-[#b97d66]"],
+];
+
+const shopTiles = [
+  {
+    title: "Curated for birthdays",
+    subtitle: "Soft, tasteful picks across John Lewis, Amazon, Airbnb, and more.",
+    price: "From £28",
+    tone: "from-[#f3ddd1] to-[#ddb39f]",
+    badge: "Shop",
+  },
+  {
+    title: "Best under £50",
+    subtitle: "A practical edit for easy wins that still feel personal.",
+    price: "12 picks",
+    tone: "from-[#ebe4d7] to-[#ccbda2]",
+    badge: "Edit",
+  },
+  {
+    title: "Luxury classics",
+    subtitle: "Higher-value gifts worth saving to a circle or a board.",
+    price: "Premium",
+    tone: "from-[#dce7e0] to-[#a8bba8]",
+    badge: "Curated",
+  },
+];
+
 function AvatarStack() {
   const avatars = [
-    ["AB", "from-[#efb19d] to-[#b25f54]"],
-    ["JM", "from-[#4e596d] to-[#212a3c]"],
-    ["SL", "from-[#e8c5ad] to-[#a86752]"],
-    ["PT", "from-[#6f7d54] to-[#324421]"],
+    ["AB", "from-[#efcdbf] to-[#bb8168]"],
+    ["JM", "from-[#dcc4b5] to-[#b78972]"],
+    ["SL", "from-[#e7cab8] to-[#b97d66]"],
+    ["PT", "from-[#98a47d] to-[#5f7046]"],
   ];
 
   return (
@@ -168,7 +199,7 @@ function AvatarStack() {
 function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
   return (
     <article
-      className={`group relative flex flex-col overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm transition-transform duration-200 hover:scale-[1.02] hover:shadow-md ${rotate}`}
+      className={`group relative flex flex-col overflow-hidden rounded-[24px] border border-[#ece2db] bg-white shadow-sm transition-transform duration-200 hover:scale-[1.02] hover:shadow-md ${rotate}`}
     >
       <div className={`h-[120px] w-full bg-gradient-to-br ${image}`}>
         <div className="flex justify-end p-3">
@@ -177,7 +208,7 @@ function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
       </div>
 
       <div className="flex flex-1 flex-col p-3.5">
-        <h3 className="text-[13px] font-semibold tracking-[-0.02em] text-slate-900 leading-tight">
+        <h3 className="leading-tight text-[13px] font-semibold tracking-[-0.02em] text-slate-900">
           {title}
         </h3>
         <p className="mt-1 text-[12px] text-slate-400">{text}</p>
@@ -195,7 +226,7 @@ function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
 
         <div className="mt-2.5 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[9px] font-bold text-white">
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[9px] font-bold text-white">
               M
             </div>
             <span className="text-[10px] text-slate-400">
@@ -207,6 +238,7 @@ function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
               starred ? "text-[#f36f64]" : "text-slate-200 hover:text-[#f36f64]"
             }`}
             aria-label={starred ? "Unstar" : "Star"}
+            type="button"
           >
             ★
           </button>
@@ -222,14 +254,14 @@ function FeedItem({ item }) {
       ? "bg-[#fff3ee]"
       : item.type === "circle"
         ? "bg-[#f0f7ee]"
-        : "bg-[#f5f3ff]";
+        : "bg-[#fff7f2]";
 
   const typeText =
     item.type === "reminder"
-      ? "text-[#e07c54]"
+      ? "text-[#d97652]"
       : item.type === "circle"
-        ? "text-[#4a7a3a]"
-        : "text-[#7c5cbf]";
+        ? "text-[#4f7440]"
+        : "text-[#8b6a5a]";
 
   return (
     <article className="flex gap-3 rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm">
@@ -248,12 +280,209 @@ function FeedItem({ item }) {
           <span className="shrink-0 text-[10px] text-slate-400">{item.time}</span>
         </div>
 
-        <div className={`mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeBg} ${typeText}`}>
+        <div className={`mt-2 inline-flex max-w-[220px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeBg} ${typeText}`}>
           <span>{item.icon}</span>
-          <span className="truncate max-w-[160px]">{item.detail}</span>
+          <span className="truncate">{item.detail}</span>
         </div>
       </div>
     </article>
+  );
+}
+
+function CircleTeaserCard() {
+  return (
+    <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f9a78]">
+            Circles
+          </p>
+          <h3 className="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
+            Plan shared gifts together.
+          </h3>
+        </div>
+        <span className="rounded-full bg-[#edf4e9] px-3 py-1 text-[11px] font-semibold text-[#5c7147]">
+          Group gifting
+        </span>
+      </div>
+
+      <p className="mt-3 max-w-[48ch] text-sm leading-6 text-slate-600">
+        Build a circle around a wedding, birthday, or milestone, invite people in, and watch the contribution pot fill up before the date arrives.
+      </p>
+
+      <div className="mt-5 rounded-[26px] border border-[#e7eee2] bg-[#f6faf3] p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.14em] text-[#83906b]">
+              Max & Fiona wedding
+            </p>
+            <p className="mt-1 text-[20px] font-semibold tracking-[-0.03em] text-slate-900">
+              £320 of £400 raised
+            </p>
+          </div>
+          <AvatarStackMini />
+        </div>
+
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#dde8d4]">
+          <div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#9cad84] to-[#5f7046]" />
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">Deadline</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">July 12</p>
+          </div>
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">Contributors</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">4 active</p>
+          </div>
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">Goal</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">Le Creuset set</p>
+          </div>
+        </div>
+      </div>
+
+      <Link
+        href="/circles"
+        className="mt-5 inline-flex rounded-full bg-[#2f5d50] px-5 py-3 text-sm font-semibold text-white"
+      >
+        Explore circles
+      </Link>
+    </article>
+  );
+}
+
+function AvatarStackMini() {
+  return (
+    <div className="flex items-center">
+      {circleContributors.map(([label, colors], index) => (
+        <div
+          key={label}
+          className={`-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#f6faf3] bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
+          style={{ zIndex: circleContributors.length - index }}
+        >
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ShopTeaserCard() {
+  return (
+    <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b28672]">
+            Shop
+          </p>
+          <h3 className="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
+            Browse curated gifts, not endless noise.
+          </h3>
+        </div>
+        <span className="rounded-full bg-[#fff3ec] px-3 py-1 text-[11px] font-semibold text-[#c56d4d]">
+          Curated shopping
+        </span>
+      </div>
+
+      <p className="mt-3 max-w-[48ch] text-sm leading-6 text-slate-600">
+        Shop brings together thoughtful picks from trusted brands, so you can save ideas to your hints board or choose something worth funding in a circle.
+      </p>
+
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        {shopTiles.map((tile) => (
+          <div
+            key={tile.title}
+            className="overflow-hidden rounded-[24px] border border-[#efe1d9] bg-[#fffdfa]"
+          >
+            <div className={`h-28 bg-gradient-to-br ${tile.tone}`} />
+            <div className="p-4">
+              <div className="inline-flex rounded-full bg-[#fff4ee] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#b4775f]">
+                {tile.badge}
+              </div>
+              <h4 className="mt-3 text-[15px] font-semibold leading-6 text-slate-900">
+                {tile.title}
+              </h4>
+              <p className="mt-1 text-[13px] leading-5 text-slate-500">
+                {tile.subtitle}
+              </p>
+              <p className="mt-3 text-[13px] font-semibold text-[#2f5d50]">
+                {tile.price}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <Link
+        href="/shop"
+        className="mt-5 inline-flex rounded-full border border-[#e8d9cf] bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+      >
+        Preview shop
+      </Link>
+    </article>
+  );
+}
+
+function DemoVideoSection() {
+  return (
+    <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-white px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.08)] md:px-8 md:py-10">
+      <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+        <div>
+          <div className="inline-flex rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-medium text-[#d77958]">
+            Product demo
+          </div>
+          <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[38px]">
+            A guided walkthrough is coming here.
+          </h2>
+          <p className="mt-4 max-w-[58ch] text-[16px] leading-7 text-slate-600">
+            This section will house a short demo video showing how Hinted connects reminders, hints, circles, and curated shopping in one flow.
+          </p>
+
+          <div className="mt-6 space-y-3 text-sm text-slate-600">
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff2ea] text-[#d77958]">
+                1
+              </span>
+              <span>See a birthday coming up in the calendar.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#edf4e9] text-[#5d7446]">
+                2
+              </span>
+              <span>Open saved hints or start a circle with friends.</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff2ea] text-[#d77958]">
+                3
+              </span>
+              <span>Browse the Shop and save the right gift idea.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[32px] border border-[#efdfd6] bg-[#fff8f4] p-4">
+          <div className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[28px] border border-dashed border-[#e8cfc1] bg-gradient-to-br from-[#fff4ed] via-[#fffaf7] to-[#f4f7f1]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,205,191,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(152,164,125,0.22),transparent_32%)]" />
+            <div className="relative z-10 flex flex-col items-center text-center">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-[0_18px_40px_rgba(145,100,76,0.12)]">
+                <span className="ml-1 text-3xl text-[#d77958]">▶</span>
+              </div>
+              <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                Demo placeholder
+              </p>
+              <h3 className="mt-2 text-[24px] font-semibold tracking-[-0.03em] text-slate-900">
+                Product walkthrough coming soon
+              </h3>
+              <p className="mt-3 max-w-[40ch] text-sm leading-6 text-slate-500">
+                Swap this area for your hosted demo video when it is ready.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -272,7 +501,10 @@ export default function HomePage() {
           </div>
 
           <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex">
-            <Link href="#how-it-works">How it works</Link>
+            <Link href="/feed">Feed</Link>
+            <Link href="/hints">Hints</Link>
+            <Link href="/circles">Circles</Link>
+            <Link href="/shop">Shop</Link>
           </nav>
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
@@ -292,7 +524,7 @@ export default function HomePage() {
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
-              <span>Gifting & social reminders made easy, without the awkward part</span>
+              <span>Gifting, reminders, circles, and curated shopping in one place</span>
             </div>
 
             <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
@@ -302,8 +534,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-7 max-w-[560px] text-[16px] leading-8 text-slate-500 sm:text-[18px]">
-              Hinted helps you remember the important moments and find better
-              gift ideas with a little help from your friends.
+              Hinted helps you remember important moments, collect better gift ideas, plan shared presents with friends, and browse curated picks when you need them.
             </p>
 
             <div className="mt-8 max-w-[540px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
@@ -313,7 +544,7 @@ export default function HomePage() {
                     Sign in to Hinted
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Keep your circles, hints, and reminders connected.
+                    Keep your circles, hints, reminders, and shop saves connected.
                   </p>
                 </div>
                 <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
@@ -378,7 +609,7 @@ export default function HomePage() {
               <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efc3af] to-[#ae6e57] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
                       M
                     </div>
                     <div>
@@ -388,6 +619,8 @@ export default function HomePage() {
                   </div>
                   <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
                     <span>Feed</span>
+                    <span>Circles</span>
+                    <span>Shop</span>
                   </div>
                 </div>
 
@@ -415,7 +648,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <div className="rounded-full bg-[#2f3b2d] px-4 py-2 text-sm font-semibold text-white">
+                    <div className="rounded-full bg-[#2f5d50] px-4 py-2 text-sm font-semibold text-white">
                       Add hint
                     </div>
                     <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
@@ -441,10 +674,10 @@ export default function HomePage() {
                 Calendar and reminders
               </h2>
               <p className="mt-3 max-w-[680px] text-[16px] leading-7 text-slate-600">
-                Track birthdays, anniversaries, and follow-ups in one calm view.
+                Track birthdays, anniversaries, and follow-ups in one calm view, then branch into circles and curated shopping when it is time to act.
               </p>
             </div>
-            <button className="inline-flex rounded-full bg-[#2f3b2d] px-5 py-3 text-sm font-semibold text-white">
+            <button className="inline-flex rounded-full bg-[#2f5d50] px-5 py-3 text-sm font-semibold text-white" type="button">
               View full planner
             </button>
           </div>
@@ -471,7 +704,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <button className="mt-4 w-full rounded-[18px] border border-slate-200 py-2.5 text-[13px] font-medium text-slate-500 hover:bg-slate-50">
+              <button className="mt-4 w-full rounded-[18px] border border-slate-200 py-2.5 text-[13px] font-medium text-slate-500 hover:bg-slate-50" type="button">
                 See all activity
               </button>
             </div>
@@ -487,8 +720,8 @@ export default function HomePage() {
                   </h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">←</button>
-                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">→</button>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500" type="button">←</button>
+                  <button className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500" type="button">→</button>
                 </div>
               </div>
 
@@ -535,18 +768,25 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="mt-5 rounded-[24px] bg-[#2f3b2d] p-5 text-white">
+              <div className="mt-5 rounded-[24px] bg-[#2f5d50] p-5 text-white">
                 <p className="text-xs uppercase tracking-[0.14em] text-white/60">Gift prompt</p>
                 <p className="mt-2 text-sm leading-7 text-white/90">
                   Sarah saved "ceramic dinnerware" and "weekend city break" to her wishlist.
                 </p>
-                <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800">
+                <button className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800" type="button">
                   View ideas
                 </button>
               </div>
             </div>
           </div>
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <CircleTeaserCard />
+            <ShopTeaserCard />
+          </div>
         </section>
+
+        <DemoVideoSection />
       </div>
     </main>
   );
