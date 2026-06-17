@@ -146,24 +146,9 @@ function AvatarMenu() {
       </button>
 
       <div className="invisible absolute right-0 top-[calc(100%+10px)] z-20 w-56 translate-y-1 rounded-[22px] border border-[#ecdcd2] bg-white p-2 opacity-0 shadow-[0_18px_45px_rgba(123,84,64,0.14)] transition-all duration-200 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-        <Link
-          href="/account"
-          className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
-        >
-          Accounts
-        </Link>
-        <Link
-          href="/billing"
-          className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
-        >
-          Billing
-        </Link>
-        <Link
-          href="/settings"
-          className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
-        >
-          Settings
-        </Link>
+        <Link href="/account" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">Accounts</Link>
+        <Link href="/billing" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">Billing</Link>
+        <Link href="/settings" className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]">Settings</Link>
       </div>
     </div>
   );
@@ -180,14 +165,11 @@ function normaliseRetailer(url) {
 function extractNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value || typeof value !== "string") return null;
-
   const cleaned = value.replace(/,/g, "");
   const match =
     cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
     cleaned.match(/(\d+(?:\.\d{1,2})?)/);
-
   if (!match) return null;
-
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -202,11 +184,9 @@ function getPriceBand(price) {
 
 function getSizeFromPrice(price, allPrices) {
   if (price == null || allPrices.length < 3) return "portrait";
-
   const sorted = [...allPrices].sort((a, b) => a - b);
   const lowCut = sorted[Math.floor(sorted.length * 0.35)];
   const highCut = sorted[Math.floor(sorted.length * 0.75)];
-
   if (price >= highCut) return "tall";
   if (price >= lowCut) return "portrait";
   return "square";
@@ -243,21 +223,30 @@ function getPricePill(priceBand) {
   return "bg-[#f1f5ec] text-[#627f53]";
 }
 
-function HintTile({ hint }) {
+function HintTile({ hint, index, draggedIndex, setDraggedIndex, moveHint }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
   return (
     <article
-      className={`group relative flex h-full min-h-[280px] cursor-move flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
+      className={`group relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
+        draggedIndex === index ? "opacity-60" : ""
+      } ${
         hint.private
           ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
           : "border-[#f0dfd6] bg-white shadow-sm"
       }`}
       draggable
+      onDragStart={() => setDraggedIndex(index)}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        moveHint(draggedIndex, index);
+      }}
+      onDragEnd={() => setDraggedIndex(null)}
     >
       <div className="relative flex h-full flex-col">
-        <div className="relative min-h-[58%] flex-1 overflow-hidden">
+        <div className="relative min-h-[62%] flex-1 overflow-hidden">
           {showImage ? (
             <>
               <img
@@ -271,9 +260,7 @@ function HintTile({ hint }) {
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.35)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
             </>
           ) : (
-            <div
-              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${hint.private ? "opacity-80" : ""}`}
-            />
+            <div className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${hint.private ? "opacity-80" : ""}`} />
           )}
 
           <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
@@ -352,14 +339,28 @@ export default function HintsPage() {
   const [link, setLink] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   const numericPrices = useMemo(
-    () =>
-      hints
-        .map((hint) => hint.numericPrice)
-        .filter((value) => typeof value === "number"),
+    () => hints.map((hint) => hint.numericPrice).filter((value) => typeof value === "number"),
     [hints]
   );
+
+  function moveHint(fromIndex, toIndex) {
+    if (fromIndex == null || toIndex == null || fromIndex === toIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+
+    setHints((current) => {
+      const updated = [...current];
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
+      return updated;
+    });
+
+    setDraggedIndex(null);
+  }
 
   async function handleAddHint() {
     const trimmed = link.trim();
@@ -394,23 +395,26 @@ export default function HintsPage() {
       );
 
       const image = data.image || "";
-      const hasUsableImage =
-        typeof image === "string" &&
-        image.startsWith("http");
+      const title = data.title || "Saved hint";
+      const retailer = data.siteName || normaliseRetailer(trimmed);
+      const cleanDescription =
+        data.description && data.description.toLowerCase() !== retailer.toLowerCase()
+          ? data.description
+          : "";
 
       const newHint = {
         id: Date.now(),
-        title: data.title || "Saved hint",
-        retailer: data.siteName || normaliseRetailer(trimmed),
+        title,
+        retailer,
         priceLabel: formatPriceLabel(numericPrice, data.price),
         numericPrice,
         priceBand: getPriceBand(numericPrice),
-        image: hasUsableImage ? image : "",
+        image: typeof image === "string" && image.startsWith("http") ? image : "",
         fallbackGradient: buildFallbackGradient(hints.length),
-        tags: data.price ? ["Added from link"] : ["Saved link"],
+        tags: cleanDescription ? ["Added from link", "Preview found"] : ["Added from link"],
         starred: false,
         private: false,
-        size: hasUsableImage && size === "square" ? "portrait" : size,
+        size: size === "square" ? "portrait" : size,
         url: data.url || trimmed,
       };
 
@@ -436,30 +440,10 @@ export default function HintsPage() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link
-                href="/feed"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Feed
-              </Link>
-              <Link
-                href="/hints"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
-              >
-                Hints
-              </Link>
-              <Link
-                href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Circles
-              </Link>
-              <Link
-                href="/shop"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Shop
-              </Link>
+              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
+              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
+              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
+              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
             </nav>
 
             <AvatarMenu />
@@ -524,8 +508,15 @@ export default function HintsPage() {
             />
 
             <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
-              {hints.map((hint) => (
-                <HintTile key={hint.id} hint={hint} />
+              {hints.map((hint, index) => (
+                <HintTile
+                  key={hint.id}
+                  hint={hint}
+                  index={index}
+                  draggedIndex={draggedIndex}
+                  setDraggedIndex={setDraggedIndex}
+                  moveHint={moveHint}
+                />
               ))}
             </div>
           </div>
