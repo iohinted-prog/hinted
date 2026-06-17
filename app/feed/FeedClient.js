@@ -32,6 +32,42 @@ const onboardingSteps = [
   },
 ];
 
+const initialContacts = [
+  {
+    id: 1,
+    name: "Maya",
+    role: "Friend",
+    note: "Saved 8 hints",
+    initials: "M",
+    colors: "from-[#efc3af] to-[#ae6e57]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+  {
+    id: 2,
+    name: "James",
+    role: "Brother",
+    note: "Saved 5 hints",
+    initials: "J",
+    colors: "from-[#4e596d] to-[#212a3c]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+  {
+    id: 3,
+    name: "Fiona",
+    role: "Friend",
+    note: "Saved 4 hints",
+    initials: "F",
+    colors: "from-[#809168] to-[#41512e]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+];
+
 const feedItems = [
   {
     id: 1,
@@ -158,6 +194,22 @@ const eventTypeStyles = {
   },
 };
 
+function getInitials(name) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function getContactGradient(role) {
+  if (role === "Family") return "from-[#eac8b8] to-[#9d6957]";
+  if (role === "Partner") return "from-[#e8b9a7] to-[#bf755f]";
+  if (role === "Brother") return "from-[#4e596d] to-[#212a3c]";
+  return "from-[#efcdbf] to-[#bb8168]";
+}
+
 function LogoMark() {
   return (
     <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
@@ -192,6 +244,141 @@ function AvatarMenu() {
   );
 }
 
+function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[720px]" }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
+      <div
+        className={`max-h-[92vh] w-full overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] ${maxWidth}`}
+      >
+        <div className="flex items-center justify-between border-b border-[#efe0d7] px-6 py-5">
+          <div>
+            {eyebrow ? (
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
+                {eyebrow}
+              </p>
+            ) : null}
+            <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+              {title}
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white text-slate-500 hover:bg-[#fff2eb]"
+            aria-label="Close window"
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function AddContactModal({ open, onClose, onSave, form, setForm }) {
+  if (!open) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    onSave();
+  };
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="New contact"
+      title="Add a new contact"
+      maxWidth="max-w-[720px]"
+    >
+      <form onSubmit={handleSubmit} className="p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Jane Smith"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+              required
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Email address</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="jane@example.com"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Phone number</span>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              placeholder="07123 456789"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Relationship</span>
+            <select
+              value={form.role}
+              onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            >
+              <option value="">Select relationship</option>
+              <option value="Friend">Friend</option>
+              <option value="Family">Family</option>
+              <option value="Partner">Partner</option>
+              <option value="Brother">Brother</option>
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Birthday</span>
+            <input
+              type="date"
+              value={form.birthday}
+              onChange={(e) => setForm((prev) => ({ ...prev, birthday: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+          >
+            Save contact
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
 function FeedItem({ item }) {
   const typeStyles =
     item.type === "reminder"
@@ -213,6 +400,15 @@ function FeedItem({ item }) {
               chip: "bg-[#f5f3ff] text-[#7c5cbf]",
               border: "border-[#e5defa]",
             };
+
+  const actionLabel =
+    item.type === "reminder"
+      ? "Start a circle"
+      : item.type === "hint"
+        ? "View hint"
+        : item.type === "circle"
+          ? "Open circle"
+          : "View activity";
 
   return (
     <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${typeStyles.border}`}>
@@ -263,6 +459,13 @@ function FeedItem({ item }) {
               className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
             >
               Comment
+            </button>
+
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              {actionLabel}
             </button>
           </div>
 
@@ -610,6 +813,16 @@ function MiniCalendar() {
 
 export default function FeedClient() {
   const [activeFilter, setActiveFilter] = useState("all");
+  const [contacts, setContacts] = useState(initialContacts);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    role: "",
+    birthday: "",
+    phone: "",
+  });
+
   const showDemoGuide = demoMode && !hasContacts;
 
   const visibleFeedItems = useMemo(() => {
@@ -617,37 +830,81 @@ export default function FeedClient() {
     return feedItems.filter((item) => item.type === activeFilter);
   }, [activeFilter]);
 
+  const resetContactForm = () => {
+    setContactForm({
+      name: "",
+      email: "",
+      role: "",
+      birthday: "",
+      phone: "",
+    });
+  };
+
+  const handleSaveContact = () => {
+    const trimmedName = contactForm.name.trim();
+    if (!trimmedName) return;
+
+    const role = contactForm.role || "Friend";
+    const newContact = {
+      id: Date.now(),
+      name: trimmedName,
+      role,
+      note: "New contact",
+      initials: getInitials(trimmedName),
+      colors: getContactGradient(role),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone.trim(),
+      birthday: contactForm.birthday,
+    };
+
+    setContacts((prev) => [newContact, ...prev]);
+    resetContactForm();
+    setIsAddContactOpen(false);
+  };
+
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-<header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
-  <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
-    <Link href="/feed" className="flex items-center gap-3.5">
-      <LogoMark />
-      <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
-        Hinted<span className="text-[#f36f64]">.io</span>
-      </div>
-    </Link>
+      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/feed" className="flex items-center gap-3.5">
+            <LogoMark />
+            <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
+              Hinted<span className="text-[#f36f64]">.io</span>
+            </div>
+          </Link>
 
-    <div className="flex items-center gap-3">
-      <nav className="flex items-center gap-3">
-        <Link
-          href="/circles"
-          className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
-        >
-          Circles
-        </Link>
-        <Link
-          href="/hints"
-          className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
-        >
-          Hints
-        </Link>
-      </nav>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <nav className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shopping"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shopping
+              </Link>
+            </nav>
 
-      <AvatarMenu />
-    </div>
-  </div>
-</header>
+            <AvatarMenu />
+          </div>
+        </div>
+      </header>
 
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
         <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
@@ -721,14 +978,50 @@ export default function FeedClient() {
                   ))}
                 </div>
 
-                <Link
-                  href="/contacts"
+                <button
+                  type="button"
+                  onClick={() => setIsAddContactOpen(true)}
                   className="mt-5 inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-semibold text-white shadow-lg"
                 >
                   Add contacts
-                </Link>
+                </button>
               </section>
             )}
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">People added</h2>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  {contacts.length}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {contacts.map((contact) => (
+                  <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+                      >
+                        {contact.initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
+                        <p className="text-xs text-slate-500">{contact.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsAddContactOpen(true)}
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Add another contact
+              </button>
+            </section>
           </aside>
 
           <section className="min-w-0">
@@ -752,6 +1045,30 @@ export default function FeedClient() {
                       Demo mode is on now. Once contacts are added, this area will switch to real activity.
                     </div>
                   )}
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddContactOpen(true)}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
+                  >
+                    Add contact
+                  </button>
+
+                  <Link
+                    href="/circles"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Create circle
+                  </Link>
+
+                  <Link
+                    href="/shopping"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Open shopping
+                  </Link>
                 </div>
 
                 <div className="mt-5 space-y-4">
@@ -790,6 +1107,25 @@ export default function FeedClient() {
               </div>
             </section>
 
+            <section className="rounded-[28px] border border-[#e6ddd7] bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Shopping next
+              </p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                A place for saved gift options
+              </h2>
+              <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                Shopping can become the home for linked products, saved retailer finds, and the items you might attach to circles later.
+              </p>
+
+              <Link
+                href="/shopping"
+                className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Go to shopping
+              </Link>
+            </section>
+
             <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
                 Gift prompt
@@ -807,6 +1143,17 @@ export default function FeedClient() {
           </aside>
         </div>
       </div>
+
+      <AddContactModal
+        open={isAddContactOpen}
+        onClose={() => {
+          resetContactForm();
+          setIsAddContactOpen(false);
+        }}
+        onSave={handleSaveContact}
+        form={contactForm}
+        setForm={setContactForm}
+      />
     </main>
   );
 }
