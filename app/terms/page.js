@@ -261,4 +261,61 @@ export default function TermsPage() {
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-                
+                13. Indemnity
+              </h2>
+              <p className="text-[17px] leading-8 text-slate-700">
+                You agree to defend, indemnify, and hold harmless Hinted and its
+                affiliates, officers, employees, and agents from and against
+                claims, liabilities, damages, losses, and expenses arising out
+                of or related to your content, your misuse of the Service, or
+                your violation of these Terms.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+                14. Changes to these Terms
+              </h2>
+              <p className="text-[17px] leading-8 text-slate-700">
+                We may update these Terms from time to time. If we make material
+                changes, we will post the updated Terms here and revise the
+                &quot;Last updated&quot; date above. By continuing to use Hinted
+                after those changes become effective, you agree to the updated
+                Terms.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+                15. Governing law
+              </h2>
+              <p className="text-[17px] leading-8 text-slate-700">
+                These Terms are governed by the laws of England and Wales,
+                without regard to conflict of law principles. Any disputes
+                arising out of or relating to these Terms or the Service will be
+                subject to the exclusive jurisdiction of the courts of England
+                and Wales.
+              </p>
+            </section>
+
+            <section className="space-y-3">
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
+                16. Contact
+              </h2>
+              <p className="text-[17px] leading-8 text-slate-700">
+                If you have questions about these Terms, contact us at{" "}
+                <a
+                  href="mailto:iohinted@gmail.com"
+                  className="font-medium text-slate-900 underline decoration-[#d8b3a3] underline-offset-4"
+                >
+                  iohinted@gmail.com
+                </a>
+                .
+              </p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}
