@@ -32,8 +32,8 @@ export default function SettingsPage() {
           <section className="rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
             <h2 className="text-[20px] font-semibold text-slate-900">How you hear from us</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500">
-              Choose the best way for Hinted to help you stay ahead of birthdays,
-              anniversaries, major events, and shared gift moments.
+              Choose the kinds of messages Hinted should send so you can stay ahead
+              without being overwhelmed.
             </p>
 
             <div className="mt-6 space-y-4">
@@ -41,30 +41,58 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium text-slate-900">Email reminders</p>
                   <p className="text-xs text-slate-500">
-                    Best if you want a calmer written record you can revisit later.
+                    Best if you want a calm written record of upcoming birthdays,
+                    events, and gift moments.
                   </p>
                 </div>
-                <input type="checkbox" defaultChecked className="h-5 w-5 accent-[#f36f64]" />
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
               </label>
 
               <label className="flex items-center justify-between gap-4 rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">In-app reminders</p>
+                  <p className="text-sm font-medium text-slate-900">Personalised offers</p>
                   <p className="text-xs text-slate-500">
-                    Best if you check Hinted often and want prompts where you already plan.
+                    Hear about offers and gift ideas tailored to your hints, occasions,
+                    and the people you are buying for.
                   </p>
                 </div>
-                <input type="checkbox" defaultChecked className="h-5 w-5 accent-[#f36f64]" />
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
               </label>
 
               <label className="flex items-center justify-between gap-4 rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
                 <div>
-                  <p className="text-sm font-medium text-slate-900">Priority gift prompts</p>
+                  <p className="text-sm font-medium text-slate-900">Hint sale alerts</p>
                   <p className="text-xs text-slate-500">
-                    Helpful when a saved hint, wishlist item, or group gift needs attention.
+                    We’ll let you know when something linked to one of your saved hints
+                    goes on sale.
                   </p>
                 </div>
-                <input type="checkbox" defaultChecked className="h-5 w-5 accent-[#f36f64]" />
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Product updates</p>
+                  <p className="text-xs text-slate-500">
+                    Hear about improvements, new features, and changes to how Hinted works.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
               </label>
             </div>
           </section>
@@ -101,6 +129,32 @@ export default function SettingsPage() {
                 Reminders for pots you have accepted cannot be turned off. This protects you
                 and the rest of your circle from losing momentum on an amazing gift for a friend.
               </p>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
+            <h2 className="text-[20px] font-semibold text-slate-900">Privacy and visibility</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Hinted is not an open public network. Your profile is only visible to people
+              you add and accept, or who add and are accepted by you.
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
+                <p className="text-sm font-medium text-slate-900">Your profile is contact-based</p>
+                <p className="mt-1 text-xs leading-6 text-slate-500">
+                  People do not browse all Hinted users. Visibility starts only when a contact
+                  connection has been added and accepted.
+                </p>
+              </div>
+
+              <div className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
+                <p className="text-sm font-medium text-slate-900">Hints stay thoughtful</p>
+                <p className="mt-1 text-xs leading-6 text-slate-500">
+                  Shared gift planning is designed around trusted circles, while private gift flows
+                  help protect surprise moments when needed.
+                </p>
+              </div>
             </div>
           </section>
 
