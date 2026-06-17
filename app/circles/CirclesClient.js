@@ -502,19 +502,19 @@ function AvatarMenu() {
           href="/account"
           className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
         >
-          account
+          Accounts
         </Link>
         <Link
           href="/billing"
           className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
         >
-          billing
+          Billing
         </Link>
         <Link
           href="/settings"
           className="block rounded-[16px] px-4 py-3 text-sm text-slate-700 hover:bg-[#faf6f3]"
         >
-          settings
+          Settings
         </Link>
       </div>
     </div>
