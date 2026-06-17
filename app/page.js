@@ -1,5 +1,5 @@
 import Link from "next/link";
-import GoogleAuthButtons from "@/components/GoogleAuthButtons";
+import GoogleAuthButtons from "./components/GoogleAuthButtons";
 
 export const metadata = {
   title: "Hinted.io | Never forget. Always thoughtful.",
