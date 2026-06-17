@@ -230,7 +230,10 @@ function findPriceInJsonLdNode(node) {
   }
 
   if (node.priceSpecification) {
-    const found = pickPriceFromOffer({ priceSpecification: node.priceSpecification, priceCurrency: node.priceCurrency });
+    const found = pickPriceFromOffer({
+      priceSpecification: node.priceSpecification,
+      priceCurrency: node.priceCurrency,
+    });
     if (found) return found;
   }
 
@@ -302,48 +305,4 @@ export async function POST(request) {
     const response = await fetch(parsedTarget.toString(), {
       method: "GET",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; HintedLinkPreviewBot/1.0; +https://hinted.io)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      redirect: "follow",
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return NextResponse.json({ error: "Could not fetch that URL" }, { status: 400 });
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("text/html")) {
-      return NextResponse.json(
-        { error: "That URL did not return an HTML page" },
-        { status: 400 }
-      );
-    }
-
-    const finalUrl = response.url || parsedTarget.toString();
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    const canonical = extractCanonical($, finalUrl);
-    const title = extractTitle($, canonical);
-    const description = extractDescription($);
-    const image = extractImage($, canonical);
-    const siteName = extractSiteName($, canonical);
-    const price = extractPrice($, html);
-
-    return NextResponse.json({
-      url: canonical,
-      title,
-      description,
-      siteName,
-      image,
-      price,
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Unable to build preview" },
-      { status: 500 }
-    );
-  }
-}
+        "User-Agent": 
