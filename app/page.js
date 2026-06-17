@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Hinted.io | Never forget. Always thoughtful.",
+  title: "Hinted.io | Gifting made easy.",
   description:
-    "Hinted helps you remember important moments, save better gift ideas, build circles, and browse thoughtful picks.",
+    "Hinted makes gifting easy without the awkwardness, with thoughtful planning, shared pots, and curated offers.",
 };
 
 const hints = [
@@ -63,32 +63,6 @@ const hints = [
   },
 ];
 
-const calendarDays = [
-  "25","26","27","28","29","30","31",
-  "1","2","3","4","5","6","7",
-  "8","9","10","11","12","13","14",
-  "15","16","17","18","19","20","21",
-  "22","23","24","25","26","27","28",
-];
-
-const reminders = [
-  {
-    title: "Sarah's Birthday",
-    date: "June 29",
-    colors: "from-[#efcdbf] to-[#c88c73]",
-  },
-  {
-    title: "Mom & Dad Anniversary",
-    date: "July 10",
-    colors: "from-[#ead0c0] to-[#bf856d]",
-  },
-  {
-    title: "James Promotion",
-    date: "July 6",
-    colors: "from-[#9cab86] to-[#5f7046]",
-  },
-];
-
 const shopCards = [
   {
     id: 1,
@@ -114,6 +88,79 @@ const shopCards = [
     tag: "Home",
     rotate: "-rotate-[0.5deg]",
   },
+];
+
+const feedItems = [
+  {
+    id: 1,
+    type: "hint",
+    avatar: "M",
+    avatarColors: "from-[#e7cab8] to-[#b97d66]",
+    name: "Mum",
+    action: "added a new hint",
+    detail: "Silk pillowcase set",
+    time: "2m ago",
+    icon: "🎁",
+  },
+  {
+    id: 2,
+    type: "reminder",
+    avatar: "S",
+    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+    name: "Sarah's Birthday",
+    action: "is 2 weeks away",
+    detail: "June 29",
+    time: "Now",
+    icon: "🎂",
+  },
+  {
+    id: 3,
+    type: "circle",
+    avatar: "MF",
+    avatarColors: "from-[#98a47d] to-[#5f7046]",
+    name: "Max & Fiona",
+    action: "Circle Pot is 80% full",
+    detail: "£320 of £400 raised",
+    time: "1h ago",
+    icon: "💍",
+  },
+  {
+    id: 4,
+    type: "shop",
+    avatar: "H",
+    avatarColors: "from-[#dcc4b5] to-[#b78972]",
+    name: "Hinted Shop",
+    action: "added a curated offer",
+    detail: "Best under £50",
+    time: "Today",
+    icon: "✦",
+  },
+];
+
+const reminders = [
+  {
+    title: "Sarah's Birthday",
+    date: "June 29",
+    colors: "from-[#efcdbf] to-[#c88c73]",
+  },
+  {
+    title: "Mom & Dad Anniversary",
+    date: "July 10",
+    colors: "from-[#ead0c0] to-[#bf856d]",
+  },
+  {
+    title: "James Promotion",
+    date: "July 6",
+    colors: "from-[#9cab86] to-[#5f7046]",
+  },
+];
+
+const calendarDays = [
+  "25","26","27","28","29","30","31",
+  "1","2","3","4","5","6","7",
+  "8","9","10","11","12","13","14",
+  "15","16","17","18","19","20","21",
+  "22","23","24","25","26","27","28",
 ];
 
 function AvatarStack() {
@@ -175,6 +222,51 @@ function MiniCard({ title, text, image, tag, rotate, starred = false }) {
   );
 }
 
+function FeedItem({ item }) {
+  const typeBg =
+    item.type === "reminder"
+      ? "bg-[#fff3ee]"
+      : item.type === "circle"
+        ? "bg-[#f0f7ee]"
+        : item.type === "shop"
+          ? "bg-[#f8f4ef]"
+          : "bg-[#fff7f2]";
+
+  const typeText =
+    item.type === "reminder"
+      ? "text-[#d97652]"
+      : item.type === "circle"
+        ? "text-[#4f7440]"
+        : item.type === "shop"
+          ? "text-[#8b6f5d]"
+          : "text-[#8b6a5a]";
+
+  return (
+    <article className="flex gap-3 rounded-[20px] border border-slate-100 bg-white p-4 shadow-sm">
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
+      >
+        {item.avatar}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-[13px] leading-[1.5] text-slate-700">
+            <span className="font-semibold text-slate-900">{item.name}</span>{" "}
+            {item.action}
+          </p>
+          <span className="shrink-0 text-[10px] text-slate-400">{item.time}</span>
+        </div>
+
+        <div className={`mt-2 inline-flex max-w-[220px] items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium ${typeBg} ${typeText}`}>
+          <span>{item.icon}</span>
+          <span className="truncate">{item.detail}</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function CirclesTeaser() {
   const contributors = [
     ["CG", "from-[#efcdbf] to-[#bb8168]"],
@@ -190,7 +282,7 @@ function CirclesTeaser() {
             Circles
           </p>
           <h3 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-            Shared gifting
+            Shared pots
           </h3>
         </div>
         <div className="flex items-center">
@@ -216,10 +308,6 @@ function CirclesTeaser() {
         <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#dde8d4]">
           <div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#9cad84] to-[#5f7046]" />
         </div>
-        <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
-          <span>4 contributors</span>
-          <span>Deadline July 12</span>
-        </div>
       </div>
     </article>
   );
@@ -233,7 +321,7 @@ function ShopTeaser() {
           Shop
         </p>
         <h3 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-          Curated picks
+          Curated offers
         </h3>
       </div>
 
@@ -282,110 +370,106 @@ export default function HomePage() {
           </div>
         </header>
 
-        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(560px,1.08fr)] xl:gap-10">
+        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.9fr)_minmax(580px,1.1fr)] xl:gap-10">
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
-              <span>Thoughtful gifting, kept simple</span>
+              <span>Gifting made easy</span>
             </div>
 
-            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
-              Never forget.
+            <h1 className="mt-7 max-w-[620px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[80px]">
+              Gifting made easy.
               <br />
-              Always <span className="text-[#ff9a7b]">thoughtful.</span>
+              Without the <span className="text-[#ff9a7b]">awkwardness.</span>
             </h1>
 
-            <p className="mt-7 max-w-[520px] text-[16px] leading-8 text-slate-500 sm:text-[18px]">
-              Save hints, remember dates, plan shared gifts, and discover better ideas.
+            <p className="mt-7 max-w-[560px] text-[17px] leading-8 text-slate-500 sm:text-[18px]">
+              Thoughtful planning. Shared pots. Curated offers.
+              <br className="hidden sm:block" />
+              Hinted helps you remember the date, save the idea, and sort the gift.
             </p>
 
-            <div className="mt-8 max-w-[540px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
-              <div className="mb-4">
-                <h2 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                  Sign in to Hinted
-                </h2>
-              </div>
-
-              <form className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-900" htmlFor="email">
-                    Email
-                  </label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="you@example.com"
-                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-900" htmlFor="password">
-                    Password
-                  </label>
-                  <input
-                    id="password"
-                    type="password"
-                    placeholder="Your password"
-                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
-                  />
-                </div>
-                <div className="flex flex-wrap gap-3 pt-2">
-                  <button
-                    type="submit"
-                    className="inline-flex h-[52px] min-w-[145px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
-                  >
-                    Sign in
-                  </button>
-                  <Link
-                    href="/onboarding"
-                    className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700"
-                  >
-                    Create account
-                  </Link>
-                </div>
-              </form>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link
+                href="/onboarding"
+                className="inline-flex h-[54px] min-w-[160px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+              >
+                Get started
+              </Link>
+              <Link
+                href="/feed"
+                className="inline-flex h-[54px] min-w-[140px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700"
+              >
+                See the product
+              </Link>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
+            <div className="mt-7 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
               <AvatarStack />
-              <p className="max-w-[280px]">Stay on top of birthdays, milestones, and group gifts.</p>
+              <p className="max-w-[320px]">
+                Stay on top of birthdays, milestones, shared gifts, and better ideas.
+              </p>
             </div>
           </div>
 
           <div className="relative min-w-0">
             <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
-              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
-                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
-                      M
+              <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                  <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
+                        M
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold tracking-tight text-slate-900">Maya</div>
+                        <div className="text-xs text-slate-500">Hints</div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm font-semibold tracking-tight text-slate-900">Maya</div>
-                      <div className="text-xs text-slate-500">Hints</div>
+                    <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
+                      <span>Feed</span>
                     </div>
                   </div>
-                  <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
-                    <span>Feed</span>
+
+                  <div className="pt-4">
+                    <h2 className="text-[28px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[34px]">
+                      Your hints.
+                    </h2>
+
+                    <div className="mt-5 grid grid-cols-3 gap-3">
+                      {hints.map((hint) => (
+                        <MiniCard
+                          key={hint.id}
+                          title={hint.title}
+                          text={hint.text}
+                          image={hint.image}
+                          tag={hint.tag}
+                          rotate={hint.rotate}
+                          starred={hint.starred}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                <div className="pt-4">
-                  <h2 className="text-[28px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[34px]">
-                    Your hints.
-                  </h2>
+                <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-4 sm:p-5">
+                  <div className="mb-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                        Live
+                      </p>
+                      <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                        Feed
+                      </h3>
+                    </div>
+                    <span className="flex h-2 w-2 rounded-full bg-[#f36f64]">
+                      <span className="h-2 w-2 animate-ping rounded-full bg-[#f36f64] opacity-75" />
+                    </span>
+                  </div>
 
-                  <div className="mt-5 grid grid-cols-3 gap-3">
-                    {hints.map((hint) => (
-                      <MiniCard
-                        key={hint.id}
-                        title={hint.title}
-                        text={hint.text}
-                        image={hint.image}
-                        tag={hint.tag}
-                        rotate={hint.rotate}
-                        starred={hint.starred}
-                      />
+                  <div className="space-y-3">
+                    {feedItems.map((item) => (
+                      <FeedItem key={item.id} item={item} />
                     ))}
                   </div>
                 </div>
@@ -398,29 +482,29 @@ export default function HomePage() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
-                Calendar
+                Planner
               </div>
               <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[38px]">
-                Keep ahead of the date.
+                Plan ahead.
               </h2>
             </div>
           </div>
 
-          <div className="mt-8 grid gap-6 xl:grid-cols-[2fr_300px]">
+          <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_300px]">
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
-                    July calendar
+                  <h3 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                    July
                   </h3>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">←</button>
-                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">→</button>
+                  <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500">←</button>
+                  <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500">→</button>
                 </div>
               </div>
 
-              <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+              <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
                 <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
               </div>
 
@@ -428,11 +512,11 @@ export default function HomePage() {
                 {calendarDays.map((day, index) => (
                   <div
                     key={`${day}-${index}`}
-                    className={`min-h-[72px] rounded-[16px] border p-2 ${
+                    className={`min-h-[58px] rounded-[14px] border p-2 ${
                       day === "13" ? "border-[#f5b49a] bg-[#fff1ea]" : "border-slate-100 bg-[#fffdfa]"
                     }`}
                   >
-                    <div className={`text-sm font-semibold ${index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"}`}>
+                    <div className={`text-xs font-semibold ${index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"}`}>
                       {day}
                     </div>
                     {["29", "6", "10", "16", "24"].includes(day) ? (
@@ -472,13 +556,7 @@ export default function HomePage() {
         </section>
 
         <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-white p-5 shadow-[0_18px_60px_rgba(173,101,72,0.08)] md:p-8">
-          <div className="mb-4">
-            <div className="inline-flex rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-medium text-[#d77958]">
-              Demo
-            </div>
-          </div>
-
-          <div className="min-h-[320px] rounded-[28px] border border-dashed border-[#e5d3c7] bg-[#fff8f4]" />
+          <div className="min-h-[280px] rounded-[28px] border border-dashed border-[#e5d3c7] bg-[#fff8f4]" />
         </section>
       </div>
     </main>
