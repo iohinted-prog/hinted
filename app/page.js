@@ -197,4 +197,290 @@ function CirclesTeaser() {
           {contributors.map(([label, colors], index) => (
             <div
               key={label}
-              
+              className={`-ml-2 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
+              style={{ zIndex: contributors.length - index }}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-[24px] bg-[#f6faf3] p-4">
+        <p className="text-[12px] uppercase tracking-[0.14em] text-[#87936f]">
+          Max & Fiona
+        </p>
+        <p className="mt-1 text-[24px] font-semibold tracking-[-0.03em] text-slate-900">
+          £320 / £400
+        </p>
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#dde8d4]">
+          <div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#9cad84] to-[#5f7046]" />
+        </div>
+        <div className="mt-4 flex items-center justify-between text-sm text-slate-500">
+          <span>4 contributors</span>
+          <span>Deadline July 12</span>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ShopTeaser() {
+  return (
+    <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b28672]">
+          Shop
+        </p>
+        <h3 className="mt-2 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+          Curated picks
+        </h3>
+      </div>
+
+      <div className="mt-5 grid grid-cols-3 gap-3">
+        {shopCards.map((card) => (
+          <MiniCard
+            key={card.id}
+            title={card.title}
+            text={card.text}
+            image={card.image}
+            tag={card.tag}
+            rotate={card.rotate}
+          />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
+      <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
+        <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
+          <div className="flex items-center gap-3.5">
+            <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
+              🎁
+            </div>
+            <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
+              Hinted<span className="text-[#f36f64]">.io</span>
+            </div>
+          </div>
+
+          <div />
+
+          <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
+            <Link href="/feed" className="shrink-0 text-[15px] font-semibold text-slate-800">
+              Log in
+            </Link>
+            <Link
+              href="/onboarding"
+              className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg"
+            >
+              Get started
+            </Link>
+          </div>
+        </header>
+
+        <section className="grid items-start gap-10 xl:grid-cols-[minmax(420px,0.92fr)_minmax(560px,1.08fr)] xl:gap-10">
+          <div className="py-2 lg:pl-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
+              <span>♡</span>
+              <span>Thoughtful gifting, kept simple</span>
+            </div>
+
+            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
+              Never forget.
+              <br />
+              Always <span className="text-[#ff9a7b]">thoughtful.</span>
+            </h1>
+
+            <p className="mt-7 max-w-[520px] text-[16px] leading-8 text-slate-500 sm:text-[18px]">
+              Save hints, remember dates, plan shared gifts, and discover better ideas.
+            </p>
+
+            <div className="mt-8 max-w-[540px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
+              <div className="mb-4">
+                <h2 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                  Sign in to Hinted
+                </h2>
+              </div>
+
+              <form className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900" htmlFor="email">
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900" htmlFor="password">
+                    Password
+                  </label>
+                  <input
+                    id="password"
+                    type="password"
+                    placeholder="Your password"
+                    className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-3 pt-2">
+                  <button
+                    type="submit"
+                    className="inline-flex h-[52px] min-w-[145px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
+                  >
+                    Sign in
+                  </button>
+                  <Link
+                    href="/onboarding"
+                    className="inline-flex h-[52px] min-w-[160px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700"
+                  >
+                    Create account
+                  </Link>
+                </div>
+              </form>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
+              <AvatarStack />
+              <p className="max-w-[280px]">Stay on top of birthdays, milestones, and group gifts.</p>
+            </div>
+          </div>
+
+          <div className="relative min-w-0">
+            <div className="rounded-[34px] border border-[#efd8ce] bg-[#fff7f2] p-4 shadow-[0_25px_80px_rgba(173,101,72,0.16)] sm:p-5">
+              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[16px] font-bold text-white shadow-sm ring-2 ring-[#f3dfd4]">
+                      M
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold tracking-tight text-slate-900">Maya</div>
+                      <div className="text-xs text-slate-500">Hints</div>
+                    </div>
+                  </div>
+                  <div className="hidden items-center gap-4 text-sm text-slate-500 md:flex">
+                    <span>Feed</span>
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <h2 className="text-[28px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[34px]">
+                    Your hints.
+                  </h2>
+
+                  <div className="mt-5 grid grid-cols-3 gap-3">
+                    {hints.map((hint) => (
+                      <MiniCard
+                        key={hint.id}
+                        title={hint.title}
+                        text={hint.text}
+                        image={hint.image}
+                        tag={hint.tag}
+                        rotate={hint.rotate}
+                        starred={hint.starred}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-[#fff7f2] px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.1)] md:px-8 md:py-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                Calendar
+              </div>
+              <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[38px]">
+                Keep ahead of the date.
+              </h2>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-6 xl:grid-cols-[2fr_300px]">
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h3 className="text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
+                    July calendar
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">←</button>
+                  <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500">→</button>
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, index) => (
+                  <div
+                    key={`${day}-${index}`}
+                    className={`min-h-[72px] rounded-[16px] border p-2 ${
+                      day === "13" ? "border-[#f5b49a] bg-[#fff1ea]" : "border-slate-100 bg-[#fffdfa]"
+                    }`}
+                  >
+                    <div className={`text-sm font-semibold ${index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"}`}>
+                      {day}
+                    </div>
+                    {["29", "6", "10", "16", "24"].includes(day) ? (
+                      <div className="mt-1.5 h-2 w-2 rounded-full bg-[#b78671]" />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-slate-900">Upcoming</h3>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">3 soon</span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {reminders.map((item) => (
+                  <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <CirclesTeaser />
+            <ShopTeaser />
+          </div>
+        </section>
+
+        <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-white p-5 shadow-[0_18px_60px_rgba(173,101,72,0.08)] md:p-8">
+          <div className="mb-4">
+            <div className="inline-flex rounded-full bg-[#fff4ec] px-3 py-1 text-xs font-medium text-[#d77958]">
+              Demo
+            </div>
+          </div>
+
+          <div className="min-h-[320px] rounded-[28px] border border-dashed border-[#e5d3c7] bg-[#fff8f4]" />
+        </section>
+      </div>
+    </main>
+  );
+}
