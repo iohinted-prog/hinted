@@ -47,6 +47,16 @@ function ensureHttpUrl(rawUrl = "") {
   return `https://${trimmed}`;
 }
 
+function stripAmazonParams(url) {
+  try {
+    const parsed = new URL(url);
+    const keep = new URL(parsed.origin + parsed.pathname);
+    return keep.toString();
+  } catch {
+    return url;
+  }
+}
+
 function getMeta($, selectors = []) {
   for (const selector of selectors) {
     const value = $(selector).attr("content");
@@ -58,58 +68,119 @@ function getMeta($, selectors = []) {
   return "";
 }
 
-function getLinkHref($, selectors = []) {
+function getAttr($, selectors = [], attr = "content") {
   for (const selector of selectors) {
-    const value = $(selector).attr("href");
+    const value = $(selector).attr(attr);
     if (value) {
-      const cleaned = cleanText(value);
+      const cleaned = String(value).trim();
       if (cleaned) return cleaned;
     }
   }
   return "";
 }
 
+function getText($, selectors = []) {
+  for (const selector of selectors) {
+    const value = $(selector).first().text();
+    const cleaned = cleanText(value);
+    if (cleaned) return cleaned;
+  }
+  return "";
+}
+
 function extractCanonical($, fallbackUrl) {
   const canonical =
-    getLinkHref($, ['link[rel="canonical"]']) ||
+    getAttr($, ['link[rel="canonical"]'], "href") ||
     getMeta($, ['meta[property="og:url"]', 'meta[name="og:url"]']);
 
   return makeAbsoluteUrl(canonical, fallbackUrl) || fallbackUrl;
 }
 
-function extractTitle($, fallbackUrl) {
-  return (
+function cleanAmazonTitle(title = "") {
+  return title
+    .replace(/\s*:\s*Amazon\.[A-Za-z.]+.*$/i, "")
+    .replace(/\s*\|\s*Amazon\.[A-Za-z.]+.*$/i, "")
+    .replace(/\s+-\s+Amazon\.[A-Za-z.]+.*$/i, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function extractTitle($, canonicalUrl) {
+  const hostname = getHostnameLabel(canonicalUrl);
+
+  let title =
+    getText($, ["#productTitle"]) ||
     getMeta($, [
       'meta[property="og:title"]',
       'meta[name="og:title"]',
       'meta[name="twitter:title"]',
       'meta[name="title"]',
     ]) ||
-    cleanText($("title").first().text()) ||
-    getHostnameLabel(fallbackUrl)
-  );
+    getText($, ["title"]) ||
+    hostname;
+
+  if (hostname.includes("amazon.")) {
+    title = cleanAmazonTitle(title);
+  }
+
+  return title || hostname;
 }
 
-function extractDescription($) {
-  return getMeta($, [
-    'meta[property="og:description"]',
-    'meta[name="og:description"]',
-    'meta[name="twitter:description"]',
-    'meta[name="description"]',
-  ]);
+function extractDescription($, canonicalUrl) {
+  const hostname = getHostnameLabel(canonicalUrl);
+
+  let description =
+    getMeta($, [
+      'meta[property="og:description"]',
+      'meta[name="og:description"]',
+      'meta[name="twitter:description"]',
+      'meta[name="description"]',
+    ]) ||
+    getText($, ["#feature-bullets", "#bookDescription_feature_div", "#productDescription"]) ||
+    "";
+
+  if (hostname.includes("amazon.") && /^amazon$/i.test(description)) {
+    description = "";
+  }
+
+  return description;
 }
 
-function extractImage($, baseUrl) {
-  const image =
+function improveAmazonImage(url = "") {
+  if (!url) return "";
+  return url
+    .replace(/\._AC_[A-Z0-9,]+_\./i, "._AC_SL1500_.")
+    .replace(/\._SL\d+_\./i, "._SL1500_.")
+    .replace(/\._SX\d+_\./i, "._SL1500_.")
+    .replace(/\._SY\d+_\./i, "._SL1500_.");
+}
+
+function extractImage($, baseUrl, canonicalUrl) {
+  const hostname = getHostnameLabel(canonicalUrl);
+
+  let image =
+    getAttr($, ["#landingImage"], "src") ||
+    getAttr($, ["#imgBlkFront"], "src") ||
+    getAttr($, ["#ebooksImgBlkFront"], "src") ||
     getMeta($, [
       'meta[property="og:image"]',
       'meta[property="og:image:url"]',
       'meta[name="og:image"]',
       'meta[name="twitter:image"]',
       'meta[name="twitter:image:src"]',
-    ]) || "";
+    ]) ||
+    "";
 
-  return makeAbsoluteUrl(image, baseUrl);
+  image = makeAbsoluteUrl(image, baseUrl);
+
+  if (hostname.includes("amazon.")) {
+    image = improveAmazonImage(image);
+    if (image && /logo|nav|icon/i.test(image)) {
+      image = "";
+    }
+  }
+
+  return image;
 }
 
 function extractSiteName($, canonicalUrl) {
@@ -157,10 +228,7 @@ function extractPriceFromMeta($) {
       'meta[name="og:price:currency"]',
     ]) || "GBP";
 
-  if (directPrice) {
-    return formatPrice(directPrice, currency);
-  }
-
+  if (directPrice) return formatPrice(directPrice, currency);
   return "";
 }
 
@@ -175,33 +243,21 @@ function safeJsonParse(value) {
 function pickPriceFromOffer(offer) {
   if (!offer || typeof offer !== "object") return "";
 
-  const directPrice = offer.price;
-  const directCurrency = offer.priceCurrency;
-
-  if (directPrice) {
-    return formatPrice(directPrice, directCurrency);
-  }
+  if (offer.price) return formatPrice(offer.price, offer.priceCurrency);
 
   if (offer.priceSpecification && typeof offer.priceSpecification === "object") {
     const spec = offer.priceSpecification;
-    if (spec.price) {
-      return formatPrice(spec.price, spec.priceCurrency || directCurrency);
-    }
-    if (spec.minPrice) {
-      return formatPrice(spec.minPrice, spec.priceCurrency || directCurrency);
-    }
+    if (spec.price) return formatPrice(spec.price, spec.priceCurrency || offer.priceCurrency);
+    if (spec.minPrice) return formatPrice(spec.minPrice, spec.priceCurrency || offer.priceCurrency);
   }
 
-  if (offer.lowPrice) {
-    return formatPrice(offer.lowPrice, offer.priceCurrency || directCurrency);
-  }
+  if (offer.lowPrice) return formatPrice(offer.lowPrice, offer.priceCurrency);
 
   return "";
 }
 
 function findPriceInJsonLdNode(node) {
   if (!node) return "";
-
   if (Array.isArray(node)) {
     for (const item of node) {
       const found = findPriceInJsonLdNode(item);
@@ -225,17 +281,7 @@ function findPriceInJsonLdNode(node) {
     if (found) return found;
   }
 
-  if (node.price) {
-    return formatPrice(node.price, node.priceCurrency);
-  }
-
-  if (node.priceSpecification) {
-    const found = pickPriceFromOffer({
-      priceSpecification: node.priceSpecification,
-      priceCurrency: node.priceCurrency,
-    });
-    if (found) return found;
-  }
+  if (node.price) return formatPrice(node.price, node.priceCurrency);
 
   for (const value of Object.values(node)) {
     if (typeof value === "object") {
@@ -253,10 +299,8 @@ function extractPriceFromJsonLd($) {
   for (let i = 0; i < scripts.length; i += 1) {
     const raw = $(scripts[i]).contents().text();
     if (!raw) continue;
-
     const parsed = safeJsonParse(raw);
     if (!parsed) continue;
-
     const found = findPriceInJsonLdNode(parsed);
     if (found) return found;
   }
@@ -264,7 +308,17 @@ function extractPriceFromJsonLd($) {
   return "";
 }
 
-function extractPriceFromHtml(html) {
+function extractPriceFromHtml($, html, canonicalUrl) {
+  const amazonPrice =
+    getText($, [
+      ".a-price .a-offscreen",
+      "#corePrice_feature_div .a-offscreen",
+      "#price_inside_buybox",
+      "#kindle-price",
+    ]) || "";
+
+  if (amazonPrice) return amazonPrice;
+
   const patterns = [
     /£\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
     /\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
@@ -273,16 +327,14 @@ function extractPriceFromHtml(html) {
 
   for (const pattern of patterns) {
     const match = html.match(pattern);
-    if (match?.[0]) {
-      return match[0].replace(/\s+/g, "");
-    }
+    if (match?.[0]) return match[0].replace(/\s+/g, "");
   }
 
   return "";
 }
 
-function extractPrice($, html) {
-  return extractPriceFromMeta($) || extractPriceFromJsonLd($) || extractPriceFromHtml(html) || "";
+function extractPrice($, html, canonicalUrl) {
+  return extractPriceFromMeta($) || extractPriceFromJsonLd($) || extractPriceFromHtml($, html, canonicalUrl) || "";
 }
 
 export async function POST(request) {
@@ -307,6 +359,7 @@ export async function POST(request) {
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HintedLinkPreviewBot/1.0; +https://hinted.io)",
         Accept: "text/html,application/xhtml+xml",
+        "Accept-Language": "en-GB,en;q=0.9",
       },
       redirect: "follow",
       cache: "no-store",
@@ -318,22 +371,23 @@ export async function POST(request) {
 
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.includes("text/html")) {
-      return NextResponse.json(
-        { error: "That URL did not return an HTML page" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "That URL did not return an HTML page" }, { status: 400 });
     }
 
     const finalUrl = response.url || parsedTarget.toString();
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const canonical = extractCanonical($, finalUrl);
+    let canonical = extractCanonical($, finalUrl);
+    if (getHostnameLabel(canonical).includes("amazon.")) {
+      canonical = stripAmazonParams(canonical);
+    }
+
     const title = extractTitle($, canonical);
-    const description = extractDescription($);
-    const image = extractImage($, canonical);
+    const description = extractDescription($, canonical);
+    const image = extractImage($, canonical, canonical);
     const siteName = extractSiteName($, canonical);
-    const price = extractPrice($, html);
+    const price = extractPrice($, html, canonical);
 
     return NextResponse.json({
       url: canonical,
@@ -344,9 +398,6 @@ export async function POST(request) {
       price,
     });
   } catch {
-    return NextResponse.json(
-      { error: "Unable to build preview" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Unable to build preview" }, { status: 500 });
   }
 }
