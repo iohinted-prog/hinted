@@ -21,3 +21,4 @@
     "tailwindcss": "^4"
   }
 }
+npm install cheerio
