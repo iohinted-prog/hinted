@@ -171,8 +171,7 @@ function AvatarMenu() {
 
 function normaliseRetailer(url) {
   try {
-    const hostname = new URL(url).hostname.replace(/^www\./, "");
-    return hostname;
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
     return "Saved link";
   }
@@ -181,9 +180,14 @@ function normaliseRetailer(url) {
 function extractNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value || typeof value !== "string") return null;
+
   const cleaned = value.replace(/,/g, "");
-  const match = cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) || cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+  const match =
+    cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
+    cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+
   if (!match) return null;
+
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -197,7 +201,8 @@ function getPriceBand(price) {
 }
 
 function getSizeFromPrice(price, allPrices) {
-  if (price == null || allPrices.length < 3) return "square";
+  if (price == null || allPrices.length < 3) return "portrait";
+
   const sorted = [...allPrices].sort((a, b) => a - b);
   const lowCut = sorted[Math.floor(sorted.length * 0.35)];
   const highCut = sorted[Math.floor(sorted.length * 0.75)];
@@ -226,9 +231,9 @@ function buildFallbackGradient(index) {
 }
 
 function getTileClass(size) {
-  if (size === "tall") return "md:col-span-3 md:row-span-8";
-  if (size === "portrait") return "md:col-span-3 md:row-span-6";
-  return "md:col-span-3 md:row-span-4";
+  if (size === "tall") return "md:col-span-3 md:row-span-9";
+  if (size === "portrait") return "md:col-span-3 md:row-span-7";
+  return "md:col-span-3 md:row-span-5";
 }
 
 function getPricePill(priceBand) {
@@ -239,68 +244,76 @@ function getPricePill(priceBand) {
 }
 
 function HintTile({ hint }) {
+  const [imageFailed, setImageFailed] = useState(false);
+  const showImage = Boolean(hint.image) && !imageFailed;
+
   return (
     <article
-      className={`group relative flex h-full min-h-[220px] cursor-move flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
+      className={`group relative flex h-full min-h-[280px] cursor-move flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
         hint.private
           ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
           : "border-[#f0dfd6] bg-white shadow-sm"
       }`}
       draggable
     >
-      <div className="relative flex-1 overflow-hidden">
-        {hint.image ? (
-          <>
-            <img
-              src={hint.image}
-              alt={hint.title}
-              className={`absolute inset-0 h-full w-full object-cover ${hint.private ? "opacity-80" : ""}`}
-              loading="lazy"
+      <div className="relative flex h-full flex-col">
+        <div className="relative min-h-[58%] flex-1 overflow-hidden">
+          {showImage ? (
+            <>
+              <img
+                src={hint.image}
+                alt={hint.title}
+                className={`absolute inset-0 h-full w-full object-cover ${hint.private ? "opacity-80" : ""}`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.35)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
+            </>
+          ) : (
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${hint.private ? "opacity-80" : ""}`}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.38)] via-[rgba(31,24,20,0.06)] to-[rgba(255,255,255,0.06)]" />
-          </>
-        ) : (
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${hint.private ? "opacity-80" : ""}`}
-          />
-        )}
+          )}
 
-        <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-full bg-white/72 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
-              ⋮⋮ Drag
+          <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
+                ⋮⋮ Drag
+              </div>
+
+              {hint.starred && (
+                <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+                  Top pick
+                </div>
+              )}
+
+              {hint.private && (
+                <div className="rounded-full bg-white/74 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                  Private
+                </div>
+              )}
             </div>
 
-            {hint.starred && (
-              <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-                Top pick
-              </div>
-            )}
-
-            {hint.private && (
-              <div className="rounded-full bg-white/70 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
-                Private
-              </div>
-            )}
+            <button
+              className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[16px] backdrop-blur-sm ${
+                hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
+              }`}
+              aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
+              type="button"
+            >
+              ★
+            </button>
           </div>
-
-          <button
-            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/68 text-[16px] backdrop-blur-sm ${
-              hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
-            }`}
-            aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
-            type="button"
-          >
-            ★
-          </button>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
-          <div className={`rounded-[24px] p-4 backdrop-blur-md ${hint.private ? "bg-white/62" : "bg-white/82"}`}>
+        <div className="relative -mt-6 px-4 pb-4 sm:px-5 sm:pb-5">
+          <div className={`rounded-[24px] p-4 shadow-sm backdrop-blur-md ${hint.private ? "bg-white/82" : "bg-white/90"}`}>
             <div className="flex flex-wrap items-center gap-2">
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(hint.priceBand)}`}>
                 {hint.priceLabel}
               </span>
+
               {hint.tags.map((tag) => (
                 <span
                   key={tag}
@@ -334,19 +347,23 @@ function HintTile({ hint }) {
   );
 }
 
-export default function HintsClient() {
+export default function HintsPage() {
   const [hints, setHints] = useState(initialHints);
   const [link, setLink] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
 
   const numericPrices = useMemo(
-    () => hints.map((hint) => hint.numericPrice).filter((value) => typeof value === "number"),
+    () =>
+      hints
+        .map((hint) => hint.numericPrice)
+        .filter((value) => typeof value === "number"),
     [hints]
   );
 
   async function handleAddHint() {
     const trimmed = link.trim();
+
     if (!trimmed) {
       setError("Paste a link first.");
       return;
@@ -371,7 +388,15 @@ export default function HintsClient() {
       }
 
       const numericPrice = extractNumericPrice(data.price);
-      const size = getSizeFromPrice(numericPrice, [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])]);
+      const size = getSizeFromPrice(
+        numericPrice,
+        [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])]
+      );
+
+      const image = data.image || "";
+      const hasUsableImage =
+        typeof image === "string" &&
+        image.startsWith("http");
 
       const newHint = {
         id: Date.now(),
@@ -380,13 +405,13 @@ export default function HintsClient() {
         priceLabel: formatPriceLabel(numericPrice, data.price),
         numericPrice,
         priceBand: getPriceBand(numericPrice),
-        image: data.image || "",
+        image: hasUsableImage ? image : "",
         fallbackGradient: buildFallbackGradient(hints.length),
         tags: data.price ? ["Added from link"] : ["Saved link"],
         starred: false,
         private: false,
-        size,
-        url: trimmed,
+        size: hasUsableImage && size === "square" ? "portrait" : size,
+        url: data.url || trimmed,
       };
 
       setHints((current) => [newHint, ...current]);
@@ -498,7 +523,7 @@ export default function HintsClient() {
               }}
             />
 
-            <div className="relative grid auto-rows-[42px] grid-cols-1 gap-6 md:grid-cols-12">
+            <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
               {hints.map((hint) => (
                 <HintTile key={hint.id} hint={hint} />
               ))}
