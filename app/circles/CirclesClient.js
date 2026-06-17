@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 const currencyOptions = [
   { code: "GBP", symbol: "£", label: "British Pound" },
   { code: "USD", symbol: "$", label: "US Dollar" },
   { code: "EUR", symbol: "€", label: "Euro" },
+  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
+  { code: "NZD", symbol: "NZ$", label: "New Zealand Dollar" },
+  { code: "ZAR", symbol: "R", label: "South African Rand" },
+  { code: "CAD", symbol: "C$", label: "Canadian Dollar" },
 ];
 
 const initialContacts = [
@@ -86,32 +90,192 @@ const calendarEvents = [
 
 const publicHintsByContact = {
   1: [
-    { id: "maya-1", title: "Silk pillowcase set", subtitle: "£45 · Public hint", amount: 45, currency: "GBP" },
-    { id: "maya-2", title: "Aesop hand wash duo", subtitle: "£62 · Public hint", amount: 62, currency: "GBP" },
-    { id: "maya-3", title: "Sunday lunch voucher", subtitle: "£80 · Public hint", amount: 80, currency: "GBP" },
+    {
+      id: "maya-1",
+      title: "Silk pillowcase set",
+      subtitle: "£45 · Public hint",
+      amount: 45,
+      currency: "GBP",
+      description: "A soft silk set that feels elevated, useful, and easy for a group to contribute toward.",
+      image:
+        "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/silk-pillowcase-set",
+    },
+    {
+      id: "maya-2",
+      title: "Aesop hand wash duo",
+      subtitle: "£62 · Public hint",
+      amount: 62,
+      currency: "GBP",
+      description: "A practical but premium home gift with a recognisable brand and easy shared target.",
+      image:
+        "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/aesop-hand-wash-duo",
+    },
+    {
+      id: "maya-3",
+      title: "Sunday lunch voucher",
+      subtitle: "£80 · Public hint",
+      amount: 80,
+      currency: "GBP",
+      description: "A simple experience-led option that feels generous without being overcomplicated.",
+      image:
+        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/sunday-lunch-voucher",
+    },
   ],
   2: [
-    { id: "james-1", title: "Noise-cancelling headphones", subtitle: "£240 · Public hint", amount: 240, currency: "GBP" },
-    { id: "james-2", title: "Leather weekender bag", subtitle: "£175 · Public hint", amount: 175, currency: "GBP" },
+    {
+      id: "james-1",
+      title: "Noise-cancelling headphones",
+      subtitle: "£240 · Public hint",
+      amount: 240,
+      currency: "GBP",
+      description: "A higher-ticket item that makes sense as a shared contribution goal.",
+      image:
+        "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/noise-cancelling-headphones",
+    },
+    {
+      id: "james-2",
+      title: "Leather weekender bag",
+      subtitle: "£175 · Public hint",
+      amount: 175,
+      currency: "GBP",
+      description: "A polished milestone gift with a strong shared target and clear use case.",
+      image:
+        "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/leather-weekender-bag",
+    },
   ],
   3: [
-    { id: "fiona-1", title: "Ceramics workshop", subtitle: "£95 · Public hint", amount: 95, currency: "GBP" },
-    { id: "fiona-2", title: "Spa afternoon for two", subtitle: "£140 · Public hint", amount: 140, currency: "GBP" },
-    { id: "fiona-3", title: "Illustrated recipe book", subtitle: "£28 · Public hint", amount: 28, currency: "GBP" },
+    {
+      id: "fiona-1",
+      title: "Ceramics workshop",
+      subtitle: "£95 · Public hint",
+      amount: 95,
+      currency: "GBP",
+      description: "A creative experience that feels thoughtful and slightly different from a physical item.",
+      image:
+        "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/ceramics-workshop",
+    },
+    {
+      id: "fiona-2",
+      title: "Spa afternoon for two",
+      subtitle: "£140 · Public hint",
+      amount: 140,
+      currency: "GBP",
+      description: "A calm, indulgent experience that works well for a mid-sized contribution circle.",
+      image:
+        "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/spa-afternoon-for-two",
+    },
+    {
+      id: "fiona-3",
+      title: "Illustrated recipe book",
+      subtitle: "£28 · Public hint",
+      amount: 28,
+      currency: "GBP",
+      description: "A smaller, charming gift that still gives the group a clear target to rally around.",
+      image:
+        "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/illustrated-recipe-book",
+    },
   ],
   4: [
-    { id: "mum-1", title: "Le Creuset casserole dish", subtitle: "£180 · Public hint", amount: 180, currency: "GBP" },
-    { id: "mum-2", title: "Garden centre gift card", subtitle: "£50 · Public hint", amount: 50, currency: "GBP" },
+    {
+      id: "mum-1",
+      title: "Le Creuset casserole dish",
+      subtitle: "£180 · Public hint",
+      amount: 180,
+      currency: "GBP",
+      description: "A lasting kitchen gift that feels substantial enough for family gifting.",
+      image:
+        "https://images.unsplash.com/photo-1584990347449-ae7ad4ee2d62?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/le-creuset-casserole-dish",
+    },
+    {
+      id: "mum-2",
+      title: "Garden centre gift card",
+      subtitle: "£50 · Public hint",
+      amount: 50,
+      currency: "GBP",
+      description: "A flexible option that still feels personal if gardening is already a known interest.",
+      image:
+        "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/garden-centre-gift-card",
+    },
   ],
   5: [
-    { id: "sarah-1", title: "Weekend cabin stay", subtitle: "£220 · Public hint", amount: 220, currency: "GBP" },
-    { id: "sarah-2", title: "Linen bedding set", subtitle: "£130 · Public hint", amount: 130, currency: "GBP" },
-    { id: "sarah-3", title: "Ceramic dinnerware", subtitle: "£85 · Public hint", amount: 85, currency: "GBP" },
-    { id: "sarah-4", title: "Cooking class for two", subtitle: "£120 · Public hint", amount: 120, currency: "GBP" },
+    {
+      id: "sarah-1",
+      title: "Weekend cabin stay",
+      subtitle: "£220 · Public hint",
+      amount: 220,
+      currency: "GBP",
+      description: "A memorable shared experience with a clear target that works naturally as a circle goal.",
+      image:
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/weekend-cabin-stay",
+    },
+    {
+      id: "sarah-2",
+      title: "Linen bedding set",
+      subtitle: "£130 · Public hint",
+      amount: 130,
+      currency: "GBP",
+      description: "A home-focused gift that feels elevated and easy to explain to contributors.",
+      image:
+        "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/linen-bedding-set",
+    },
+    {
+      id: "sarah-3",
+      title: "Ceramic dinnerware",
+      subtitle: "£85 · Public hint",
+      amount: 85,
+      currency: "GBP",
+      description: "A tasteful item with a moderate target and clear visual identity.",
+      image:
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/ceramic-dinnerware",
+    },
+    {
+      id: "sarah-4",
+      title: "Cooking class for two",
+      subtitle: "£120 · Public hint",
+      amount: 120,
+      currency: "GBP",
+      description: "An experience gift that feels social, memorable, and easy to group-fund.",
+      image:
+        "https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/cooking-class-for-two",
+    },
   ],
   6: [
-    { id: "tom-1", title: "Train travel voucher", subtitle: "£60 · Public hint", amount: 60, currency: "GBP" },
-    { id: "tom-2", title: "Coffee subscription", subtitle: "£38 · Public hint", amount: 38, currency: "GBP" },
+    {
+      id: "tom-1",
+      title: "Train travel voucher",
+      subtitle: "£60 · Public hint",
+      amount: 60,
+      currency: "GBP",
+      description: "A useful and practical option for someone who values flexible travel over physical gifts.",
+      image:
+        "https://images.unsplash.com/photo-1474487548417-781cb71495f3?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/train-travel-voucher",
+    },
+    {
+      id: "tom-2",
+      title: "Coffee subscription",
+      subtitle: "£38 · Public hint",
+      amount: 38,
+      currency: "GBP",
+      description: "A lighter recurring gift that still gives the group a neat goal to aim for.",
+      image:
+        "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=800&q=80",
+      url: "https://example.com/coffee-subscription",
+    },
   ],
 };
 
@@ -160,6 +324,11 @@ const initialCircles = [
       active: true,
       item: "Weekend cabin stay",
       source: "From Sarah’s public hints",
+      sourceUrl: "https://example.com/weekend-cabin-stay",
+      previewImage:
+        "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80",
+      previewDescription:
+        "A memorable shared experience with a clear target that works naturally as a circle goal.",
       target: 220,
       currency: "GBP",
       raised: 95,
@@ -205,6 +374,11 @@ const initialCircles = [
       active: true,
       item: "Le Creuset casserole dish",
       source: "From Mum’s public hints",
+      sourceUrl: "https://example.com/le-creuset-casserole-dish",
+      previewImage:
+        "https://images.unsplash.com/photo-1584990347449-ae7ad4ee2d62?auto=format&fit=crop&w=800&q=80",
+      previewDescription:
+        "A lasting kitchen gift that feels substantial enough for family gifting.",
       target: 180,
       currency: "GBP",
       raised: 50,
@@ -242,6 +416,9 @@ const initialCircles = [
       active: false,
       item: "",
       source: "",
+      sourceUrl: "",
+      previewImage: "",
+      previewDescription: "",
       target: 0,
       currency: "GBP",
       raised: 0,
@@ -495,6 +672,57 @@ function ContributionRing({ raised, target, ringId }) {
   );
 }
 
+function PotPreviewCard({ image, title, description, url, sourceLabel }) {
+  if (!title && !description && !url && !image) return null;
+
+  return (
+    <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+        Linked item
+      </p>
+
+      <div className="mt-3 flex gap-4">
+        {image ? (
+          <img
+            src={image}
+            alt={title || "Linked item preview"}
+            className="h-20 w-20 rounded-[18px] object-cover"
+          />
+        ) : (
+          <div className="h-20 w-20 rounded-[18px] bg-[#f5ebe4]" />
+        )}
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">
+            {title || "Untitled item"}
+          </p>
+
+          {description ? (
+            <p className="mt-1 line-clamp-3 text-[13px] leading-6 text-slate-500">
+              {description}
+            </p>
+          ) : null}
+
+          {sourceLabel ? (
+            <p className="mt-2 text-[12px] font-medium text-[#df7b59]">{sourceLabel}</p>
+          ) : null}
+
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block truncate text-[12px] text-slate-500 underline decoration-[#e8b4a0] underline-offset-4"
+            >
+              {url}
+            </a>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PotTypeGuide() {
   const potTypes = [
     {
@@ -693,7 +921,7 @@ function CurrencyAmountInput({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <div className="grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
+      <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
         <select
           value={currency}
           onChange={(e) => onCurrencyChange(e.target.value)}
@@ -701,7 +929,7 @@ function CurrencyAmountInput({
         >
           {currencyOptions.map((option) => (
             <option key={option.code} value={option.code}>
-              {option.code} · {option.symbol}
+              {option.code} · {option.label}
             </option>
           ))}
         </select>
@@ -1056,9 +1284,12 @@ function CreateCircleModal({
                                     : "border-[#efe1d9] bg-white"
                                 }`}
                               >
-                                <div>
+                                <div className="min-w-0 pr-4">
                                   <p className="text-sm font-semibold text-slate-900">{hint.title}</p>
                                   <p className="mt-1 text-[13px] text-slate-500">{hint.subtitle}</p>
+                                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                                    {hint.description}
+                                  </p>
                                 </div>
 
                                 <input
@@ -1114,31 +1345,13 @@ function CreateCircleModal({
                   </div>
 
                   {linkPreview ? (
-                    <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
-                      <div className="flex gap-4">
-                        {linkPreview.image ? (
-                          <img
-                            src={linkPreview.image}
-                            alt={linkPreview.title || "Linked item preview"}
-                            className="h-20 w-20 rounded-[18px] object-cover"
-                          />
-                        ) : (
-                          <div className="h-20 w-20 rounded-[18px] bg-[#f5ebe4]" />
-                        )}
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {linkPreview.title || "Untitled item"}
-                          </p>
-                          <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                            {linkPreview.description || "Preview pulled from the linked page."}
-                          </p>
-                          <p className="mt-2 text-[12px] font-medium text-[#df7b59]">
-                            {linkPreview.siteName || linkPreview.url}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                    <PotPreviewCard
+                      image={linkPreview.image}
+                      title={linkPreview.title}
+                      description={linkPreview.description}
+                      url={linkPreview.url}
+                      sourceLabel={linkPreview.siteName || "Fetched link"}
+                    />
                   ) : null}
                 </div>
               )}
@@ -1485,21 +1698,29 @@ function EditPotModal({
                             visibleHints.map((hint) => (
                               <label
                                 key={hint.id}
-                                className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
+                                className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
                                   form.selectedHintId === hint.id
                                     ? "border-[#f0a384] bg-[#fff4ee]"
                                     : "border-[#efe1d9] bg-white"
                                 }`}
                               >
-                                <div>
+                                <div className="min-w-0 pr-4">
                                   <p className="text-sm font-semibold text-slate-900">{hint.title}</p>
                                   <p className="mt-1 text-[13px] text-slate-500">{hint.subtitle}</p>
+                                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                                    {hint.description}
+                                  </p>
+                                  {hint.url ? (
+                                    <p className="mt-2 truncate text-[12px] text-slate-400">
+                                      {hint.url}
+                                    </p>
+                                  ) : null}
                                 </div>
 
                                 <input
                                   type="radio"
                                   name="editSelectedHint"
-                                  className="h-4 w-4 accent-[#f36f64]"
+                                  className="mt-1 h-4 w-4 accent-[#f36f64]"
                                   checked={form.selectedHintId === hint.id}
                                   onChange={() =>
                                     setForm((prev) => ({
@@ -1509,6 +1730,9 @@ function EditPotModal({
                                       target: String(hint.amount || prev.target),
                                       currency: hint.currency || prev.currency,
                                       source: `From ${selectedHintContact.name}'s public hints`,
+                                      sourceUrl: hint.url || "",
+                                      previewImage: hint.image || "",
+                                      previewDescription: hint.description || "",
                                     }))
                                   }
                                 />
@@ -1550,30 +1774,14 @@ function EditPotModal({
                   </div>
 
                   {linkPreview ? (
-                    <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
-                      <div className="flex gap-4">
-                        {linkPreview.image ? (
-                          <img
-                            src={linkPreview.image}
-                            alt={linkPreview.title || "Linked item preview"}
-                            className="h-20 w-20 rounded-[18px] object-cover"
-                          />
-                        ) : (
-                          <div className="h-20 w-20 rounded-[18px] bg-[#f5ebe4]" />
-                        )}
-
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {linkPreview.title || "Untitled item"}
-                          </p>
-                          <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                            {linkPreview.description || "Preview pulled from the linked page."}
-                          </p>
-                          <p className="mt-2 text-[12px] font-medium text-[#df7b59]">
-                            {linkPreview.siteName || linkPreview.url}
-                          </p>
-                        </div>
-                      </div>
+                    <div className="space-y-3">
+                      <PotPreviewCard
+                        image={linkPreview.image}
+                        title={linkPreview.title}
+                        description={linkPreview.description}
+                        url={linkPreview.url}
+                        sourceLabel={linkPreview.siteName || "Fetched link"}
+                      />
 
                       <button
                         type="button"
@@ -1582,9 +1790,12 @@ function EditPotModal({
                             ...prev,
                             item: linkPreview.title || prev.item,
                             source: linkPreview.siteName || "From pasted link",
+                            sourceUrl: linkPreview.url || prev.sourceUrl,
+                            previewImage: linkPreview.image || prev.previewImage,
+                            previewDescription: linkPreview.description || prev.previewDescription,
                           }))
                         }
-                        className="mt-4 inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
                       >
                         Use this preview
                       </button>
@@ -1640,6 +1851,18 @@ function EditPotModal({
               <p className="mt-4 text-[14px] leading-7 text-slate-600">
                 {form.note || "No note added yet."}
               </p>
+
+              {!amountMode ? (
+                <div className="mt-5">
+                  <PotPreviewCard
+                    image={form.previewImage}
+                    title={form.item}
+                    description={form.previewDescription}
+                    url={form.sourceUrl}
+                    sourceLabel={form.source}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <div className="mt-6 flex flex-col gap-3">
@@ -1882,6 +2105,9 @@ export default function CirclesClient() {
     fundingMode: "Flexible pot",
     note: "",
     source: "",
+    sourceUrl: "",
+    previewImage: "",
+    previewDescription: "",
     itemSource: "hint",
     selectedHintId: "",
     itemUrl: "",
@@ -2095,6 +2321,24 @@ export default function CirclesClient() {
         active: true,
         item: itemLabel,
         source: sourceLabel,
+        sourceUrl:
+          form.goalType === "amount"
+            ? ""
+            : form.itemSource === "hint"
+              ? selectedHint?.url || ""
+              : linkPreview?.url || form.itemUrl || "",
+        previewImage:
+          form.goalType === "amount"
+            ? ""
+            : form.itemSource === "hint"
+              ? selectedHint?.image || ""
+              : linkPreview?.image || "",
+        previewDescription:
+          form.goalType === "amount"
+            ? ""
+            : form.itemSource === "hint"
+              ? selectedHint?.description || ""
+              : linkPreview?.description || "",
         target: targetNumber,
         currency: form.currency,
         raised: 0,
@@ -2128,9 +2372,12 @@ export default function CirclesClient() {
       fundingMode: circle.pot.fundingMode || "Flexible pot",
       note: circle.pot.note || "",
       source: circle.pot.source || "",
-      itemSource: "hint",
+      sourceUrl: circle.pot.sourceUrl || "",
+      previewImage: circle.pot.previewImage || "",
+      previewDescription: circle.pot.previewDescription || "",
+      itemSource: circle.pot.sourceUrl ? "url" : "hint",
       selectedHintId: "",
-      itemUrl: "",
+      itemUrl: circle.pot.sourceUrl || "",
     });
     setIsEditPotOpen(true);
   };
@@ -2157,6 +2404,10 @@ export default function CirclesClient() {
                   editPotForm.goalType === "amount"
                     ? "Amount-based goal"
                     : editPotForm.source || circle.pot.source,
+                sourceUrl: editPotForm.goalType === "amount" ? "" : editPotForm.sourceUrl,
+                previewImage: editPotForm.goalType === "amount" ? "" : editPotForm.previewImage,
+                previewDescription:
+                  editPotForm.goalType === "amount" ? "" : editPotForm.previewDescription,
                 target: updatedTarget,
                 currency: editPotForm.currency,
                 deadline: editPotForm.deadline,
@@ -2185,6 +2436,9 @@ export default function CirclesClient() {
                 active: false,
                 item: "",
                 source: "",
+                sourceUrl: "",
+                previewImage: "",
+                previewDescription: "",
                 target: 0,
                 currency: circle.pot.currency || "GBP",
                 note: "Choose a public hint or paste a link to turn this into a communal goal.",
