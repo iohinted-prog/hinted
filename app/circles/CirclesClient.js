@@ -1,14 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
-export const metadata = {
-  title: "Circles | Hinted.io",
-  description: "Build gifting circles, invite contacts, and fund shared gift goals together.",
-};
-
-const contacts = [
+const initialContacts = [
   {
     id: 1,
     name: "Maya",
@@ -16,6 +11,9 @@ const contacts = [
     note: "Saved 8 hints",
     initials: "M",
     colors: "from-[#efc3af] to-[#ae6e57]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
   {
     id: 2,
@@ -24,6 +22,9 @@ const contacts = [
     note: "Saved 5 hints",
     initials: "J",
     colors: "from-[#4e596d] to-[#212a3c]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
   {
     id: 3,
@@ -32,6 +33,9 @@ const contacts = [
     note: "Saved 4 hints",
     initials: "F",
     colors: "from-[#809168] to-[#41512e]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
   {
     id: 4,
@@ -40,6 +44,9 @@ const contacts = [
     note: "Saved 6 hints",
     initials: "M",
     colors: "from-[#eac8b8] to-[#9d6957]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
   {
     id: 5,
@@ -48,6 +55,9 @@ const contacts = [
     note: "Saved 10 hints",
     initials: "S",
     colors: "from-[#e8b9a7] to-[#bf755f]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
   {
     id: 6,
@@ -56,6 +66,9 @@ const contacts = [
     note: "Saved 3 hints",
     initials: "T",
     colors: "from-[#b7c8db] to-[#6b88a7]",
+    email: "",
+    phone: "",
+    birthday: "",
   },
 ];
 
@@ -109,7 +122,6 @@ const circles = [
       target: 220,
       raised: 95,
       note: "Selected from Sarah’s own hints so the group has a clear goal.",
-      image: "from-[#d5dccc] via-[#b8c4a7] to-[#8fa17b]",
     },
   },
   {
@@ -148,7 +160,6 @@ const circles = [
       target: 180,
       raised: 50,
       note: "A practical family gift with a target everyone can work toward.",
-      image: "from-[#d8d1cb] via-[#bcaea1] to-[#8f7765]",
     },
   },
   {
@@ -180,10 +191,30 @@ const circles = [
       target: 0,
       raised: 0,
       note: "Choose one of James’s saved hints to turn this into a communal goal.",
-      image: "",
     },
   },
 ];
+
+function subtractDays(dateString, days) {
+  const date = new Date(dateString);
+  date.setDate(date.getDate() - days);
+  return date.toISOString().split("T")[0];
+}
+
+function getInitials(name) {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("");
+}
+
+function getContactGradient(role) {
+  if (role === "Family") return "from-[#eac8b8] to-[#9d6957]";
+  if (role === "Partner") return "from-[#e8b9a7] to-[#bf755f]";
+  return "from-[#efcdbf] to-[#bb8168]";
+}
 
 function LogoMark() {
   return (
@@ -197,8 +228,9 @@ function AvatarMenu() {
   return (
     <div className="relative group">
       <button
-        className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-sm font-bold text-white ring-4 ring-white/70"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-sm font-bold text-white ring-4 ring-white/70"
         aria-label="Open account menu"
+        type="button"
       >
         CG
       </button>
@@ -222,6 +254,42 @@ function AvatarMenu() {
         >
           Payment details
         </Link>
+      </div>
+    </div>
+  );
+}
+
+function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[980px]" }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
+      <div
+        className={`max-h-[92vh] w-full overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] ${maxWidth}`}
+      >
+        <div className="flex items-center justify-between border-b border-[#efe0d7] px-6 py-5">
+          <div>
+            {eyebrow ? (
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
+                {eyebrow}
+              </p>
+            ) : null}
+            <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+              {title}
+            </h2>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white text-slate-500 hover:bg-[#fff2eb]"
+            aria-label="Close window"
+            type="button"
+          >
+            ✕
+          </button>
+        </div>
+
+        {children}
       </div>
     </div>
   );
@@ -292,7 +360,7 @@ function MemberPill({ member }) {
   );
 }
 
-function ContributionRing({ raised, target }) {
+function ContributionRing({ raised, target, ringId }) {
   const percentage = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
@@ -302,19 +370,12 @@ function ContributionRing({ raised, target }) {
     <div className="flex flex-col items-center">
       <div className="relative flex h-[148px] w-[148px] items-center justify-center">
         <svg className="h-[148px] w-[148px] -rotate-90" viewBox="0 0 140 140" aria-hidden="true">
+          <circle cx="70" cy="70" r={radius} stroke="#f1e3db" strokeWidth="12" fill="none" />
           <circle
             cx="70"
             cy="70"
             r={radius}
-            stroke="#f1e3db"
-            strokeWidth="12"
-            fill="none"
-          />
-          <circle
-            cx="70"
-            cy="70"
-            r={radius}
-            stroke="url(#circleGradient)"
+            stroke={`url(#${ringId})`}
             strokeWidth="12"
             strokeLinecap="round"
             fill="none"
@@ -322,7 +383,7 @@ function ContributionRing({ raised, target }) {
             strokeDashoffset={dash}
           />
           <defs>
-            <linearGradient id="circleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <linearGradient id={ringId} x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#ff9b75" />
               <stop offset="100%" stopColor="#f36f64" />
             </linearGradient>
@@ -361,10 +422,6 @@ function CircleCard({ circle }) {
               </h2>
               <p className="mt-2 text-sm text-slate-500">{circle.subtitle}</p>
             </div>
-
-            <button className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]">
-              Add directly
-            </button>
           </div>
 
           <p className="mt-4 max-w-[60ch] text-[14px] leading-7 text-slate-600">
@@ -408,7 +465,11 @@ function CircleCard({ circle }) {
             {circle.pot.active ? (
               <>
                 <div className="mt-5">
-                  <ContributionRing raised={circle.pot.raised} target={circle.pot.target} />
+                  <ContributionRing
+                    raised={circle.pot.raised}
+                    target={circle.pot.target}
+                    ringId={`circle-gradient-${circle.id}`}
+                  />
                 </div>
 
                 <div className="mt-4 flex -space-x-3">
@@ -423,9 +484,7 @@ function CircleCard({ circle }) {
                   ))}
                 </div>
 
-                <p className="mt-4 text-[14px] leading-7 text-slate-600">
-                  {circle.pot.note}
-                </p>
+                <p className="mt-4 text-[14px] leading-7 text-slate-600">{circle.pot.note}</p>
 
                 <button className="mt-5 inline-flex h-10 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-sm font-semibold text-white">
                   Edit pot
@@ -453,12 +512,6 @@ function CircleCard({ circle }) {
   );
 }
 
-function subtractDays(dateString, days) {
-  const date = new Date(dateString);
-  date.setDate(date.getDate() - days);
-  return date.toISOString().split("T")[0];
-}
-
 function CreateCircleModal({
   open,
   onClose,
@@ -476,288 +529,363 @@ function CreateCircleModal({
 }) {
   if (!open) return null;
 
-  const addPerson = (contact) => {
-    setSelectedPeople((prev) =>
-      prev.some((person) => person.id === contact.id) ? prev : [...prev, contact]
-    );
-  };
-
-  const removePerson = (id) => {
-    setSelectedPeople((prev) => prev.filter((person) => person.id !== id));
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-[980px] overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)]">
-        <div className="flex items-center justify-between border-b border-[#efe0d7] px-6 py-5">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
-              New circle
-            </p>
-            <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
-              Create a circle around an event
-            </h2>
-          </div>
+    <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
+      <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
+        <div className="space-y-6 p-6">
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">1. Choose the event</p>
 
-          <button
-            onClick={onClose}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white text-slate-500 hover:bg-[#fff2eb]"
-            aria-label="Close create circle window"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
-          <div className="space-y-6 p-6">
-            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-              <p className="text-sm font-semibold text-slate-900">1. Choose the event</p>
-
-              <div className="mt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEventMode("calendar")}
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    eventMode === "calendar"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  From calendar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEventMode("new")}
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    eventMode === "new"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  New event
-                </button>
-              </div>
-
-              {eventMode === "calendar" ? (
-                <div className="mt-4 space-y-3">
-                  {calendarEvents.map((event) => (
-                    <label
-                      key={event.id}
-                      className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
-                        String(event.id) === selectedEventId
-                          ? "border-[#f0a384] bg-[#fff4ee]"
-                          : "border-[#efe1d9] bg-[#fffdfa]"
-                      }`}
-                    >
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{event.title}</p>
-                        <p className="mt-1 text-[13px] text-slate-500">
-                          {event.type} · {event.date}
-                        </p>
-                      </div>
-                      <input
-                        type="radio"
-                        name="calendarEvent"
-                        className="h-4 w-4 accent-[#f36f64]"
-                        checked={String(event.id) === selectedEventId}
-                        onChange={() => {
-                          setSelectedEventId(String(event.id));
-                          setForm((prev) => ({ ...prev, eventDate: event.date }));
-                        }}
-                      />
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-2 sm:col-span-2">
-                    <span className="text-sm font-medium text-slate-700">Event title</span>
-                    <input
-                      type="text"
-                      value={form.eventTitle}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, eventTitle: e.target.value }))
-                      }
-                      className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                      placeholder="Summer birthday dinner"
-                    />
-                  </label>
-
-                  <label className="space-y-2">
-                    <span className="text-sm font-medium text-slate-700">Event date</span>
-                    <input
-                      type="date"
-                      value={form.eventDate}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, eventDate: e.target.value }))
-                      }
-                      className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    />
-                  </label>
-                </div>
-              )}
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEventMode("calendar")}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                  eventMode === "calendar"
+                    ? "bg-[#2f3b2d] text-white"
+                    : "border border-[#ead8ce] bg-white text-slate-700"
+                }`}
+              >
+                From calendar
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventMode("new")}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                  eventMode === "new"
+                    ? "bg-[#2f3b2d] text-white"
+                    : "border border-[#ead8ce] bg-white text-slate-700"
+                }`}
+              >
+                New event
+              </button>
             </div>
 
-            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-              <p className="text-sm font-semibold text-slate-900">2. Circle details</p>
-
+            {eventMode === "calendar" ? (
+              <div className="mt-4 space-y-3">
+                {calendarEvents.map((event) => (
+                  <label
+                    key={event.id}
+                    className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
+                      String(event.id) === selectedEventId
+                        ? "border-[#f0a384] bg-[#fff4ee]"
+                        : "border-[#efe1d9] bg-[#fffdfa]"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+                      <p className="mt-1 text-[13px] text-slate-500">
+                        {event.type} · {event.date}
+                      </p>
+                    </div>
+                    <input
+                      type="radio"
+                      name="calendarEvent"
+                      className="h-4 w-4 accent-[#f36f64]"
+                      checked={String(event.id) === selectedEventId}
+                      onChange={() => {
+                        setSelectedEventId(String(event.id));
+                        setForm((prev) => ({ ...prev, eventDate: event.date }));
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            ) : (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Circle title</span>
+                  <span className="text-sm font-medium text-slate-700">Event title</span>
                   <input
                     type="text"
-                    value={form.title}
-                    onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                    value={form.eventTitle}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, eventTitle: e.target.value }))
+                    }
                     className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    placeholder="Sarah birthday circle"
+                    placeholder="Summer birthday dinner"
                   />
                 </label>
 
                 <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Deadline</span>
+                  <span className="text-sm font-medium text-slate-700">Event date</span>
                   <input
                     type="date"
-                    value={form.deadline}
-                    max={latestDeadline}
+                    value={form.eventDate}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, deadline: e.target.value }))
+                      setForm((prev) => ({ ...prev, eventDate: e.target.value }))
                     }
                     className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
                   />
-                  <p className="text-[12px] text-slate-400">
-                    Must be at least 7 days before the event.
-                  </p>
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Goal type</span>
-                  <select
-                    value={form.goalType}
-                    onChange={(e) => setForm((prev) => ({ ...prev, goalType: e.target.value }))}
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                  >
-                    <option value="item">Specific item</option>
-                    <option value="amount">Target amount</option>
-                  </select>
-                </label>
-
-                <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">
-                    {form.goalType === "item" ? "Item to aim for" : "Target amount"}
-                  </span>
-                  <input
-                    type="text"
-                    value={form.goalValue}
-                    onChange={(e) => setForm((prev) => ({ ...prev, goalValue: e.target.value }))}
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    placeholder={form.goalType === "item" ? "Le Creuset casserole dish" : "£180"}
-                  />
                 </label>
               </div>
-            </div>
+            )}
           </div>
 
-          <div className="border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
-            <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
-              <p className="text-sm font-semibold text-slate-900">3. Add people</p>
-              <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                Drag contacts into this circle, or tap add to include them.
-              </p>
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">2. Circle details</p>
 
-              <div className="mt-4 min-h-[120px] rounded-[20px] bg-[#fffaf7] p-4">
-                {selectedPeople.length ? (
-                  <div className="flex flex-wrap gap-3">
-                    {selectedPeople.map((person) => (
-                      <div
-                        key={person.id}
-                        className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
-                      >
-                        <div
-                          className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
-                        >
-                          {person.initials}
-                        </div>
-                        <span className="text-sm font-medium text-slate-700">{person.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedPeople((prev) =>
-                              prev.filter((item) => item.id !== person.id)
-                            );
-                          }}
-                          className="text-slate-400 hover:text-slate-600"
-                          aria-label={`Remove ${person.name}`}
-                        >
-                          ✕
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-400">No one added yet.</p>
-                )}
-              </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">Circle title</span>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                  placeholder="Sarah birthday circle"
+                />
+              </label>
 
-              <div className="mt-5 space-y-3">
-                {contacts.map((contact) => (
-                  <div
-                    key={contact.id}
-                    className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                      >
-                        {contact.initials}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-                        <p className="text-[12px] text-slate-500">{contact.role}</p>
-                      </div>
-                    </div>
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Deadline</span>
+                <input
+                  type="date"
+                  value={form.deadline}
+                  max={latestDeadline}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, deadline: e.target.value }))
+                  }
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                />
+                <p className="text-[12px] text-slate-400">
+                  Must be at least 7 days before the event.
+                </p>
+              </label>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedPeople((prev) =>
-                          prev.some((person) => person.id === contact.id)
-                            ? prev
-                            : [...prev, contact]
-                        );
-                      }}
-                      className="inline-flex h-9 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-3 text-[12px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Goal type</span>
+                <select
+                  value={form.goalType}
+                  onChange={(e) => setForm((prev) => ({ ...prev, goalType: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                >
+                  <option value="item">Specific item</option>
+                  <option value="amount">Target amount</option>
+                </select>
+              </label>
+
+              <label className="space-y-2 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">
+                  {form.goalType === "item" ? "Item to aim for" : "Target amount"}
+                </span>
+                <input
+                  type="text"
+                  value={form.goalValue}
+                  onChange={(e) => setForm((prev) => ({ ...prev, goalValue: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                  placeholder={form.goalType === "item" ? "Le Creuset casserole dish" : "£180"}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
+          <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">3. Add people</p>
+            <p className="mt-1 text-[13px] leading-6 text-slate-500">
+              Drag contacts into this circle, or tap add to include them.
+            </p>
+
+            <div className="mt-4 min-h-[120px] rounded-[20px] bg-[#fffaf7] p-4">
+              {selectedPeople.length ? (
+                <div className="flex flex-wrap gap-3">
+                  {selectedPeople.map((person) => (
+                    <div
+                      key={person.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
                     >
-                      Add
-                    </button>
-                  </div>
-                ))}
-              </div>
+                      <div
+                        className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
+                      >
+                        {person.initials}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">{person.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedPeople((prev) =>
+                            prev.filter((item) => item.id !== person.id)
+                          )
+                        }
+                        className="text-slate-400 hover:text-slate-600"
+                        aria-label={`Remove ${person.name}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">No one added yet.</p>
+              )}
+            </div>
 
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+            <div className="mt-5 space-y-3">
+              {contacts.map((contact) => (
+                <div
+                  key={contact.id}
+                  className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
-                >
-                  Create circle
-                </button>
-              </div>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+                    >
+                      {contact.initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+                      <p className="text-[12px] text-slate-500">{contact.role}</p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedPeople((prev) =>
+                        prev.some((person) => person.id === contact.id)
+                          ? prev
+                          : [...prev, contact]
+                      )
+                    }
+                    className="inline-flex h-9 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-3 text-[12px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Add
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+              >
+                Create circle
+              </button>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </ModalShell>
   );
 }
 
-export default function CirclesPage() {
+function AddContactModal({
+  open,
+  onClose,
+  onSave,
+  form,
+  setForm,
+}) {
+  if (!open) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    onSave();
+  };
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="New contact"
+      title="Add a new contact"
+      maxWidth="max-w-[720px]"
+    >
+      <form onSubmit={handleSubmit} className="p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Jane Smith"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+              required
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Email address</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="jane@example.com"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Phone number</span>
+            <input
+              type="tel"
+              value={form.phone}
+              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
+              placeholder="07123 456789"
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Relationship</span>
+            <select
+              value={form.role}
+              onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            >
+              <option value="">Select relationship</option>
+              <option value="Friend">Friend</option>
+              <option value="Family">Family</option>
+              <option value="Partner">Partner</option>
+            </select>
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-medium text-slate-700">Birthday</span>
+            <input
+              type="date"
+              value={form.birthday}
+              onChange={(e) => setForm((prev) => ({ ...prev, birthday: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+          >
+            Save contact
+          </button>
+        </div>
+      </form>
+    </ModalShell>
+  );
+}
+
+export default function CirclesClient() {
+  const [contacts, setContacts] = useState(initialContacts);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [eventMode, setEventMode] = useState("calendar");
   const [selectedEventId, setSelectedEventId] = useState(String(calendarEvents[0].id));
   const [selectedPeople, setSelectedPeople] = useState([]);
@@ -770,12 +898,52 @@ export default function CirclesPage() {
     goalValue: "",
   });
 
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    role: "",
+    birthday: "",
+    phone: "",
+  });
+
   const activeEventDate =
     eventMode === "calendar"
       ? calendarEvents.find((event) => String(event.id) === selectedEventId)?.date || ""
       : form.eventDate;
 
   const latestDeadline = activeEventDate ? subtractDays(activeEventDate, 7) : "";
+
+  const resetContactForm = () => {
+    setContactForm({
+      name: "",
+      email: "",
+      role: "",
+      birthday: "",
+      phone: "",
+    });
+  };
+
+  const handleSaveContact = () => {
+    const trimmedName = contactForm.name.trim();
+    if (!trimmedName) return;
+
+    const role = contactForm.role || "Friend";
+    const newContact = {
+      id: Date.now(),
+      name: trimmedName,
+      role,
+      note: "New contact",
+      initials: getInitials(trimmedName),
+      colors: getContactGradient(role),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone.trim(),
+      birthday: contactForm.birthday,
+    };
+
+    setContacts((prev) => [newContact, ...prev]);
+    resetContactForm();
+    setIsAddContactOpen(false);
+  };
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -801,12 +969,6 @@ export default function CirclesPage() {
                 className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 sm:px-5 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
               >
                 Hints
-              </Link>
-              <Link
-                href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 sm:px-5 text-[14px] font-semibold text-slate-900 shadow-sm"
-              >
-                Circles
               </Link>
             </nav>
 
@@ -848,7 +1010,11 @@ export default function CirclesPage() {
                     ))}
                   </div>
 
-                  <button className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddContactOpen(true)}
+                    className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
+                  >
                     Add new contact
                   </button>
                 </div>
@@ -903,6 +1069,17 @@ export default function CirclesPage() {
         form={form}
         setForm={setForm}
         latestDeadline={latestDeadline}
+      />
+
+      <AddContactModal
+        open={isAddContactOpen}
+        onClose={() => {
+          resetContactForm();
+          setIsAddContactOpen(false);
+        }}
+        onSave={handleSaveContact}
+        form={contactForm}
+        setForm={setContactForm}
       />
     </main>
   );
