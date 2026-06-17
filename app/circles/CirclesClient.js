@@ -672,33 +672,33 @@ function ContributionRing({ raised, target, ringId }) {
   );
 }
 
-function PotPreviewCard({ image, title, description, url, sourceLabel }) {
+function PotPreviewCard({ image, title, description, url, sourceLabel, compact = false }) {
   if (!title && !description && !url && !image) return null;
 
   return (
-    <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
+    <div className={`rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] ${compact ? "p-3" : "p-4"}`}>
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
         Linked item
       </p>
 
-      <div className="mt-3 flex gap-4">
+      <div className={`mt-3 flex ${compact ? "gap-3" : "gap-4"}`}>
         {image ? (
           <img
             src={image}
             alt={title || "Linked item preview"}
-            className="h-20 w-20 rounded-[18px] object-cover"
+            className={`${compact ? "h-16 w-16 rounded-[16px]" : "h-20 w-20 rounded-[18px]"} object-cover`}
           />
         ) : (
-          <div className="h-20 w-20 rounded-[18px] bg-[#f5ebe4]" />
+          <div className={`${compact ? "h-16 w-16 rounded-[16px]" : "h-20 w-20 rounded-[18px]"} bg-[#f5ebe4]`} />
         )}
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">
+          <p className={`${compact ? "text-[13px]" : "text-sm"} font-semibold text-slate-900`}>
             {title || "Untitled item"}
           </p>
 
           {description ? (
-            <p className="mt-1 line-clamp-3 text-[13px] leading-6 text-slate-500">
+            <p className={`mt-1 ${compact ? "text-[12px] leading-5" : "text-[13px] leading-6"} text-slate-500`}>
               {description}
             </p>
           ) : null}
@@ -773,6 +773,10 @@ function CircleCard({ circle, onEditPot }) {
   const invitedCount = circle.members.length;
   const moneyLabel = formatMoney(circle.pot.target, circle.pot.currency);
   const raisedLabel = formatMoney(circle.pot.raised, circle.pot.currency);
+  const showItemPreview =
+    circle.pot.active &&
+    circle.pot.goalType === "item" &&
+    (circle.pot.previewImage || circle.pot.previewDescription || circle.pot.sourceUrl);
 
   return (
     <article className="rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm sm:p-6">
@@ -873,6 +877,19 @@ function CircleCard({ circle, onEditPot }) {
                     {circle.pot.currency}
                   </span>
                 </div>
+
+                {showItemPreview ? (
+                  <div className="mt-5 w-full text-left">
+                    <PotPreviewCard
+                      image={circle.pot.previewImage}
+                      title={circle.pot.item}
+                      description={circle.pot.previewDescription}
+                      url={circle.pot.sourceUrl}
+                      sourceLabel={circle.pot.source}
+                      compact
+                    />
+                  </div>
+                ) : null}
 
                 <p className="mt-4 text-[14px] leading-7 text-slate-600">{circle.pot.note}</p>
 
@@ -1149,18 +1166,7 @@ function CreateCircleModal({
                   onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
                   onAmountChange={(value) => setForm((prev) => ({ ...prev, goalValue: value }))}
                 />
-              ) : (
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Item or amount</span>
-                  <input
-                    type="text"
-                    value={form.goalValue}
-                    onChange={(e) => setForm((prev) => ({ ...prev, goalValue: e.target.value }))}
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    placeholder="Weekend cabin stay or 220"
-                  />
-                </label>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -1278,7 +1284,7 @@ function CreateCircleModal({
                             visibleHints.map((hint) => (
                               <label
                                 key={hint.id}
-                                className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
+                                className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
                                   form.selectedHintId === hint.id
                                     ? "border-[#f0a384] bg-[#fff4ee]"
                                     : "border-[#efe1d9] bg-white"
@@ -1295,14 +1301,12 @@ function CreateCircleModal({
                                 <input
                                   type="radio"
                                   name="selectedHint"
-                                  className="h-4 w-4 accent-[#f36f64]"
+                                  className="mt-1 h-4 w-4 accent-[#f36f64]"
                                   checked={form.selectedHintId === hint.id}
                                   onChange={() =>
                                     setForm((prev) => ({
                                       ...prev,
                                       selectedHintId: hint.id,
-                                      goalType: "item",
-                                      goalValue: hint.title,
                                       currency: hint.currency || prev.currency,
                                     }))
                                   }
@@ -1535,19 +1539,6 @@ function EditPotModal({
                 onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
                 onAmountChange={(value) => setForm((prev) => ({ ...prev, target: value }))}
               />
-
-              {!amountMode ? (
-                <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Item title</span>
-                  <input
-                    type="text"
-                    value={form.item}
-                    onChange={(e) => setForm((prev) => ({ ...prev, item: e.target.value }))}
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    placeholder="Weekend cabin stay"
-                  />
-                </label>
-              ) : null}
             </div>
           </div>
 
@@ -2194,14 +2185,6 @@ export default function CirclesClient() {
       }
 
       setLinkPreview(data);
-
-      if (!form.goalValue) {
-        setForm((prev) => ({
-          ...prev,
-          goalType: "item",
-          goalValue: data.title || prev.goalValue,
-        }));
-      }
     } catch (error) {
       setLinkPreview({
         title: "Preview unavailable",
@@ -2284,7 +2267,9 @@ export default function CirclesClient() {
     const itemLabel =
       form.goalType === "amount"
         ? "Shared contribution pot"
-        : form.goalValue.trim() || linkPreview?.title || selectedHint?.title || "New shared item";
+        : form.itemSource === "hint"
+          ? selectedHint?.title || "New shared item"
+          : linkPreview?.title || "New shared item";
 
     const sourceLabel =
       form.goalType === "amount"
