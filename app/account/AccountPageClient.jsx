@@ -1,37 +1,289 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import BackButton from "../components/BackButton";
+import { createClient } from "../../lib/supabase/client";
+
+function splitName(fullName = "") {
+  const trimmed = fullName.trim();
+  if (!trimmed) return { firstName: "", lastName: "" };
+
+  const parts = trimmed.split(/\s+/);
+  return {
+    firstName: parts[0] || "",
+    lastName: parts.slice(1).join(" "),
+  };
+}
+
+function buildFullName(firstName = "", lastName = "") {
+  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+}
+
+function initialsFromName(fullName = "", email = "") {
+  const source = fullName.trim() || email.trim();
+  if (!source) return "U";
+
+  const parts = source.split(/\s+|@|[._-]/).filter(Boolean);
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || "").join("") || "U";
+}
+
+function formatMemberSince(dateString) {
+  if (!dateString) return "Member";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "Member";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
 
 export default function AccountPageClient() {
+  const supabase = createClient();
   const fileInputRef = useRef(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
+
+  const [userId, setUserId] = useState("");
+  const [email, setEmail] = useState("");
+  const [memberSince, setMemberSince] = useState("");
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState("");
+
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    displayName: "",
+    phone: "",
+    birthday: "",
+    bio: "",
+  });
+
+  const initials = useMemo(() => {
+    const fullName = buildFullName(form.firstName, form.lastName) || form.displayName;
+    return initialsFromName(fullName, email);
+  }, [form.firstName, form.lastName, form.displayName, email]);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAccount() {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        if (isActive) {
+          setMessageType("error");
+          setMessage("We couldn't load your account right now.");
+          setProfileLoaded(true);
+        }
+        return;
+      }
+
+      const metadata = user.user_metadata || {};
+      const metadataName =
+        metadata.full_name ||
+        metadata.name ||
+        [metadata.given_name, metadata.family_name].filter(Boolean).join(" ").trim() ||
+        "";
+
+      const metadataAvatar = metadata.avatar_url || metadata.picture || "";
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, avatar_url, birthday, phone, bio")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!isActive) return;
+
+      if (profileError) {
+        console.error("Error loading profile:", profileError.message);
+      }
+
+      const resolvedFullName = profile?.full_name || metadataName || "";
+      const nameParts = splitName(resolvedFullName);
+      const resolvedAvatar = profile?.avatar_url || metadataAvatar || "";
+
+      setUserId(user.id);
+      setEmail(user.email || "");
+      setMemberSince(formatMemberSince(user.created_at || ""));
+      setAvatarUrl(resolvedAvatar);
+      setPhotoPreview(resolvedAvatar);
+      setForm({
+        firstName: nameParts.firstName,
+        lastName: nameParts.lastName,
+        displayName: resolvedFullName,
+        phone: profile?.phone || "",
+        birthday: profile?.birthday || "",
+        bio: profile?.bio || "",
+      });
+
+      setProfileLoaded(true);
+    }
+
+    loadAccount();
+
+    return () => {
+      isActive = false;
+    };
+  }, [supabase]);
+
+  function updateField(key, value) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+    if (message) {
+      setMessage("");
+    }
+  }
 
   function handleChoosePhoto() {
     fileInputRef.current?.click();
   }
 
-  function handlePhotoChange(event) {
+  async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !userId) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    setPhotoPreview(previewUrl);
+    const localPreview = URL.createObjectURL(file);
+    setPhotoPreview(localPreview);
+    setUploadingPhoto(true);
+    setMessage("");
+
+    try {
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const filePath = `${userId}/avatar-${Date.now()}.${extension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, file, {
+          cacheControl: "3600",
+          upsert: true,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
+      const publicUrl = data?.publicUrl || "";
+
+      setAvatarUrl(publicUrl);
+      setPhotoPreview(publicUrl);
+      setMessageType("success");
+      setMessage("Profile photo updated.");
+    } catch (error) {
+      console.error("Photo upload error:", error);
+      setPhotoPreview(avatarUrl || "");
+      setMessageType("error");
+      setMessage("We couldn't upload that photo right now.");
+    } finally {
+      setUploadingPhoto(false);
+    }
   }
 
   function handleRemovePhoto() {
-    setPhotoPreview(null);
+    setPhotoPreview("");
+    setAvatarUrl("");
+    setMessage("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!userId) return;
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      const fullName = buildFullName(form.firstName, form.lastName) || form.displayName.trim();
+
+      const { error } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          full_name: fullName || null,
+          avatar_url: avatarUrl || null,
+          birthday: form.birthday || null,
+          phone: form.phone.trim() || null,
+          bio: form.bio.trim() || null,
+        },
+        { onConflict: "id" }
+      );
+
+      if (error) {
+        throw error;
+      }
+
+      const metadataUpdate = {
+        full_name: fullName || null,
+        avatar_url: avatarUrl || null,
+      };
+
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: metadataUpdate,
+      });
+
+      if (authUpdateError) {
+        console.error("Auth metadata update error:", authUpdateError.message);
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        displayName: fullName,
+      }));
+
+      setMessageType("success");
+      setMessage("Your account details have been saved.");
+    } catch (error) {
+      console.error("Account save error:", error);
+      setMessageType("error");
+      setMessage("We couldn't save your changes right now.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!profileLoaded) {
+    return (
+      <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+        <div className="flex min-h-screen items-center justify-center px-6">
+          <div className="w-full max-w-md rounded-[30px] border border-[#efd8ce] bg-white p-8 text-center shadow-[0_25px_80px_rgba(173,101,72,0.14)]">
+            <div className="mx-auto h-14 w-14 rounded-full bg-[#fff1ea] p-3">
+              <div className="h-full w-full animate-spin rounded-full border-2 border-[#f6d8ca] border-t-[#f36f64]" />
+            </div>
+
+            <h1 className="mt-6 text-[28px] font-semibold tracking-[-0.04em] text-slate-900">
+              We’re getting your account ready
+            </h1>
+
+            <p className="mt-3 text-[15px] leading-7 text-slate-600">
+              Pulling in your profile details so everything is ready to update.
+            </p>
+
+            <div className="mt-6 rounded-full bg-[#f5eee9] p-1">
+              <div className="h-2 w-2/3 animate-pulse rounded-full bg-gradient-to-r from-[#ff946d] to-[#f36f64]" />
+            </div>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   return (
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[920px]">
         <div className="mb-6">
-          <BackButton fallback="/" />
+          <BackButton fallback="/feed" />
         </div>
 
         <div className="mb-8">
@@ -60,7 +312,7 @@ export default function AccountPageClient() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  "CG"
+                  initials
                 )}
               </div>
 
@@ -75,15 +327,21 @@ export default function AccountPageClient() {
               <button
                 type="button"
                 onClick={handleChoosePhoto}
-                className="mt-4 inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-5 text-sm font-semibold text-white hover:bg-[#253120]"
+                disabled={uploadingPhoto}
+                className={`mt-4 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-white ${
+                  uploadingPhoto
+                    ? "cursor-not-allowed bg-[#7c8b79]"
+                    : "bg-[#2f3b2d] hover:bg-[#253120]"
+                }`}
               >
-                Upload photo
+                {uploadingPhoto ? "Uploading..." : "Upload photo"}
               </button>
 
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                className="mt-3 inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+                disabled={uploadingPhoto}
+                className="mt-3 inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Remove
               </button>
@@ -93,12 +351,15 @@ export default function AccountPageClient() {
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c97a5d]">
                 Account
               </p>
-              <p className="mt-2 text-sm text-slate-700">Member since June 2026</p>
+              <p className="mt-2 text-sm text-slate-700">
+                {memberSince ? `Member since ${memberSince}` : "Member"}
+              </p>
+              <p className="mt-1 break-all text-sm text-slate-500">{email}</p>
             </div>
           </aside>
 
           <section className="rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
-            <form className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-slate-900" htmlFor="firstName">
@@ -107,7 +368,8 @@ export default function AccountPageClient() {
                   <input
                     id="firstName"
                     type="text"
-                    defaultValue="Cian"
+                    value={form.firstName}
+                    onChange={(e) => updateField("firstName", e.target.value)}
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
                 </div>
@@ -119,7 +381,8 @@ export default function AccountPageClient() {
                   <input
                     id="lastName"
                     type="text"
-                    defaultValue="G"
+                    value={form.lastName}
+                    onChange={(e) => updateField("lastName", e.target.value)}
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
                 </div>
@@ -132,7 +395,8 @@ export default function AccountPageClient() {
                 <input
                   id="displayName"
                   type="text"
-                  defaultValue="Cian G"
+                  value={form.displayName}
+                  onChange={(e) => updateField("displayName", e.target.value)}
                   className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                 />
               </div>
@@ -144,9 +408,13 @@ export default function AccountPageClient() {
                 <input
                   id="email"
                   type="email"
-                  defaultValue="cian@example.com"
-                  className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  value={email}
+                  readOnly
+                  className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-200 bg-slate-50 px-4 text-sm text-slate-500 outline-none"
                 />
+                <p className="mt-2 text-xs text-slate-500">
+                  Email is managed by your sign-in account.
+                </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -157,6 +425,8 @@ export default function AccountPageClient() {
                   <input
                     id="phone"
                     type="tel"
+                    value={form.phone}
+                    onChange={(e) => updateField("phone", e.target.value)}
                     placeholder="+44 7..."
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
@@ -169,6 +439,8 @@ export default function AccountPageClient() {
                   <input
                     id="birthday"
                     type="date"
+                    value={form.birthday}
+                    onChange={(e) => updateField("birthday", e.target.value)}
                     className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                   />
                 </div>
@@ -181,21 +453,40 @@ export default function AccountPageClient() {
                 <textarea
                   id="bio"
                   rows={4}
+                  value={form.bio}
+                  onChange={(e) => updateField("bio", e.target.value)}
                   placeholder="Add a few words that help friends recognise you."
                   className="mt-2 w-full rounded-[18px] border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                 />
               </div>
 
+              {message ? (
+                <div
+                  className={`rounded-[18px] border px-4 py-3 text-sm ${
+                    messageType === "error"
+                      ? "border-red-200 bg-red-50 text-red-700"
+                      : "border-[#f3d8cc] bg-[#fff7f2] text-slate-700"
+                  }`}
+                >
+                  {message}
+                </div>
+              ) : null}
+
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="submit"
-                  className="inline-flex h-[52px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+                  disabled={saving || uploadingPhoto}
+                  className={`inline-flex h-[52px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
+                    saving || uploadingPhoto
+                      ? "cursor-not-allowed bg-[#e9a48d]"
+                      : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+                  }`}
                 >
-                  Save changes
+                  {saving ? "Saving..." : "Save changes"}
                 </button>
 
                 <Link
-                  href="/"
+                  href="/feed"
                   className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
                 >
                   Cancel
