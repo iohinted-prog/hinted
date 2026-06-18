@@ -42,6 +42,7 @@ export default function AvatarMenu() {
 
   const initials = useMemo(() => {
     if (!fullName) return "U";
+
     return fullName
       .trim()
       .split(/\s+/)
@@ -71,8 +72,8 @@ export default function AvatarMenu() {
 
       {open && (
         <div className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
-          <Link href="/profile" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
-            Profile
+          <Link href="/account" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
+            Account
           </Link>
           <Link href="/settings" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
             Settings
