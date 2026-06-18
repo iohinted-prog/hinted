@@ -16,33 +16,59 @@ export default function BillingClient() {
 
   const [billing_email, setBillingEmail] = useState("");
   const [billing_country, setBillingCountry] = useState("GB");
+  const [paymentMethods, setPaymentMethods] = useState([]);
 
   useEffect(() => {
     let ignore = false;
 
     async function loadData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        if (!ignore) setLoading(false);
-        return;
-      }
+        if (!user) {
+          if (!ignore) setLoading(false);
+          return;
+        }
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("billing_email, billing_country")
-        .eq("id", user.id)
-        .single();
+        const { data } = await supabase
+          .from("profiles")
+          .select("billing_email, billing_country")
+          .eq("id", user.id)
+          .single();
 
-      if (!ignore && data) {
-        setBillingEmail(data.billing_email ?? "");
-        setBillingCountry(data.billing_country ?? "GB");
-      }
+        if (!ignore && data) {
+          setBillingEmail(data.billing_email ?? "");
+          setBillingCountry(data.billing_country ?? "GB");
+        }
 
-      if (!ignore) {
-        setLoading(false);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          const pmRes = await fetch("/api/billing/payment-methods", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          const pmData = await pmRes.json();
+
+          if (!ignore && pmRes.ok) {
+            setPaymentMethods(pmData.paymentMethods ?? []);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err.message || "Failed to load billing details");
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
@@ -78,29 +104,19 @@ export default function BillingClient() {
       setPortalLoading(true);
       setError("");
 
-      const customerRes = await fetch("/api/billing/customer", {
+      const res = await fetch("/api/billing/setup-intent", {
         method: "POST",
       });
 
-      const customerData = await customerRes.json();
+      const data = await res.json();
 
-      if (!customerRes.ok) {
-        throw new Error(customerData.error || "Failed to create Stripe customer");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to open card form");
       }
 
-      const portalRes = await fetch("/api/billing/portal-session", {
-        method: "POST",
-      });
-
-      const portalData = await portalRes.json();
-
-      if (!portalRes.ok) {
-        throw new Error(portalData.error || "Failed to open billing portal");
-      }
-
-      window.location.href = portalData.url;
+      window.location.href = "/billing/add-card";
     } catch (err) {
-      setError(err.message || "Something went wrong opening the billing portal");
+      setError(err.message || "Something went wrong opening card form");
     } finally {
       setPortalLoading(false);
     }
@@ -110,7 +126,7 @@ export default function BillingClient() {
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[980px]">
         <div className="mb-6">
-          <BackButton fallback="/" />
+          <BackButton fallback="/settings" />
         </div>
 
         <div className="mb-8">
@@ -139,12 +155,35 @@ export default function BillingClient() {
                   Use saved cards to move quickly when joining a pot or buying through shop.
                 </p>
 
-                <div className="mt-6 rounded-[24px] border border-dashed border-[#ead8ce] bg-[#fffdfa] p-5">
-                  <p className="text-sm font-semibold text-slate-900">No saved cards yet</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
-                    When you add a card through Stripe, it can be managed from your billing portal
-                    and shown here once live card retrieval is connected.
-                  </p>
+                <div className="mt-6 space-y-3">
+                  {paymentMethods.length === 0 ? (
+                    <div className="rounded-[24px] border border-dashed border-[#ead8ce] bg-[#fffdfa] p-5">
+                      <p className="text-sm font-semibold text-slate-900">No saved cards yet</p>
+                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                        Add a card to keep payment ready for future pots and shop purchases.
+                      </p>
+                    </div>
+                  ) : (
+                    paymentMethods.map((card) => (
+                      <div
+                        key={card.id}
+                        className="flex items-center justify-between rounded-[24px] border border-[#ead8ce] bg-[#fffdfa] p-5"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold capitalize text-slate-900">
+                            {card.brand} ending in {card.last4}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Expires {String(card.exp_month).padStart(2, "0")}/{card.exp_year}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-[#f6ebe4] px-3 py-1 text-xs font-medium text-slate-700">
+                          Saved
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
 
                 <div className="mt-6">
@@ -154,7 +193,7 @@ export default function BillingClient() {
                     disabled={portalLoading}
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
                   >
-                    {portalLoading ? "Opening Stripe..." : "Add new card"}
+                    {portalLoading ? "Opening form..." : "Add card"}
                   </button>
                 </div>
               </section>
@@ -213,7 +252,7 @@ export default function BillingClient() {
                     </button>
 
                     <Link
-                      href="/"
+                      href="/settings"
                       className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
                     >
                       Cancel
@@ -260,12 +299,16 @@ export default function BillingClient() {
                 <div className="mt-5 space-y-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Saved cards</span>
-                    <span className="font-medium text-slate-900">0</span>
+                    <span className="font-medium text-slate-900">{paymentMethods.length}</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Default card</span>
-                    <span className="font-medium text-slate-900">None yet</span>
+                    <span className="font-medium text-slate-900">
+                      {paymentMethods.length > 0
+                        ? `${paymentMethods[0].brand} •••• ${paymentMethods[0].last4}`
+                        : "None yet"}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
