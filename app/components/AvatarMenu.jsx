@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 
 export default function AvatarMenu() {
   const supabase = createClient();
+  const menuRef = useRef(null);
 
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState("");
@@ -40,6 +41,20 @@ export default function AvatarMenu() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   const initials = useMemo(() => {
     if (!fullName) return "U";
 
@@ -53,11 +68,14 @@ export default function AvatarMenu() {
   }, [fullName]);
 
   return (
-    <div className="relative">
+    <div ref={menuRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
         className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-neutral-200"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Open account menu"
       >
         {avatarUrl ? (
           <img
@@ -74,6 +92,9 @@ export default function AvatarMenu() {
         <div className="absolute right-0 mt-2 w-48 rounded-xl border border-neutral-200 bg-white p-2 shadow-lg">
           <Link href="/account" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
             Account
+          </Link>
+          <Link href="/billing" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
+            Billing
           </Link>
           <Link href="/settings" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
             Settings
