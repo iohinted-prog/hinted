@@ -135,12 +135,11 @@ export default function BillingClient() {
       <div className="mx-auto max-w-[980px]">
         <div className="mb-6">
           <Link
-            href="/settings"
-            replace
+            href="/feed"
             className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-[#faf6f3]"
           >
             <span aria-hidden="true">←</span>
-            <span>Back to settings</span>
+            <span>Back to feed</span>
           </Link>
         </div>
 
@@ -267,8 +266,7 @@ export default function BillingClient() {
                     </button>
 
                     <Link
-                      href="/settings"
-                      replace
+                      href="/feed"
                       className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
                     >
                       Cancel
