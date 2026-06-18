@@ -26,6 +26,13 @@ const interestOptions = [
   "Art",
 ];
 
+const relationshipOptions = [
+  { value: "partner", label: "Partner" },
+  { value: "friend", label: "Friend" },
+  { value: "sister", label: "Sister" },
+  { value: "brother", label: "Brother" },
+];
+
 function StepPill({ active, complete, number, label }) {
   return (
     <div className="flex min-w-0 items-center gap-3">
@@ -83,6 +90,7 @@ export default function OnboardingPage() {
     birthday: "",
     inviteName: "",
     inviteEmail: "",
+    inviteRelationship: "friend",
   });
   const [errors, setErrors] = useState({});
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -115,9 +123,7 @@ export default function OnboardingPage() {
 
       const { data: existingProfile, error: profileError } = await supabase
         .from("profiles")
-        .select(
-          "full_name, avatar_url, birthday, interests, invite_name, invite_email, onboarding_completed"
-        )
+        .select("full_name, avatar_url, birthday, interests, onboarding_completed")
         .eq("id", user.id)
         .maybeSingle();
 
@@ -138,12 +144,11 @@ export default function OnboardingPage() {
 
       if (!isActive) return;
 
-      setForm({
+      setForm((prev) => ({
+        ...prev,
         fullName: resolvedName,
         birthday: existingProfile?.birthday || "",
-        inviteName: existingProfile?.invite_name || "",
-        inviteEmail: existingProfile?.invite_email || "",
-      });
+      }));
 
       setSelectedInterests(
         Array.isArray(existingProfile?.interests) && existingProfile.interests.length > 0
@@ -224,7 +229,7 @@ export default function OnboardingPage() {
 
     if (userError || !user) {
       console.error("Could not find logged-in user.");
-      return false;
+      return { ok: false, user: null };
     }
 
     const payload = {
@@ -233,8 +238,6 @@ export default function OnboardingPage() {
       avatar_url: avatarUrl || null,
       birthday: form.birthday || null,
       interests: selectedInterests,
-      invite_name: form.inviteName.trim() || null,
-      invite_email: form.inviteEmail.trim() || null,
       ...values,
     };
 
@@ -244,6 +247,29 @@ export default function OnboardingPage() {
 
     if (error) {
       console.error("Error saving profile:", error.message);
+      return { ok: false, user };
+    }
+
+    return { ok: true, user };
+  }
+
+  async function saveConnection(profileId) {
+    const hasInviteName = form.inviteName.trim().length > 0;
+    const hasInviteEmail = form.inviteEmail.trim().length > 0;
+
+    if (!hasInviteName && !hasInviteEmail) return true;
+
+    const payload = {
+      profile_id: profileId,
+      name: form.inviteName.trim() || "Unnamed contact",
+      email: form.inviteEmail.trim() || null,
+      relationship_type: form.inviteRelationship,
+    };
+
+    const { error } = await supabase.from("profile_connections").insert(payload);
+
+    if (error) {
+      console.error("Error saving connection:", error.message);
       return false;
     }
 
@@ -254,8 +280,8 @@ export default function OnboardingPage() {
     if (!validateStep()) return;
 
     if (step === 1 || step === 2) {
-      const ok = await saveProfile();
-      if (!ok) return;
+      const result = await saveProfile();
+      if (!result.ok) return;
     }
 
     setStep((prev) => Math.min(prev + 1, steps.length));
@@ -266,8 +292,8 @@ export default function OnboardingPage() {
   }
 
   async function skipInterestsStep() {
-    const ok = await saveProfile();
-    if (!ok) return;
+    const result = await saveProfile();
+    if (!result.ok) return;
     setStep(3);
   }
 
@@ -278,13 +304,16 @@ export default function OnboardingPage() {
   async function finishOnboarding(skippedInvite = false) {
     if (!skippedInvite && !validateStep()) return;
 
-    const ok = await saveProfile({
-      invite_name: skippedInvite ? null : form.inviteName.trim() || null,
-      invite_email: skippedInvite ? null : form.inviteEmail.trim() || null,
+    const result = await saveProfile({
       onboarding_completed: true,
     });
 
-    if (!ok) return;
+    if (!result.ok || !result.user) return;
+
+    if (!skippedInvite) {
+      const connectionSaved = await saveConnection(result.user.id);
+      if (!connectionSaved) return;
+    }
 
     router.push("/feed");
   }
@@ -555,7 +584,7 @@ export default function OnboardingPage() {
               </h1>
 
               <p className="mt-3 text-[15px] leading-7 text-slate-600">
-                Search your Google contacts by name or email, or add someone manually.
+                Search your Google contacts by name or email, then choose how you know them.
               </p>
 
               <div className="mt-7">
@@ -644,6 +673,24 @@ export default function OnboardingPage() {
                   {errors.inviteEmail ? (
                     <p className="mt-2 text-xs text-red-500">{errors.inviteEmail}</p>
                   ) : null}
+                </div>
+
+                <div>
+                  <label htmlFor="inviteRelationship" className="block text-sm font-medium text-slate-900">
+                    Relationship
+                  </label>
+                  <select
+                    id="inviteRelationship"
+                    value={form.inviteRelationship}
+                    onChange={(e) => updateField("inviteRelationship", e.target.value)}
+                    className="mt-2 h-[56px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
+                  >
+                    {relationshipOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
