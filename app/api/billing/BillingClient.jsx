@@ -11,6 +11,7 @@ export default function BillingClient() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [cardLoading, setCardLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState("");
   const [error, setError] = useState("");
 
   const [billingEmail, setBillingEmail] = useState("");
@@ -157,6 +158,31 @@ export default function BillingClient() {
     }
   }
 
+  async function handleDeleteCard(paymentMethodId) {
+    try {
+      setDeletingId(paymentMethodId);
+      setError("");
+
+      const res = await fetch(`/api/billing/payment-methods/${paymentMethodId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete card.");
+      }
+
+      setPaymentMethods((current) =>
+        current.filter((card) => card.id !== paymentMethodId)
+      );
+    } catch (err) {
+      setError(err.message || "Failed to delete card.");
+    } finally {
+      setDeletingId("");
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[980px]">
@@ -219,9 +245,20 @@ export default function BillingClient() {
                           </p>
                         </div>
 
-                        <span className="rounded-full bg-[#f6ebe4] px-3 py-1 text-xs font-medium text-slate-700">
-                          Saved
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="rounded-full bg-[#f6ebe4] px-3 py-1 text-xs font-medium text-slate-700">
+                            Saved
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCard(card.id)}
+                            disabled={deletingId === card.id}
+                            className="inline-flex h-9 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-xs font-medium text-slate-700 hover:bg-[#faf6f3] disabled:opacity-60"
+                          >
+                            {deletingId === card.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
@@ -300,36 +337,6 @@ export default function BillingClient() {
                     </Link>
                   </div>
                 </form>
-              </section>
-
-              <section className="rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
-                <h2 className="text-[20px] font-semibold text-slate-900">How we handle payments</h2>
-                <p className="mt-2 text-sm text-slate-500">
-                  We store only what is necessary to help you move quickly and safely.
-                </p>
-
-                <div className="mt-6 space-y-4">
-                  <div className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
-                    <p className="text-sm font-medium text-slate-900">Saved for convenience, not for pressure</p>
-                    <p className="mt-1 text-xs leading-6 text-slate-500">
-                      Your card can be kept on file so joining a pot or checking out in shop feels easy when timing matters.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
-                    <p className="text-sm font-medium text-slate-900">Protected carefully</p>
-                    <p className="mt-1 text-xs leading-6 text-slate-500">
-                      We are careful about how payment details are handled and shown, and we keep the experience focused on trust and clarity.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
-                    <p className="text-sm font-medium text-slate-900">No subscription billing here</p>
-                    <p className="mt-1 text-xs leading-6 text-slate-500">
-                      Billing in Hinted is for saved cards, receipts, and payment preferences only.
-                    </p>
-                  </div>
-                </div>
               </section>
             </div>
 
