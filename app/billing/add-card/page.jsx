@@ -11,7 +11,9 @@ import {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+);
 
 function AddCardForm() {
   const stripe = useStripe();
@@ -40,7 +42,7 @@ function AddCardForm() {
       return;
     }
 
-    const { error: confirmError } = await stripe.confirmSetup({
+    const result = await stripe.confirmSetup({
       elements,
       confirmParams: {
         return_url: `${window.location.origin}/billing?saved=1`,
@@ -48,14 +50,20 @@ function AddCardForm() {
       redirect: "if_required",
     });
 
-    if (confirmError) {
-      setError(confirmError.message || "Failed to save card.");
+    if (result.error) {
+      setError(result.error.message || "Failed to save card.");
       setSubmitting(false);
       return;
     }
 
-    router.push("/billing?saved=1");
-    router.refresh();
+    if (result.setupIntent?.status === "succeeded") {
+      router.push("/billing?saved=1");
+      router.refresh();
+      return;
+    }
+
+    setError("Card setup did not complete.");
+    setSubmitting(false);
   }
 
   return (
@@ -174,6 +182,15 @@ export default function AddCardPage() {
         <div className="mx-auto max-w-[760px] rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
           <div className="rounded-[20px] bg-[#fde8e8] p-4 text-sm text-[#c12020]">
             {error}
+          </div>
+
+          <div className="mt-5">
+            <Link
+              href="/billing"
+              className="inline-flex h-[44px] items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
+            >
+              Back to billing
+            </Link>
           </div>
         </div>
       </main>
