@@ -127,13 +127,19 @@ export default function OnboardingPage() {
     return Object.keys(nextErrors).length === 0;
   }
 
-  async function nextStep() {
+ async function nextStep() {
   if (!validateStep()) return;
 
   if (step === 1) {
-    const saved = await saveBirthday();
-    if (!saved) return;
+    try {
+      await saveBirthday();
+    } catch (error) {
+      console.error("Birthday save failed:", error);
+    }
   }
+
+  setStep((prev) => Math.min(prev + 1, steps.length));
+}
 
   setStep((prev) => Math.min(prev + 1, steps.length));
 }
