@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
-import BackButton from "../components/BackButton";
 import { saveBilling } from "../actions/billing";
 
 export default function BillingClient() {
@@ -11,41 +10,57 @@ export default function BillingClient() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [portalLoading, setPortalLoading] = useState(false);
+  const [cardLoading, setCardLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [billing_email, setBillingEmail] = useState("");
-  const [billing_country, setBillingCountry] = useState("GB");
+  const [billingEmail, setBillingEmail] = useState("");
+  const [billingCountry, setBillingCountry] = useState("GB");
   const [paymentMethods, setPaymentMethods] = useState([]);
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadData() {
+    async function loadBillingPage() {
       try {
+        setLoading(true);
+        setError("");
+
         const {
           data: { user },
+          error: userError,
         } = await supabase.auth.getUser();
 
-        if (!user) {
-          if (!ignore) setLoading(false);
+        if (userError || !user) {
+          if (!ignore) {
+            setError("You must be signed in to view billing.");
+            setLoading(false);
+          }
           return;
         }
 
-        const { data } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("profiles")
           .select("billing_email, billing_country")
           .eq("id", user.id)
           .single();
 
-        if (!ignore && data) {
-          setBillingEmail(data.billing_email ?? "");
-          setBillingCountry(data.billing_country ?? "GB");
+        if (profileError) {
+          throw new Error(profileError.message || "Failed to load profile.");
+        }
+
+        if (!ignore && profile) {
+          setBillingEmail(profile.billing_email ?? "");
+          setBillingCountry(profile.billing_country ?? "GB");
         }
 
         const {
           data: { session },
+          error: sessionError,
         } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          throw new Error(sessionError.message || "Failed to load session.");
+        }
 
         if (session?.access_token) {
           const pmRes = await fetch("/api/billing/payment-methods", {
@@ -57,13 +72,19 @@ export default function BillingClient() {
 
           const pmData = await pmRes.json();
 
-          if (!ignore && pmRes.ok) {
-            setPaymentMethods(pmData.paymentMethods ?? []);
+          if (!pmRes.ok) {
+            throw new Error(pmData.error || "Failed to load saved cards.");
           }
+
+          if (!ignore) {
+            setPaymentMethods(Array.isArray(pmData.paymentMethods) ? pmData.paymentMethods : []);
+          }
+        } else if (!ignore) {
+          setPaymentMethods([]);
         }
       } catch (err) {
         if (!ignore) {
-          setError(err.message || "Failed to load billing details");
+          setError(err.message || "Failed to load billing details.");
         }
       } finally {
         if (!ignore) {
@@ -72,7 +93,7 @@ export default function BillingClient() {
       }
     }
 
-    loadData();
+    loadBillingPage();
 
     return () => {
       ignore = true;
@@ -82,34 +103,37 @@ export default function BillingClient() {
   async function handleSave(e) {
     e.preventDefault();
 
-    setSaving(true);
-    setError("");
-
-    const formData = {
-      billing_email,
-      billing_country,
-    };
-
     try {
-      await saveBilling(formData);
+      setSaving(true);
+      setError("");
+
+      await saveBilling({
+        billing_email: billingEmail,
+        billing_country: billingCountry,
+      });
     } catch (err) {
-      setError(err.message || "Failed to save billing details");
+      setError(err.message || "Failed to save billing details.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleManageCards() {
+  async function handleAddCard() {
     try {
-      setPortalLoading(true);
+      setCardLoading(true);
       setError("");
 
       const {
         data: { session },
+        error: sessionError,
       } = await supabase.auth.getSession();
 
+      if (sessionError) {
+        throw new Error(sessionError.message || "Failed to load session.");
+      }
+
       if (!session?.access_token) {
-        throw new Error("You must be signed in to add a card");
+        throw new Error("You must be signed in to add a card.");
       }
 
       const res = await fetch("/api/billing/setup-intent", {
@@ -122,14 +146,14 @@ export default function BillingClient() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to open card form");
+        throw new Error(data.error || "Failed to open card form.");
       }
 
       window.location.href = "/billing/add-card";
     } catch (err) {
-      setError(err.message || "Something went wrong opening card form");
+      setError(err.message || "Something went wrong opening the card form.");
     } finally {
-      setPortalLoading(false);
+      setCardLoading(false);
     }
   }
 
@@ -137,7 +161,13 @@ export default function BillingClient() {
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[980px]">
         <div className="mb-6">
-          <BackButton fallback="/settings" />
+          <Link
+            href="/feed"
+            className="inline-flex h-11 items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-[#faf6f3]"
+          >
+            <span aria-hidden="true">←</span>
+            <span>Back to feed</span>
+          </Link>
         </div>
 
         <div className="mb-8">
@@ -200,11 +230,11 @@ export default function BillingClient() {
                 <div className="mt-6">
                   <button
                     type="button"
-                    onClick={handleManageCards}
-                    disabled={portalLoading}
+                    onClick={handleAddCard}
+                    disabled={cardLoading}
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
                   >
-                    {portalLoading ? "Opening form..." : "Add card"}
+                    {cardLoading ? "Opening form..." : "Add card"}
                   </button>
                 </div>
               </section>
@@ -223,7 +253,7 @@ export default function BillingClient() {
                     <input
                       id="billingEmail"
                       type="email"
-                      value={billing_email}
+                      value={billingEmail}
                       onChange={(e) => setBillingEmail(e.target.value)}
                       placeholder="billing@example.com"
                       className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
@@ -236,7 +266,7 @@ export default function BillingClient() {
                     </label>
                     <select
                       id="billingCountry"
-                      value={billing_country}
+                      value={billingCountry}
                       onChange={(e) => setBillingCountry(e.target.value)}
                       className="mt-2 h-[54px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                     >
@@ -263,7 +293,7 @@ export default function BillingClient() {
                     </button>
 
                     <Link
-                      href="/settings"
+                      href="/feed"
                       className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
                     >
                       Cancel
