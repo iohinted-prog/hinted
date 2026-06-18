@@ -751,7 +751,7 @@ export default function HintsPage() {
               <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
             </nav>
 
-            <AvatarMenu />
+    
           </div>
         </div>
       </header>
