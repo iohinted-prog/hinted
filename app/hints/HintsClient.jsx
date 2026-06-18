@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
+import AvatarMenu from "../components/AvatarMenu";
 
 const initialHints = [
   {
