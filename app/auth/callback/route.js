@@ -6,6 +6,7 @@ export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") || "/onboarding";
+  const origin = requestUrl.origin;
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -20,7 +21,7 @@ export async function GET(request) {
           cookieStore.set({ name, value, ...options });
         },
         remove(name, options) {
-          cookieStore.set({ name, value: "", ...options });
+          cookieStore.delete({ name, ...options });
         },
       },
     }
@@ -31,9 +32,9 @@ export async function GET(request) {
 
     if (error) {
       console.error("Auth callback error:", error.message);
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/", origin));
     }
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  return NextResponse.redirect(new URL(next, origin));
 }
