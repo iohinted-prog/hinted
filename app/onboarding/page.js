@@ -80,10 +80,10 @@ export default function OnboardingPage() {
 
   const { error } = await supabase
     .from("profiles")
-    .update({
+    .upsert({
+      id: user.id,
       birthday: form.birthday,
-    })
-    .eq("id", user.id);
+    });
 
   if (error) {
     console.error("Error saving birthday:", error.message);
