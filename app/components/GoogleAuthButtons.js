@@ -6,13 +6,20 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
   const supabase = createClient();
 
   const handleGoogleAuth = async () => {
-    const nextPath =
-      variant === "header-login" ? "/feed" : "/onboarding";
+    const nextPath = variant === "header-login" ? "/feed" : "/onboarding";
+
+    const redirectTo = `https://hinted.io/auth/callback?next=${encodeURIComponent(nextPath)}`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `https://hinted.io/auth/callback?next=${encodeURIComponent(nextPath)}`,
+        redirectTo,
+        scopes:
+          "openid email profile https://www.googleapis.com/auth/contacts.readonly",
+        queryParams: {
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
 
