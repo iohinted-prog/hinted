@@ -3,9 +3,11 @@
 import { createClient } from "../../lib/supabase/server";
 
 export async function saveSettings(formData) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   if (!user) {
     throw new Error("User not authenticated");
@@ -20,10 +22,7 @@ export async function saveSettings(formData) {
     currency: formData.currency || "GBP",
   };
 
-  const { error } = await supabase
-    .from("profiles")
-    .update(settings)
-    .eq("id", user.id);
+  const { error } = await supabase.from("profiles").update(settings).eq("id", user.id);
 
   if (error) {
     throw error;
