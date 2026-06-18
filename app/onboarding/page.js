@@ -78,12 +78,18 @@ export default function OnboardingPage() {
     return false;
   }
 
-  const { error } = await supabase
+const { data, error } = await supabase
     .from("profiles")
-    .upsert({
-      id: user.id,
-      birthday: form.birthday,
-    });
+    .upsert(
+      {
+        id: user.id,
+        birthday: form.birthday,
+      },
+      { onConflict: "id" }
+    )
+    .select();
+
+  console.log("saveBirthday result:", { data, error, userId: user.id, birthday: form.birthday });
 
   if (error) {
     console.error("Error saving birthday:", error.message);
