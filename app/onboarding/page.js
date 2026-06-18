@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 
@@ -74,6 +74,7 @@ function getPrimaryContactField(person, field) {
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
+  const hasRedirectedRef = useRef(false);
 
   const [step, setStep] = useState(1);
   const [selectedInterests, setSelectedInterests] = useState(["Travel", "Food"]);
@@ -85,16 +86,17 @@ export default function OnboardingPage() {
   });
   const [errors, setErrors] = useState({});
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [needsName, setNeedsName] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
-  const [contactsAllowed, setContactsAllowed] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
   const [contactResults, setContactResults] = useState([]);
   const [searchingContacts, setSearchingContacts] = useState(false);
+  const [contactsMessage, setContactsMessage] = useState("");
 
   const progress = useMemo(() => `${(step / steps.length) * 100}%`, [step]);
 
   useEffect(() => {
+    let isActive = true;
+
     async function loadUserProfile() {
       const {
         data: { user },
@@ -103,6 +105,7 @@ export default function OnboardingPage() {
 
       if (userError || !user) {
         console.error("Could not find logged-in user.");
+        if (isActive) setProfileLoaded(true);
         return;
       }
 
@@ -110,16 +113,11 @@ export default function OnboardingPage() {
       const googleName = getGoogleName(metadata);
       const googleAvatar = getGoogleAvatar(metadata);
 
-      setForm((prev) => ({
-        ...prev,
-        fullName: googleName || "",
-      }));
-      setAvatarUrl(googleAvatar || "");
-      setNeedsName(!googleName);
-
       const { data: existingProfile, error: profileError } = await supabase
         .from("profiles")
-        .select("full_name, avatar_url, birthday, interests, invite_name, invite_email")
+        .select(
+          "full_name, avatar_url, birthday, interests, invite_name, invite_email, onboarding_completed"
+        )
         .eq("id", user.id)
         .maybeSingle();
 
@@ -127,18 +125,25 @@ export default function OnboardingPage() {
         console.error("Error loading profile:", profileError.message);
       }
 
+      if (existingProfile?.onboarding_completed === true && !hasRedirectedRef.current) {
+        hasRedirectedRef.current = true;
+        router.replace("/feed");
+        return;
+      }
+
       const existingName = existingProfile?.full_name || "";
       const existingAvatar = existingProfile?.avatar_url || "";
-      const resolvedName = googleName || existingName || "";
+      const resolvedName = existingName || googleName || "";
       const resolvedAvatar = googleAvatar || existingAvatar || "";
 
-      setForm((prev) => ({
-        ...prev,
+      if (!isActive) return;
+
+      setForm({
         fullName: resolvedName,
-        birthday: existingProfile?.birthday || prev.birthday,
-        inviteName: existingProfile?.invite_name || prev.inviteName,
-        inviteEmail: existingProfile?.invite_email || prev.inviteEmail,
-      }));
+        birthday: existingProfile?.birthday || "",
+        inviteName: existingProfile?.invite_name || "",
+        inviteEmail: existingProfile?.invite_email || "",
+      });
 
       setSelectedInterests(
         Array.isArray(existingProfile?.interests) && existingProfile.interests.length > 0
@@ -147,7 +152,6 @@ export default function OnboardingPage() {
       );
 
       setAvatarUrl(resolvedAvatar);
-      setNeedsName(!resolvedName);
 
       const { error: syncError } = await supabase.from("profiles").upsert(
         {
@@ -162,11 +166,15 @@ export default function OnboardingPage() {
         console.error("Error syncing Google profile:", syncError.message);
       }
 
-      setProfileLoaded(true);
+      if (isActive) setProfileLoaded(true);
     }
 
     loadUserProfile();
-  }, [supabase]);
+
+    return () => {
+      isActive = false;
+    };
+  }, [router, supabase]);
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -185,7 +193,7 @@ export default function OnboardingPage() {
     const nextErrors = {};
 
     if (step === 1) {
-      if (needsName && !form.fullName.trim()) {
+      if (!form.fullName.trim()) {
         nextErrors.fullName = "Please tell us what to call you.";
       }
 
@@ -282,6 +290,9 @@ export default function OnboardingPage() {
   }
 
   async function searchGoogleContacts(query) {
+    setContactSearch(query);
+    setContactsMessage("");
+
     if (!query.trim()) {
       setContactResults([]);
       return;
@@ -297,10 +308,19 @@ export default function OnboardingPage() {
       const providerToken = session?.provider_token;
 
       if (!providerToken) {
-        console.error("No Google provider token found.");
         setContactResults([]);
+        setContactsMessage("Google contacts access is not available for this session.");
         return;
       }
+
+      await fetch(
+        "https://people.googleapis.com/v1/people:searchContacts?query=&pageSize=1&readMask=names,emailAddresses",
+        {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        }
+      );
 
       const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
       url.searchParams.set("query", query);
@@ -318,6 +338,7 @@ export default function OnboardingPage() {
       if (!response.ok) {
         console.error("Google contact search failed:", result);
         setContactResults([]);
+        setContactsMessage("We couldn’t search Google contacts right now.");
         return;
       }
 
@@ -333,18 +354,17 @@ export default function OnboardingPage() {
         .filter((person) => person.name || person.email);
 
       setContactResults(mapped);
-      setContactsAllowed(true);
+
+      if (mapped.length === 0) {
+        setContactsMessage("No matching Google contacts found. You can still add someone manually.");
+      }
     } catch (error) {
       console.error("Contact search error:", error);
       setContactResults([]);
+      setContactsMessage("We couldn’t search Google contacts right now.");
     } finally {
       setSearchingContacts(false);
     }
-  }
-
-  function handleContactSearchChange(value) {
-    setContactSearch(value);
-    searchGoogleContacts(value);
   }
 
   function selectContact(contact) {
@@ -355,6 +375,7 @@ export default function OnboardingPage() {
     }));
     setContactSearch(contact.name || contact.email || "");
     setContactResults([]);
+    setContactsMessage("");
     setErrors((prev) => ({
       ...prev,
       inviteName: "",
@@ -414,11 +435,11 @@ export default function OnboardingPage() {
               </div>
 
               <h1 className="mt-4 text-[34px] font-semibold tracking-[-0.05em] text-slate-900 sm:text-[42px]">
-                Add your birthday.
+                Tell us a bit about you.
               </h1>
 
               <p className="mt-3 text-[15px] leading-7 text-slate-600">
-                So we can remind people, and you don’t have to 🤫
+                We’ve pulled in what we can from Google, but you can change your name anytime here.
               </p>
 
               {avatarUrl ? (
@@ -433,41 +454,32 @@ export default function OnboardingPage() {
                       Signed in with Google
                     </p>
                     <p className="text-sm text-slate-500">
-                      We’ll use this profile photo on your account.
+                      We’ll use this profile photo on your account when available.
                     </p>
                   </div>
                 </div>
               ) : null}
 
-              {needsName ? (
-                <div className="mt-7">
-                  <label htmlFor="fullName" className="block text-sm font-medium text-slate-900">
-                    What should you be called?
-                  </label>
-                  <input
-                    id="fullName"
-                    type="text"
-                    value={form.fullName}
-                    onChange={(e) => updateField("fullName", e.target.value)}
-                    placeholder="Your name"
-                    className={`mt-2 h-[56px] w-full rounded-[18px] border bg-white px-4 text-sm text-slate-900 outline-none transition focus:ring-4 ${
-                      errors.fullName
-                        ? "border-red-300 focus:border-red-300 focus:ring-red-100"
-                        : "border-slate-300 focus:border-[#f36f64]/50 focus:ring-[#f36f64]/10"
-                    }`}
-                  />
-                  {errors.fullName ? (
-                    <p className="mt-2 text-xs text-red-500">{errors.fullName}</p>
-                  ) : null}
-                </div>
-              ) : (
-                <div className="mt-7 rounded-[22px] border border-[#f1e4dc] bg-[#fffaf7] p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-                    Name
-                  </p>
-                  <p className="mt-1 text-base font-medium text-slate-900">{form.fullName}</p>
-                </div>
-              )}
+              <div className="mt-7">
+                <label htmlFor="fullName" className="block text-sm font-medium text-slate-900">
+                  What should you be called?
+                </label>
+                <input
+                  id="fullName"
+                  type="text"
+                  value={form.fullName}
+                  onChange={(e) => updateField("fullName", e.target.value)}
+                  placeholder="Your name"
+                  className={`mt-2 h-[56px] w-full rounded-[18px] border bg-white px-4 text-sm text-slate-900 outline-none transition focus:ring-4 ${
+                    errors.fullName
+                      ? "border-red-300 focus:border-red-300 focus:ring-red-100"
+                      : "border-slate-300 focus:border-[#f36f64]/50 focus:ring-[#f36f64]/10"
+                  }`}
+                />
+                {errors.fullName ? (
+                  <p className="mt-2 text-xs text-red-500">{errors.fullName}</p>
+                ) : null}
+              </div>
 
               <div className="mt-7">
                 <label htmlFor="birthday" className="block text-sm font-medium text-slate-900">
@@ -502,7 +514,7 @@ export default function OnboardingPage() {
               </h1>
 
               <p className="mt-3 text-[15px] leading-7 text-slate-600">
-                Pick 2-3 that interests you, so we can improve your experience
+                Pick 2-3 that interest you so we can improve your experience.
               </p>
 
               <div className="mt-7 flex flex-wrap gap-2.5">
@@ -554,7 +566,7 @@ export default function OnboardingPage() {
                   id="contactSearch"
                   type="text"
                   value={contactSearch}
-                  onChange={(e) => handleContactSearchChange(e.target.value)}
+                  onChange={(e) => searchGoogleContacts(e.target.value)}
                   placeholder="Search a name or email"
                   className="mt-2 h-[56px] w-full rounded-[18px] border border-slate-300 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                 />
@@ -563,7 +575,7 @@ export default function OnboardingPage() {
                   <p className="mt-2 text-xs text-slate-500">Searching contacts...</p>
                 ) : null}
 
-                {contactsAllowed && contactResults.length > 0 ? (
+                {contactResults.length > 0 ? (
                   <div className="mt-3 overflow-hidden rounded-[18px] border border-slate-200 bg-white">
                     {contactResults.map((contact) => (
                       <button
@@ -586,10 +598,8 @@ export default function OnboardingPage() {
                   </div>
                 ) : null}
 
-                {contactsAllowed && contactSearch && !searchingContacts && contactResults.length === 0 ? (
-                  <p className="mt-2 text-xs text-slate-500">
-                    No matching Google contacts found. You can still add someone manually.
-                  </p>
+                {contactsMessage ? (
+                  <p className="mt-2 text-xs text-slate-500">{contactsMessage}</p>
                 ) : null}
               </div>
 
