@@ -22,47 +22,53 @@ export default function BillingClient() {
     let ignore = false;
 
     async function loadData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-      if (!user) {
-        if (!ignore) setLoading(false);
-        return;
-      }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("billing_email, billing_country")
-        .eq("id", user.id)
-        .single();
-
-      if (!ignore && data) {
-        setBillingEmail(data.billing_email ?? "");
-        setBillingCountry(data.billing_country ?? "GB");
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (session?.access_token) {
-        const pmRes = await fetch("/api/billing/payment-methods", {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-
-        const pmData = await pmRes.json();
-
-        if (!ignore && pmRes.ok) {
-          setPaymentMethods(pmData.paymentMethods ?? []);
+        if (!user) {
+          if (!ignore) setLoading(false);
+          return;
         }
-      }
 
-      if (!ignore) {
-        setLoading(false);
+        const { data } = await supabase
+          .from("profiles")
+          .select("billing_email, billing_country")
+          .eq("id", user.id)
+          .single();
+
+        if (!ignore && data) {
+          setBillingEmail(data.billing_email ?? "");
+          setBillingCountry(data.billing_country ?? "GB");
+        }
+
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          const pmRes = await fetch("/api/billing/payment-methods", {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          const pmData = await pmRes.json();
+
+          if (!ignore && pmRes.ok) {
+            setPaymentMethods(pmData.paymentMethods ?? []);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err.message || "Failed to load billing details");
+        }
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
       }
     }
 
@@ -98,29 +104,30 @@ export default function BillingClient() {
       setPortalLoading(true);
       setError("");
 
-      const customerRes = await fetch("/api/billing/customer", {
-        method: "POST",
-      });
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      const customerData = await customerRes.json();
-
-      if (!customerRes.ok) {
-        throw new Error(customerData.error || "Failed to create Stripe customer");
+      if (!session?.access_token) {
+        throw new Error("You must be signed in to add a card");
       }
 
-      const portalRes = await fetch("/api/billing/portal-session", {
+      const res = await fetch("/api/billing/setup-intent", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
       });
 
-      const portalData = await portalRes.json();
+      const data = await res.json();
 
-      if (!portalRes.ok) {
-        throw new Error(portalData.error || "Failed to open billing portal");
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to open card form");
       }
 
-      window.location.href = portalData.url;
+      window.location.href = "/billing/add-card";
     } catch (err) {
-      setError(err.message || "Something went wrong opening the billing portal");
+      setError(err.message || "Something went wrong opening card form");
     } finally {
       setPortalLoading(false);
     }
@@ -130,7 +137,7 @@ export default function BillingClient() {
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[980px]">
         <div className="mb-6">
-          <BackButton fallback="/" />
+          <BackButton fallback="/settings" />
         </div>
 
         <div className="mb-8">
@@ -164,7 +171,7 @@ export default function BillingClient() {
                     <div className="rounded-[24px] border border-dashed border-[#ead8ce] bg-[#fffdfa] p-5">
                       <p className="text-sm font-semibold text-slate-900">No saved cards yet</p>
                       <p className="mt-2 text-sm leading-6 text-slate-500">
-                        When you add a card through Stripe, it will appear here for quick reference.
+                        Add a card to keep payment ready for future pots and shop purchases.
                       </p>
                     </div>
                   ) : (
@@ -197,7 +204,7 @@ export default function BillingClient() {
                     disabled={portalLoading}
                     className="inline-flex h-[48px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
                   >
-                    {portalLoading ? "Opening Stripe..." : "Add new card"}
+                    {portalLoading ? "Opening form..." : "Add card"}
                   </button>
                 </div>
               </section>
@@ -256,7 +263,7 @@ export default function BillingClient() {
                     </button>
 
                     <Link
-                      href="/"
+                      href="/settings"
                       className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
                     >
                       Cancel
@@ -309,7 +316,9 @@ export default function BillingClient() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Default card</span>
                     <span className="font-medium text-slate-900">
-                      {paymentMethods.length > 0 ? `${paymentMethods[0].brand} •••• ${paymentMethods[0].last4}` : "None yet"}
+                      {paymentMethods.length > 0
+                        ? `${paymentMethods[0].brand} •••• ${paymentMethods[0].last4}`
+                        : "None yet"}
                     </span>
                   </div>
 
