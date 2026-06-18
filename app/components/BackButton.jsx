@@ -2,13 +2,31 @@
 
 import { useRouter } from "next/navigation";
 
-export default function BackButton({ fallback = "/" }) {
+export default function BackButton({
+  fallback = "/",
+  label = "Back",
+  className = "",
+}) {
   const router = useRouter();
 
   function handleBack() {
-    if (typeof window !== "undefined" && window.history.length > 1) {
-      router.back();
+    if (typeof window === "undefined") {
+      router.push(fallback);
       return;
+    }
+
+    const referrer = document.referrer;
+
+    if (referrer) {
+      try {
+        const refUrl = new URL(referrer);
+        const currentOrigin = window.location.origin;
+
+        if (refUrl.origin === currentOrigin) {
+          router.back();
+          return;
+        }
+      } catch (e) {}
     }
 
     router.push(fallback);
@@ -18,9 +36,14 @@ export default function BackButton({ fallback = "/" }) {
     <button
       type="button"
       onClick={handleBack}
-      className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+      className={
+        className ||
+        "inline-flex h-11 items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-[#faf6f3]"
+      }
+      aria-label={label}
     >
-      ← Back
+      <span aria-hidden="true">←</span>
+      <span>{label}</span>
     </button>
   );
 }
