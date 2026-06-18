@@ -106,21 +106,6 @@ export default function BillingClient() {
     }
   }
 
-  const savedCards = [
-    {
-      id: 1,
-      label: "Visa ending in 4242",
-      expiry: "08/2028",
-      default: true,
-    },
-    {
-      id: 2,
-      label: "Mastercard ending in 1189",
-      expiry: "03/2027",
-      default: false,
-    },
-  ];
-
   return (
     <main className="min-h-screen bg-[#fffaf7] px-5 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[980px]">
@@ -154,49 +139,12 @@ export default function BillingClient() {
                   Use saved cards to move quickly when joining a pot or buying through shop.
                 </p>
 
-                <div className="mt-6 space-y-4">
-                  {savedCards.map((card) => (
-                    <div
-                      key={card.id}
-                      className="rounded-[24px] border border-[#f1e4dc] bg-[#fffdfa] p-5"
-                    >
-                      <div className="flex items-center justify-between gap-4">
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{card.label}</p>
-                          <p className="mt-1 text-xs text-slate-500">Expires {card.expiry}</p>
-                        </div>
-
-                        {card.default ? (
-                          <span className="rounded-full bg-[#f3f7ef] px-3 py-1 text-[11px] font-semibold text-[#58703f]">
-                            Default
-                          </span>
-                        ) : (
-                          <button
-                            type="button"
-                            className="rounded-full border border-[#ead8ce] bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
-                          >
-                            Make default
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          className="inline-flex h-[40px] items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          type="button"
-                          className="inline-flex h-[40px] items-center justify-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="mt-6 rounded-[24px] border border-dashed border-[#ead8ce] bg-[#fffdfa] p-5">
+                  <p className="text-sm font-semibold text-slate-900">No saved cards yet</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    When you add a card through Stripe, it can be managed from your billing portal
+                    and shown here once live card retrieval is connected.
+                  </p>
                 </div>
 
                 <div className="mt-6">
@@ -312,12 +260,12 @@ export default function BillingClient() {
                 <div className="mt-5 space-y-4">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Saved cards</span>
-                    <span className="font-medium text-slate-900">2</span>
+                    <span className="font-medium text-slate-900">0</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-500">Default card</span>
-                    <span className="font-medium text-slate-900">Visa 4242</span>
+                    <span className="font-medium text-slate-900">None yet</span>
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
