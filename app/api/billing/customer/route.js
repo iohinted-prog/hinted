@@ -18,7 +18,7 @@ export async function POST() {
 
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("email, full_name, stripe_customer_id")
+      .select("full_name, stripe_customer_id")
       .eq("id", user.id)
       .single();
 
@@ -31,7 +31,7 @@ export async function POST() {
     }
 
     const customer = await stripe.customers.create({
-      email: user.email || profile?.email || undefined,
+      email: user.email || undefined,
       name: profile?.full_name || undefined,
       metadata: {
         supabase_user_id: user.id,
