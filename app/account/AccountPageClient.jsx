@@ -7,7 +7,9 @@ import { createClient } from "../../lib/supabase/client";
 
 function splitName(fullName = "") {
   const trimmed = fullName.trim();
-  if (!trimmed) return { firstName: "", lastName: "" };
+  if (!trimmed) {
+    return { firstName: "", lastName: "" };
+  }
 
   const parts = trimmed.split(/\s+/);
   return {
@@ -16,22 +18,50 @@ function splitName(fullName = "") {
   };
 }
 
-function buildFullName(firstName = "", lastName = "") {
-  return [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+function buildFullName(firstName = "", lastName = "", displayName = "") {
+  const combined = [firstName.trim(), lastName.trim()].filter(Boolean).join(" ");
+  return combined || displayName.trim();
 }
 
-function initialsFromName(fullName = "", email = "") {
+function getMetadataName(metadata = {}) {
+  return (
+    metadata.full_name ||
+    metadata.name ||
+    [metadata.given_name, metadata.family_name].filter(Boolean).join(" ") ||
+    ""
+  ).trim();
+}
+
+function getMetadataAvatar(metadata = {}) {
+  return metadata.avatar_url || metadata.picture || "";
+}
+
+function getInitials(fullName = "", email = "") {
   const source = fullName.trim() || email.trim();
-  if (!source) return "U";
+
+  if (!source) {
+    return "U";
+  }
 
   const parts = source.split(/\s+|@|[._-]/).filter(Boolean);
-  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() || "").join("") || "U";
+  return (
+    parts
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "U"
+  );
 }
 
-function formatMemberSince(dateString) {
-  if (!dateString) return "Member";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "Member";
+function formatMemberSince(createdAt) {
+  if (!createdAt) {
+    return "Member";
+  }
+
+  const date = new Date(createdAt);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Member";
+  }
 
   return new Intl.DateTimeFormat("en-GB", {
     month: "long",
@@ -52,8 +82,9 @@ export default function AccountPageClient() {
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
   const [memberSince, setMemberSince] = useState("");
-  const [photoPreview, setPhotoPreview] = useState("");
+
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [photoPreview, setPhotoPreview] = useState("");
 
   const [form, setForm] = useState({
     firstName: "",
@@ -64,69 +95,77 @@ export default function AccountPageClient() {
     bio: "",
   });
 
-  const initials = useMemo(() => {
-    const fullName = buildFullName(form.firstName, form.lastName) || form.displayName;
-    return initialsFromName(fullName, email);
-  }, [form.firstName, form.lastName, form.displayName, email]);
+  const resolvedName = useMemo(
+    () => buildFullName(form.firstName, form.lastName, form.displayName),
+    [form.firstName, form.lastName, form.displayName]
+  );
+
+  const initials = useMemo(() => getInitials(resolvedName, email), [resolvedName, email]);
 
   useEffect(() => {
     let isActive = true;
 
     async function loadAccount() {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
+        if (userError || !user) {
+          throw userError || new Error("No authenticated user found.");
+        }
+
+        const metadata = user.user_metadata || {};
+        const metadataName = getMetadataName(metadata);
+        const metadataAvatar = getMetadataAvatar(metadata);
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("full_name, avatar_url, birthday, phone, bio")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error loading profile:", profileError.message);
+        }
+
+        if (!isActive) {
+          return;
+        }
+
+        const savedFullName = profile?.full_name || metadataName || "";
+        const nameParts = splitName(savedFullName);
+
+        const savedAvatar =
+          profile?.avatar_url ||
+          metadataAvatar ||
+          "";
+
+        setUserId(user.id);
+        setEmail(user.email || "");
+        setMemberSince(formatMemberSince(user.created_at));
+        setAvatarUrl(savedAvatar);
+        setPhotoPreview(savedAvatar);
+        setForm({
+          firstName: nameParts.firstName,
+          lastName: nameParts.lastName,
+          displayName: savedFullName,
+          phone: profile?.phone || "",
+          birthday: profile?.birthday || "",
+          bio: profile?.bio || "",
+        });
+      } catch (error) {
+        console.error("Account load error:", error);
         if (isActive) {
           setMessageType("error");
           setMessage("We couldn't load your account right now.");
+        }
+      } finally {
+        if (isActive) {
           setProfileLoaded(true);
         }
-        return;
       }
-
-      const metadata = user.user_metadata || {};
-      const metadataName =
-        metadata.full_name ||
-        metadata.name ||
-        [metadata.given_name, metadata.family_name].filter(Boolean).join(" ").trim() ||
-        "";
-
-      const metadataAvatar = metadata.avatar_url || metadata.picture || "";
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("full_name, avatar_url, birthday, phone, bio")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!isActive) return;
-
-      if (profileError) {
-        console.error("Error loading profile:", profileError.message);
-      }
-
-      const resolvedFullName = profile?.full_name || metadataName || "";
-      const nameParts = splitName(resolvedFullName);
-      const resolvedAvatar = profile?.avatar_url || metadataAvatar || "";
-
-      setUserId(user.id);
-      setEmail(user.email || "");
-      setMemberSince(formatMemberSince(user.created_at || ""));
-      setAvatarUrl(resolvedAvatar);
-      setPhotoPreview(resolvedAvatar);
-      setForm({
-        firstName: nameParts.firstName,
-        lastName: nameParts.lastName,
-        displayName: resolvedFullName,
-        phone: profile?.phone || "",
-        birthday: profile?.birthday || "",
-        bio: profile?.bio || "",
-      });
-
-      setProfileLoaded(true);
     }
 
     loadAccount();
@@ -137,7 +176,10 @@ export default function AccountPageClient() {
   }, [supabase]);
 
   function updateField(key, value) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
 
     if (message) {
       setMessage("");
@@ -150,7 +192,10 @@ export default function AccountPageClient() {
 
   async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
-    if (!file || !userId) return;
+
+    if (!file || !userId) {
+      return;
+    }
 
     const localPreview = URL.createObjectURL(file);
     setPhotoPreview(localPreview);
@@ -159,13 +204,14 @@ export default function AccountPageClient() {
 
     try {
       const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const filePath = `${userId}/avatar-${Date.now()}.${extension}`;
+      const filePath = `${userId}/avatar.${extension}`;
 
       const { error: uploadError } = await supabase.storage
         .from("avatars")
         .upload(filePath, file, {
           cacheControl: "3600",
           upsert: true,
+          contentType: file.type,
         });
 
       if (uploadError) {
@@ -173,7 +219,34 @@ export default function AccountPageClient() {
       }
 
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      const publicUrl = data?.publicUrl || "";
+      const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          avatar_url: publicUrl,
+          full_name: resolvedName || null,
+          birthday: form.birthday || null,
+          phone: form.phone.trim() || null,
+          bio: form.bio.trim() || null,
+        },
+        { onConflict: "id" }
+      );
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: publicUrl,
+          full_name: resolvedName || null,
+        },
+      });
+
+      if (authUpdateError) {
+        console.error("Auth metadata update error:", authUpdateError.message);
+      }
 
       setAvatarUrl(publicUrl);
       setPhotoPreview(publicUrl);
@@ -186,29 +259,78 @@ export default function AccountPageClient() {
       setMessage("We couldn't upload that photo right now.");
     } finally {
       setUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }
 
-  function handleRemovePhoto() {
-    setPhotoPreview("");
-    setAvatarUrl("");
+  async function handleRemovePhoto() {
+    if (!userId || uploadingPhoto) {
+      return;
+    }
+
+    setUploadingPhoto(true);
     setMessage("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+
+    try {
+      const { error: profileError } = await supabase.from("profiles").upsert(
+        {
+          id: userId,
+          avatar_url: null,
+          full_name: resolvedName || null,
+          birthday: form.birthday || null,
+          phone: form.phone.trim() || null,
+          bio: form.bio.trim() || null,
+        },
+        { onConflict: "id" }
+      );
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: {
+          avatar_url: null,
+          full_name: resolvedName || null,
+        },
+      });
+
+      if (authUpdateError) {
+        console.error("Auth metadata update error:", authUpdateError.message);
+      }
+
+      setAvatarUrl("");
+      setPhotoPreview("");
+      setMessageType("success");
+      setMessage("Profile photo removed.");
+    } catch (error) {
+      console.error("Remove photo error:", error);
+      setMessageType("error");
+      setMessage("We couldn't remove that photo right now.");
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   }
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!userId) return;
+
+    if (!userId) {
+      return;
+    }
 
     setSaving(true);
     setMessage("");
 
     try {
-      const fullName = buildFullName(form.firstName, form.lastName) || form.displayName.trim();
+      const fullName = resolvedName;
 
-      const { error } = await supabase.from("profiles").upsert(
+      const { error: profileError } = await supabase.from("profiles").upsert(
         {
           id: userId,
           full_name: fullName || null,
@@ -220,17 +342,15 @@ export default function AccountPageClient() {
         { onConflict: "id" }
       );
 
-      if (error) {
-        throw error;
+      if (profileError) {
+        throw profileError;
       }
 
-      const metadataUpdate = {
-        full_name: fullName || null,
-        avatar_url: avatarUrl || null,
-      };
-
       const { error: authUpdateError } = await supabase.auth.updateUser({
-        data: metadataUpdate,
+        data: {
+          full_name: fullName || null,
+          avatar_url: avatarUrl || null,
+        },
       });
 
       if (authUpdateError) {
