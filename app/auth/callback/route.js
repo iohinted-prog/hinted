@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") || "/onboarding";
-  const origin = requestUrl.origin;
-  const cookieStore = await cookies();
+
+  const safeNext =
+    next.startsWith("/") && !next.startsWith("//") ? next : "/onboarding";
+
+  const redirectUrl = new URL(safeNext, requestUrl.origin);
+  const response = NextResponse.redirect(redirectUrl);
+
+  response.headers.set("Cache-Control", "private, no-store");
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -15,26 +20,28 @@ export async function GET(request) {
     {
       cookies: {
         get(name) {
-          return cookieStore.get(name)?.value;
+          return request.cookies.get(name)?.value;
         },
         set(name, value, options) {
-          cookieStore.set({ name, value, ...options });
+          response.cookies.set(name, value, options);
         },
         remove(name, options) {
-          cookieStore.delete({ name, ...options });
+          response.cookies.set(name, "", options);
         },
       },
     }
   );
 
-  if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-
-    if (error) {
-      console.error("Auth callback error:", error.message);
-      return NextResponse.redirect(new URL("/", origin));
-    }
+  if (!code) {
+    return NextResponse.redirect(new URL("/", requestUrl.origin));
   }
 
-  return NextResponse.redirect(new URL(next, origin));
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+
+  if (error) {
+    console.error("Auth callback error:", error.message);
+    return NextResponse.redirect(new URL("/", requestUrl.origin));
+  }
+
+  return response;
 }
