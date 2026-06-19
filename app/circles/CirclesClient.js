@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
@@ -19,17 +19,13 @@ const currencyOptions = [
 
 const relationshipOptions = [
   "Partner",
-  "Spouse",
   "Family",
   "Friend",
+  "Brother",
+  "Sister",
   "Parent",
-  "Child",
-  "Sibling",
-  "Cousin",
   "Colleague",
-  "Roommate",
-  "Best friend",
-  "Other",
+  "Child",
 ];
 
 const calendarEvents = [
@@ -72,18 +68,6 @@ function getInitials(name) {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() || "")
     .join("");
-}
-
-function getGoogleContactName(person = {}) {
-  const names = person?.names;
-  if (!Array.isArray(names) || names.length === 0) return "";
-  return names[0]?.displayName || names[0]?.givenName || "";
-}
-
-function getGoogleContactEmail(person = {}) {
-  const emailAddresses = person?.emailAddresses;
-  if (!Array.isArray(emailAddresses) || emailAddresses.length === 0) return "";
-  return emailAddresses[0]?.value || "";
 }
 
 function getPrimaryRelationship(relationshipTypes) {
@@ -457,20 +441,7 @@ function RelationshipChips({ selected, onToggle }) {
   );
 }
 
-function AddContactModal({
-  open,
-  onClose,
-  onSave,
-  form,
-  setForm,
-  isSaving,
-  contactSearch,
-  onSearchContacts,
-  contactResults,
-  searchingContacts,
-  contactsMessage,
-  onSelectGoogleContact,
-}) {
+function AddContactModal({ open, onClose, onSave, form, setForm, isSaving }) {
   const toggleRelationship = (value) => {
     setForm((prev) => ({
       ...prev,
@@ -480,160 +451,79 @@ function AddContactModal({
     }));
   };
 
-  const canSave = form.name.trim() && form.relationshipTypes.length > 0 && !isSaving;
-
   return (
-    <ModalShell open={open} onClose={onClose} eyebrow="Contact" title="Add a contact" maxWidth="max-w-[860px]">
-      <div className="grid gap-0 lg:grid-cols-[1.04fr_0.96fr]">
-        <div className="space-y-5 p-6">
-          <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-[#fffdfb] p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Bring someone in quickly</p>
-            <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-900">Browse from your linked contacts</h3>
-            <p className="mt-2 text-[14px] leading-7 text-slate-600">
-              Search your linked Google account, choose the right person, then tag the relationship that fits best.
-            </p>
-            <div className="mt-4">
-              <label htmlFor="googleContactSearch" className="block text-sm font-medium text-slate-700">
-                Search contacts
-              </label>
-              <input
-                id="googleContactSearch"
-                type="text"
-                value={contactSearch}
-                onChange={(e) => onSearchContacts(e.target.value)}
-                className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                placeholder="Search a name or email"
-              />
+    <ModalShell open={open} onClose={onClose} eyebrow="Contact" title="Add a contact" maxWidth="max-w-[760px]">
+      <div className="space-y-5 p-6">
+        <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-[#fffdfb] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Bring someone in quickly</p>
+          <h3 className="mt-2 text-xl font-semibold tracking-[-0.04em] text-slate-900">Replicate the onboarding flow</h3>
+          <p className="mt-2 text-[14px] leading-7 text-slate-600">
+            Search from Google Contacts later, or add someone manually now so they are ready for hints and circles.
+          </p>
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="flex h-12 flex-1 items-center rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-400">
+              Search Google contacts
             </div>
-
-            {searchingContacts ? <p className="mt-3 text-xs text-slate-500">Searching contacts...</p> : null}
-
-            {contactResults.length ? (
-              <div className="mt-4 max-h-[260px] space-y-2 overflow-y-auto pr-1">
-                {contactResults.map((contact) => {
-                  const active = form.name === (contact.name || "") && form.email === (contact.email || "");
-
-                  return (
-                    <button
-                      key={contact.id}
-                      type="button"
-                      onClick={() => onSelectGoogleContact(contact)}
-                      className={`flex w-full items-center justify-between rounded-[18px] border px-4 py-3 text-left transition ${
-                        active
-                          ? "border-[#f0a384] bg-[#fff4ee]"
-                          : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900">{contact.name || "No name"}</p>
-                        <p className="truncate text-[12px] text-slate-500">{contact.email || "No email"}</p>
-                      </div>
-                      <span className="ml-4 text-[12px] font-semibold text-[#df7b59]">{active ? "Selected" : "Use"}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {contactsMessage ? <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p> : null}
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2 sm:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Name</span>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                placeholder="Maya"
-              />
-            </label>
-
-            <label className="space-y-2 sm:col-span-2">
-              <span className="text-sm font-medium text-slate-700">Email</span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                placeholder="maya@example.com"
-              />
-            </label>
+            <button
+              type="button"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+            >
+              Connect Google
+            </button>
           </div>
         </div>
 
-        <div className="border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Pick the relationship</p>
-            <p className="mt-2 text-[13px] leading-6 text-slate-500">
-              Pick one or more so circles and hints can feel more personal later.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              {relationshipOptions.map((relationship) => {
-                const selected = form.relationshipTypes.includes(relationship);
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="space-y-2 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+              placeholder="Maya"
+            />
+          </label>
 
-                return (
-                  <button
-                    key={relationship}
-                    type="button"
-                    onClick={() => toggleRelationship(relationship)}
-                    className={`rounded-full px-4 py-2.5 text-sm font-medium transition ${
-                      selected
-                        ? "bg-[#2f3b2d] text-white"
-                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {relationship}
-                  </button>
-                );
-              })}
-            </div>
+          <label className="space-y-2 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+              placeholder="maya@example.com"
+            />
+          </label>
 
-            <div className="mt-6 rounded-[20px] bg-[#fffaf7] p-4">
-              <p className="text-sm font-semibold text-slate-900">Selected tags</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {form.relationshipTypes.length ? (
-                  form.relationshipTypes.map((relationship) => (
-                    <span
-                      key={relationship}
-                      className="inline-flex rounded-full bg-[#edf6eb] px-3 py-1 text-[11px] font-semibold text-[#4a7a3a]"
-                    >
-                      {relationship}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-[12px] text-slate-400">No relationship selected yet.</span>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!canSave}
-                onClick={onSave}
-                className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
-                  canSave ? "bg-gradient-to-b from-[#ff946d] to-[#f36f64]" : "cursor-not-allowed bg-[#e7b29f]"
-                }`}
-              >
-                {isSaving ? "Saving..." : "Save contact"}
-              </button>
-            </div>
+          <div className="space-y-2 sm:col-span-2">
+            <span className="text-sm font-medium text-slate-700">Relationship</span>
+            <RelationshipChips selected={form.relationshipTypes} onToggle={toggleRelationship} />
+            <p className="text-[12px] text-slate-400">Pick one or more so circles and hints can feel more personal later.</p>
           </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+          >
+            {isSaving ? "Saving..." : "Save contact"}
+          </button>
         </div>
       </div>
     </ModalShell>
   );
 }
-
 
 function CreateCircleModal({
   open,
@@ -899,9 +789,9 @@ function CreateCircleModal({
             </p>
 
             <div className="mt-4 min-h-[120px] rounded-[20px] bg-[#fffaf7] p-4">
-              {selectedPeople.length ? (
+              {(selectedPeople || []).length ? (
                 <div className="flex flex-wrap gap-3">
-                  {selectedPeople.map((person) => (
+                  {(selectedPeople || []).map((person) => (
                     <div key={person.id} className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2">
                       <div
                         className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
@@ -926,9 +816,9 @@ function CreateCircleModal({
             </div>
 
             <div className="mt-5 space-y-3">
-              {contacts.length ? (
-                contacts.map((contact) => {
-                  const alreadyAdded = selectedPeople.some((person) => person.id === contact.id);
+              {(contacts || []).length ? (
+                (contacts || []).map((contact) => {
+                  const alreadyAdded = (selectedPeople || []).some((person) => person.id === contact.id);
                   return (
                     <div key={contact.id} className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3">
                       <div className="flex items-center gap-3">
@@ -989,7 +879,7 @@ function CreateCircleModal({
               <button
                 type="button"
                 onClick={onSubmit}
-                disabled={!contacts.length}
+                disabled={!(contacts || []).length}
                 className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-50"
               >
                 Create circle
@@ -1013,9 +903,9 @@ function AddInvitesModal({ open, onClose, circle, contacts, onSave, selectedPeop
         </p>
 
         <div className="rounded-[20px] bg-[#fffaf7] p-4">
-          {selectedPeople.length ? (
+          {(selectedPeople || []).length ? (
             <div className="flex flex-wrap gap-3">
-              {selectedPeople.map((person) => (
+              {(selectedPeople || []).map((person) => (
                 <div key={person.id} className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2">
                   <div
                     className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
@@ -1040,9 +930,9 @@ function AddInvitesModal({ open, onClose, circle, contacts, onSave, selectedPeop
         </div>
 
         <div className="space-y-3">
-          {contacts.length ? (
-            contacts.map((contact) => {
-              const alreadyAdded = selectedPeople.some((person) => person.id === contact.id);
+          {(contacts || []).length ? (
+            (contacts || []).map((contact) => {
+              const alreadyAdded = (selectedPeople || []).some((person) => person.id === contact.id);
               return (
                 <div key={contact.id} className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3">
                   <div className="flex items-center gap-3">
@@ -1088,7 +978,7 @@ function AddInvitesModal({ open, onClose, circle, contacts, onSave, selectedPeop
           <button
             type="button"
             onClick={onSave}
-            disabled={!selectedPeople.length || isSaving}
+            disabled={!(selectedPeople || []).length || isSaving}
             className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
           >
             {isSaving ? "Saving..." : "Save invites"}
@@ -1104,7 +994,6 @@ export default function CirclesClient() {
   const [contacts, setContacts] = useState([]);
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
-  const contactSearchTimeoutRef = useRef(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isCreateCircleOpen, setIsCreateCircleOpen] = useState(false);
@@ -1114,10 +1003,6 @@ export default function CirclesClient() {
   const [savingInvites, setSavingInvites] = useState(false);
   const [activeCircle, setActiveCircle] = useState(null);
   const [contactForm, setContactForm] = useState({ name: "", email: "", relationshipTypes: [] });
-  const [contactSearch, setContactSearch] = useState("");
-  const [contactResults, setContactResults] = useState([]);
-  const [searchingContacts, setSearchingContacts] = useState(false);
-  const [contactsMessage, setContactsMessage] = useState("");
   const [eventMode, setEventMode] = useState("calendar");
   const [selectedEventId, setSelectedEventId] = useState("1");
   const [selectedPeople, setSelectedPeople] = useState([]);
@@ -1140,14 +1025,6 @@ export default function CirclesClient() {
 
   const resetContactForm = () => {
     setContactForm({ name: "", email: "", relationshipTypes: [] });
-    setContactSearch("");
-    setContactResults([]);
-    setSearchingContacts(false);
-    setContactsMessage("");
-    if (contactSearchTimeoutRef.current) {
-      clearTimeout(contactSearchTimeoutRef.current);
-      contactSearchTimeoutRef.current = null;
-    }
   };
 
   const resetCircleForm = () => {
@@ -1272,114 +1149,6 @@ export default function CirclesClient() {
     };
   }, []);
 
-  async function runGoogleContactSearch(query) {
-    const trimmedQuery = query.trim();
-    setContactSearch(query);
-    setContactsMessage("");
-
-    if (!trimmedQuery) {
-      setContactResults([]);
-      setSearchingContacts(false);
-      return;
-    }
-
-    setSearchingContacts(true);
-
-    try {
-      const {
-        data: { session: activeSession },
-      } = await supabase.auth.getSession();
-
-      const providerToken = activeSession?.provider_token;
-
-      if (!providerToken) {
-        setContactResults([]);
-        setContactsMessage("Google contacts access is not available for this session.");
-        return;
-      }
-
-      const warmupResponse = await fetch(
-        "https://people.googleapis.com/v1/people:searchContacts?query=&pageSize=1&readMask=names,emailAddresses",
-        {
-          headers: { Authorization: `Bearer ${providerToken}` },
-        }
-      );
-
-      if (!warmupResponse.ok) {
-        setContactResults([]);
-        setContactsMessage("We couldn’t access Google contacts right now.");
-        return;
-      }
-
-      const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
-      url.searchParams.set("query", trimmedQuery);
-      url.searchParams.set("pageSize", "8");
-      url.searchParams.set("readMask", "names,emailAddresses");
-
-      const response = await fetch(url.toString(), {
-        headers: { Authorization: `Bearer ${providerToken}` },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setContactResults([]);
-        setContactsMessage("We couldn’t search Google contacts right now.");
-        return;
-      }
-
-      const people = Array.isArray(result.results) ? result.results : [];
-      const mapped = people
-        .map((item, index) => ({
-          id: item.person?.resourceName || String(index),
-          name: getGoogleContactName(item.person),
-          email: getGoogleContactEmail(item.person),
-        }))
-        .filter((person) => person.name || person.email);
-
-      setContactResults(mapped);
-
-      if (!mapped.length) {
-        setContactsMessage("No matching Google contacts found. You can still add someone manually.");
-      }
-    } catch {
-      setContactResults([]);
-      setContactsMessage("We couldn’t search Google contacts right now.");
-    } finally {
-      setSearchingContacts(false);
-    }
-  }
-
-  function handleContactSearch(query) {
-    setContactSearch(query);
-    setContactsMessage("");
-
-    if (contactSearchTimeoutRef.current) {
-      clearTimeout(contactSearchTimeoutRef.current);
-    }
-
-    if (!query.trim()) {
-      setContactResults([]);
-      setSearchingContacts(false);
-      return;
-    }
-
-    contactSearchTimeoutRef.current = setTimeout(() => {
-      runGoogleContactSearch(query);
-    }, 250);
-  }
-
-  function handleSelectGoogleContact(contact) {
-    setContactForm((prev) => ({
-      ...prev,
-      name: contact.name || prev.name,
-      email: contact.email || prev.email,
-    }));
-    setContactSearch(contact.name || contact.email || "");
-    setContactResults([]);
-    setContactsMessage("");
-  }
-
   const handleSaveContact = async () => {
     if (!session?.user?.id) {
       setErrorMessage("You need to be signed in to save a contact.");
@@ -1391,15 +1160,10 @@ export default function CirclesClient() {
       return;
     }
 
-    if (!contactForm.relationshipTypes.length) {
-      setErrorMessage("Please choose at least one relationship.");
-      return;
-    }
-
     setSavingContact(true);
     setErrorMessage("");
 
-    const relationshipTypes = contactForm.relationshipTypes.length ? contactForm.relationshipTypes : ["Friend"];
+    const relationshipTypes = (contactForm.relationshipTypes || []).length ? contactForm.relationshipTypes : ["Friend"];
     const payload = {
       profile_id: session.user.id,
       name: contactForm.name.trim(),
@@ -1437,22 +1201,11 @@ export default function CirclesClient() {
       return;
     }
 
-    if (!circleForm.eventDate || !circleForm.deadline) {
-      setErrorMessage("Please add both the event date and contribution deadline.");
-      return;
-    }
-
     setSavingCircle(true);
     setErrorMessage("");
 
     const itemAmount = parseAmount(circleForm.itemTargetAmount);
     const feeAmount = parseAmount(circleForm.organisingFeeAmount);
-
-    if (itemAmount <= 0) {
-      setErrorMessage("Please add a valid item amount before creating the pot.");
-      return;
-    }
-
     const totalAmount = itemAmount + feeAmount;
     const deadlineAt = circleForm.deadline ? new Date(`${circleForm.deadline}T18:00:00`).toISOString() : null;
 
@@ -1483,8 +1236,8 @@ export default function CirclesClient() {
       return;
     }
 
-    if (selectedPeople.length) {
-      const inviteRows = selectedPeople.map((person) => ({
+    if ((selectedPeople || []).length) {
+      const inviteRows = (selectedPeople || []).map((person) => ({
         circleid: insertedCircle.id,
         userid: session.user.id,
         contactid: person.id,
@@ -1498,13 +1251,12 @@ export default function CirclesClient() {
 
     await fetchContactsAndCircles(session.user.id);
     resetCircleForm();
-    setSelectedPeople([]);
     setIsCreateCircleOpen(false);
     setSavingCircle(false);
   };
 
   const handleSaveInvites = async () => {
-    if (!session?.user?.id || !activeCircle || !inviteSelections.length) {
+    if (!session?.user?.id || !activeCircle || !(inviteSelections || []).length) {
       setIsInviteModalOpen(false);
       return;
     }
@@ -1546,7 +1298,7 @@ export default function CirclesClient() {
     setIsInviteModalOpen(true);
   };
 
-  const visibleCircles = circles.length > 0 ? circles : [demoCircle];
+  const visibleCircles = (circles || []).length ? circles : [demoCircle];
 
   return (
     <main className="min-h-screen bg-[#fcf8f5] text-slate-900">
@@ -1594,8 +1346,8 @@ export default function CirclesClient() {
               <div className="mt-5 space-y-3">
                 {loading ? (
                   <div className="rounded-[20px] bg-[#faf7f4] p-4 text-sm text-slate-500">Loading contacts...</div>
-                ) : contacts.length ? (
-                  contacts.map((contact) => (
+                ) : (contacts || []).length ? (
+                  (contacts || []).map((contact) => (
                     <ContactCard key={contact.id} contact={contact} onAdd={(person) => setSelectedPeople((prev) => [...prev, person])} />
                   ))
                 ) : (
@@ -1628,8 +1380,8 @@ export default function CirclesClient() {
               </div>
 
               <div className="mt-4 rounded-[22px] border border-[#f0dfd6] bg-[#fffaf7] px-4 py-3 text-sm text-slate-600">
-                {circles.length
-                  ? `${circles.length} real circle${circles.length === 1 ? "" : "s"}`
+                {(circles || []).length
+                  ? `${(circles || []).length} real circle${(circles || []).length === 1 ? "" : "s"}`
                   : "Showing one demo example until you create your first real circle"}
               </div>
             </section>
