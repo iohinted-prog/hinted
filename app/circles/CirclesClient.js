@@ -38,6 +38,8 @@ const calendarEvents = [
   { id: 3, title: "James Promotion Dinner", date: "2026-07-16", type: "Milestone" },
 ];
 
+const publicHintsByContact = {};
+
 const exampleCircle = {
   id: "example-circle",
   name: "Example pot",
@@ -80,50 +82,6 @@ const exampleCircle = {
     deadline: "2026-07-01",
     goalType: "item",
   },
-};
-
-const myHintLibrary = [
-  {
-    id: "my-1",
-    title: "Blue cashmere scarf",
-    subtitle: "Private hint",
-    description: "Saved privately to your own hints.",
-    amount: 95,
-    currency: "GBP",
-    image:
-      "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?auto=format&fit=crop&w=1200&q=80",
-    url: "https://example.com/blue-cashmere-scarf",
-    visibility: "private",
-  },
-  {
-    id: "my-2",
-    title: "Le Labo candle",
-    subtitle: "Public hint",
-    description: "A simple home gift that works well for a shared contribution circle.",
-    amount: 62,
-    currency: "GBP",
-    image:
-      "https://images.unsplash.com/photo-1603006905003-be475563bc59?auto=format&fit=crop&w=1200&q=80",
-    url: "https://example.com/le-labo-candle",
-    visibility: "public",
-  },
-];
-
-const publicHintsByContact = {
-  "demo-contact-1": [
-    {
-      id: "contact-hint-1",
-      title: "Polaroid camera",
-      subtitle: "Public hint",
-      description: "A camera they’ve been wanting for weekends away.",
-      amount: 119,
-      currency: "GBP",
-      image:
-        "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=80",
-      url: "https://example.com/polaroid-camera",
-      visibility: "public",
-    },
-  ],
 };
 
 function roundCurrency(value) {
@@ -203,6 +161,15 @@ function getPrimaryContactField(person, field) {
   return items[0]?.value || items[0]?.displayName || "";
 }
 
+function getGoogleName(metadata = {}) {
+  return (
+    metadata.full_name ||
+    metadata.name ||
+    [metadata.given_name, metadata.family_name].filter(Boolean).join(" ") ||
+    ""
+  ).trim();
+}
+
 function normalizeSupabaseError(error, fallback) {
   if (!error) return fallback;
   const parts = [error.message, error.details, error.hint].filter(Boolean);
@@ -234,10 +201,9 @@ function fundingModeToLabel(value) {
   return "Flexible pot";
 }
 
-function sourceTypeFromForm(goalType, itemSource, selectedHintOrigin) {
+function sourceTypeFromForm(goalType, itemSource) {
   if (goalType === "amount") return "external_link";
   if (itemSource === "url") return "external_link";
-  if (selectedHintOrigin === "mine") return "organiser_private_hint";
   return "recipient_public_hint";
 }
 
@@ -246,25 +212,21 @@ function relationshipLabelFromArray(relationshipTypes) {
   return relationshipTypes[0] || "Friend";
 }
 
-function buildContactRecordFromRow(row, index = 0) {
+function buildContactRecordFromRow(row) {
   const relationship = relationshipLabelFromArray(row?.relationship_types);
   const safeName = row?.name || row?.email || "Unnamed contact";
 
   return {
     id: row.id,
-    contactKey: row.id || `contact-${index}`,
     profileConnectionId: row.id,
     name: safeName,
     role: relationship,
-    note:
-      row?.status === "accepted"
-        ? "Accepted"
-        : row?.status === "invited"
-          ? "Invited"
-          : "Saved to contacts",
+    note: "Saved to contacts",
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship),
     email: row?.email || "",
+    phone: "",
+    birthday: "",
     raw: row,
   };
 }
@@ -392,11 +354,9 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       source:
         circleRow.source_type === "external_link"
           ? "From pasted link"
-          : circleRow.source_type === "organiser_private_hint"
-            ? "From your hints"
-            : circleRow.source_type === "recipient_public_hint"
-              ? "From public hints"
-              : "Shared goal",
+          : circleRow.source_type === "recipient_public_hint"
+            ? "From public hints"
+            : "Shared goal",
       sourceUrl: circleRow.item_url || "",
       previewImage: circleRow.item_image_url || "",
       previewDescription: circleRow.item_description || "",
@@ -833,7 +793,7 @@ function CircleCard({ circle, onDeleteCircleClick, deletingCircleId }) {
                 <div className="mt-6 rounded-[24px] border border-dashed border-[#e5d8cf] bg-white p-5 text-left">
                   <p className="text-sm font-semibold text-slate-900">Choose from hints or links</p>
                   <p className="mt-2 text-[14px] leading-7 text-slate-600">
-                    Pick one of your own hints, use a public hint, or paste a product link so the circle has one shared goal.
+                    Pick a public hint or paste a product link so the circle has one shared goal.
                   </p>
                 </div>
 
@@ -898,38 +858,6 @@ function CurrencyAmountInput({
   );
 }
 
-function HintOptionCard({ hint, selected, onSelect }) {
-  return (
-    <label
-      className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
-        selected ? "border-[#f0a384] bg-[#fff4ee]" : "border-[#efe1d9] bg-white"
-      }`}
-    >
-      <div className="min-w-0 pr-4">
-        <p className="text-sm font-semibold text-slate-900">{hint.title}</p>
-        <p className="mt-1 text-[13px] text-slate-500">
-          {hint.subtitle}
-          {hint.visibility ? ` · ${hint.visibility}` : ""}
-        </p>
-        <p className="mt-2 text-[12px] leading-5 text-slate-500">{hint.description}</p>
-        {hint.amount ? (
-          <p className="mt-2 text-[12px] font-medium text-slate-600">
-            {formatMoney(hint.amount, hint.currency || "GBP")}
-          </p>
-        ) : null}
-      </div>
-
-      <input
-        type="radio"
-        name="selectedHint"
-        className="mt-1 h-4 w-4 accent-[#f36f64]"
-        checked={selected}
-        onChange={onSelect}
-      />
-    </label>
-  );
-}
-
 function CreateCircleModal({
   open,
   onClose,
@@ -955,19 +883,15 @@ function CreateCircleModal({
   if (!open) return null;
 
   const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
-  const selectedHintContact =
-    String(selectedHintContactId) === "mine"
-      ? null
-      : contacts.find((contact) => String(contact.id) === String(selectedHintContactId));
-
-  const myHints = myHintLibrary;
-  const visibleContactHints = selectedHintContactId
+  const selectedHintContact = contacts.find(
+    (contact) => String(contact.id) === String(selectedHintContactId)
+  );
+  const visibleHints = selectedHintContactId
     ? publicHintsByContact[selectedHintContactId] || []
     : [];
   const amountMode = form.goalType === "amount";
-
   const selectedHint =
-    [...myHints, ...visibleContactHints].find((hint) => String(hint.id) === String(form.selectedHintId)) || null;
+    publicHintsByContact?.[selectedHintContactId]?.find((hint) => hint.id === form.selectedHintId) || null;
 
   const liveBaseAmount =
     form.goalType === "item"
@@ -1134,7 +1058,6 @@ function CreateCircleModal({
                       itemSource: nextValue === "amount" ? "" : prev.itemSource || "hint",
                       selectedHintId: nextValue === "amount" ? "" : prev.selectedHintId,
                       itemUrl: nextValue === "amount" ? "" : prev.itemUrl,
-                      selectedHintOrigin: nextValue === "amount" ? "" : prev.selectedHintOrigin || "mine",
                     }));
                   }}
                   className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
@@ -1161,7 +1084,7 @@ function CreateCircleModal({
                 <div>
                   <p className="text-sm font-semibold text-slate-900">4. Choose the item</p>
                   <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                    Pick from your own hints, from a contact’s public hints, or paste a link from anywhere on the internet.
+                    Pick from a contact’s public hints or paste a link from anywhere on the internet.
                   </p>
                 </div>
               </div>
@@ -1182,7 +1105,7 @@ function CreateCircleModal({
                       : "border border-[#ead8ce] bg-white text-slate-700"
                   }`}
                 >
-                  Choose a hint
+                  From public hints
                 </button>
                 <button
                   type="button"
@@ -1191,7 +1114,6 @@ function CreateCircleModal({
                       ...prev,
                       itemSource: "url",
                       selectedHintId: "",
-                      selectedHintOrigin: "",
                     }))
                   }
                   className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
@@ -1208,37 +1130,9 @@ function CreateCircleModal({
                 <div className="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
                   <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-3">
                     <p className="px-2 pb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      Hint source
+                      Contacts
                     </p>
-
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedHintContactId("mine");
-                          setForm((prev) => ({
-                            ...prev,
-                            selectedHintId: "",
-                            selectedHintOrigin: "mine",
-                          }));
-                        }}
-                        className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                          String(selectedHintContactId) === "mine"
-                            ? "border-[#f0a384] bg-[#fff4ee]"
-                            : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
-                        }`}
-                      >
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b from-[#4e596d] to-[#212a3c] text-[11px] font-bold text-white">
-                          Y
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">Your hints</p>
-                          <p className="text-[12px] text-slate-500">Includes private hints</p>
-                        </div>
-                      </button>
-                    </div>
-
-                    <div className="mt-3 max-h-[260px] space-y-2 overflow-y-auto pr-1">
+                    <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
                       {contacts.map((contact) => {
                         const selected = String(contact.id) === String(selectedHintContactId);
 
@@ -1251,7 +1145,6 @@ function CreateCircleModal({
                               setForm((prev) => ({
                                 ...prev,
                                 selectedHintId: "",
-                                selectedHintOrigin: "contact",
                               }));
                             }}
                             className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
@@ -1275,52 +1168,14 @@ function CreateCircleModal({
 
                       {!contacts.length ? (
                         <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                          Add a contact first to choose from their public hints later.
+                          Add a contact first to choose from public hints.
                         </div>
                       ) : null}
                     </div>
                   </div>
 
                   <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-4">
-                    {String(selectedHintContactId) === "mine" ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#4e596d] to-[#212a3c] text-[12px] font-bold text-white">
-                            Y
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">Your hints</p>
-                            <p className="text-[13px] text-slate-500">
-                              These are placeholder hints for now. When your Hints page is ready, this panel can load your real private and public hints from Supabase.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                          {myHints.length ? (
-                            myHints.map((hint) => (
-                              <HintOptionCard
-                                key={hint.id}
-                                hint={hint}
-                                selected={String(form.selectedHintId) === String(hint.id)}
-                                onSelect={() =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    selectedHintId: hint.id,
-                                    selectedHintOrigin: "mine",
-                                    currency: hint.currency || prev.currency,
-                                  }))
-                                }
-                              />
-                            ))
-                          ) : (
-                            <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                              You do not have any hints yet.
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : selectedHintContact ? (
+                    {selectedHintContact ? (
                       <>
                         <div className="flex items-center gap-3">
                           <div
@@ -1333,38 +1188,55 @@ function CreateCircleModal({
                               {selectedHintContact.name}'s public hints
                             </p>
                             <p className="text-[13px] text-slate-500">
-                              This stays as demo data until your real hints system is built.
+                              Choose one shared goal for this circle.
                             </p>
                           </div>
                         </div>
 
                         <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                          {visibleContactHints.length ? (
-                            visibleContactHints.map((hint) => (
-                              <HintOptionCard
+                          {visibleHints.length ? (
+                            visibleHints.map((hint) => (
+                              <label
                                 key={hint.id}
-                                hint={hint}
-                                selected={String(form.selectedHintId) === String(hint.id)}
-                                onSelect={() =>
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    selectedHintId: hint.id,
-                                    selectedHintOrigin: "contact",
-                                    currency: hint.currency || prev.currency,
-                                  }))
-                                }
-                              />
+                                className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
+                                  form.selectedHintId === hint.id
+                                    ? "border-[#f0a384] bg-[#fff4ee]"
+                                    : "border-[#efe1d9] bg-white"
+                                }`}
+                              >
+                                <div className="min-w-0 pr-4">
+                                  <p className="text-sm font-semibold text-slate-900">{hint.title}</p>
+                                  <p className="mt-1 text-[13px] text-slate-500">{hint.subtitle}</p>
+                                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                                    {hint.description}
+                                  </p>
+                                </div>
+
+                                <input
+                                  type="radio"
+                                  name="selectedHint"
+                                  className="mt-1 h-4 w-4 accent-[#f36f64]"
+                                  checked={form.selectedHintId === hint.id}
+                                  onChange={() =>
+                                    setForm((prev) => ({
+                                      ...prev,
+                                      selectedHintId: hint.id,
+                                      currency: hint.currency || prev.currency,
+                                    }))
+                                  }
+                                />
+                              </label>
                             ))
                           ) : (
                             <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                              This contact does not have any public hints yet.
+                              No public hints available for this contact yet.
                             </div>
                           )}
                         </div>
                       </>
                     ) : (
                       <div className="flex h-full min-h-[220px] items-center justify-center rounded-[18px] bg-white p-6 text-center text-sm text-slate-500">
-                        Select “Your hints” or choose a contact to view hints.
+                        Select a contact to view their public hints.
                       </div>
                     )}
                   </div>
@@ -1864,63 +1736,76 @@ function AddContactModal({ open, onClose, onSave, supabase }) {
   );
 }
 
-function ConfirmDeleteContactModal({
+function DeleteContactModal({
   open,
   onClose,
   onConfirm,
   contact,
   isDeleting,
+  errorMessage,
 }) {
   const [typedName, setTypedName] = useState("");
 
   useEffect(() => {
-    if (!open) setTypedName("");
+    if (!open) {
+      setTypedName("");
+    }
   }, [open]);
 
   if (!open || !contact) return null;
 
-  const matches = typedName.trim().toLowerCase() === String(contact.name || "").trim().toLowerCase();
+  const expectedName = String(contact.name || "").trim();
+  const matches = typedName.trim() === expectedName;
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
       eyebrow="Delete contact"
-      title={`Delete ${contact.name}?`}
-      maxWidth="max-w-[640px]"
+      title={`Delete ${contact.name}`}
+      maxWidth="max-w-[620px]"
     >
       <div className="space-y-5 p-6">
-        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4 text-sm leading-7 text-[#8d4036]">
-          This will remove the contact from your contacts list. To confirm, type their name exactly below.
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently remove the contact.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            Type <span className="font-semibold text-slate-900">{expectedName}</span> to confirm.
+          </p>
         </div>
 
         <label className="block">
-          <span className="block text-sm font-medium text-slate-900">Type name to confirm</span>
+          <span className="block text-sm font-medium text-slate-900">Type the contact name</span>
           <input
             type="text"
             value={typedName}
             onChange={(e) => setTypedName(e.target.value)}
-            placeholder={contact.name}
-            className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            placeholder={expectedName}
+            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
           />
         </label>
 
-        <div className="flex justify-end gap-3">
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={!matches || isDeleting}
-            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold ${
-              !matches || isDeleting
-                ? "cursor-not-allowed bg-[#f0d8d3] text-[#a15a4f]"
-                : "bg-[#b14f43] text-white"
+            disabled={isDeleting || !matches}
+            onClick={() => onConfirm(contact)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting || !matches
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
             }`}
           >
             {isDeleting ? "Deleting..." : "Delete contact"}
@@ -1931,63 +1816,64 @@ function ConfirmDeleteContactModal({
   );
 }
 
-function ConfirmDeleteCircleModal({
+function DeleteCircleModal({
   open,
   onClose,
   onConfirm,
   circle,
   isDeleting,
+  errorMessage,
 }) {
-  const [typedName, setTypedName] = useState("");
-
-  useEffect(() => {
-    if (!open) setTypedName("");
-  }, [open]);
-
   if (!open || !circle) return null;
-
-  const matches = typedName.trim().toLowerCase() === String(circle.name || "").trim().toLowerCase();
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
       eyebrow="Delete circle"
-      title={`Delete ${circle.name}?`}
-      maxWidth="max-w-[640px]"
+      title={`Delete ${circle.name}`}
+      maxWidth="max-w-[720px]"
     >
       <div className="space-y-5 p-6">
-        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4 text-sm leading-7 text-[#8d4036]">
-          This will remove the circle and its invite rows. To confirm, type the circle name exactly below.
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently delete the entire circle.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            This removes the circle itself and its invites.
+          </p>
         </div>
 
-        <label className="block">
-          <span className="block text-sm font-medium text-slate-900">Type circle name to confirm</span>
-          <input
-            type="text"
-            value={typedName}
-            onChange={(e) => setTypedName(e.target.value)}
-            placeholder={circle.name}
-            className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
-          />
-        </label>
+        <div className="rounded-[20px] bg-[#fffaf7] p-4">
+          <p className="text-sm font-semibold text-slate-900">Circle summary</p>
+          <p className="mt-2 text-[13px] text-slate-600">
+            {circle.name} · {circle.subtitle}
+          </p>
+          <p className="mt-2 text-[13px] text-slate-500">
+            Members and invitees shown on this circle will lose access once it is deleted.
+          </p>
+        </div>
 
-        <div className="flex justify-end gap-3">
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
           >
             Cancel
           </button>
           <button
             type="button"
-            onClick={onConfirm}
-            disabled={!matches || isDeleting}
-            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold ${
-              !matches || isDeleting
-                ? "cursor-not-allowed bg-[#f0d8d3] text-[#a15a4f]"
-                : "bg-[#b14f43] text-white"
+            disabled={isDeleting}
+            onClick={() => onConfirm(circle)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
             }`}
           >
             {isDeleting ? "Deleting..." : "Delete circle"}
@@ -1999,201 +1885,227 @@ function ConfirmDeleteCircleModal({
 }
 
 export default function CirclesClient() {
-  const supabase = useMemo(() => createClient(), []);
-  const [user, setUser] = useState(null);
-  const [userDisplayName, setUserDisplayName] = useState("You");
+  const supabase = createClient();
+
+  const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
+  const safeDefaultEvent = safeCalendarEvents[0] || {
+    id: "",
+    title: "",
+    date: "",
+    type: "Event",
+  };
+
+  const [sessionUser, setSessionUser] = useState(null);
+  const [profile, setProfile] = useState(null);
 
   const [contacts, setContacts] = useState([]);
-  const [circles, setCircles] = useState([]);
-  const [loadingContacts, setLoadingContacts] = useState(true);
-  const [loadingCircles, setLoadingCircles] = useState(true);
+  const [realCircles, setRealCircles] = useState([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const [isLoadingCircles, setIsLoadingCircles] = useState(true);
+
   const [pageError, setPageError] = useState("");
+  const [contactError, setContactError] = useState("");
+  const [circleError, setCircleError] = useState("");
+  const [circleSuccess, setCircleSuccess] = useState("");
 
-  const [showAddContactModal, setShowAddContactModal] = useState(false);
-  const [contactToDelete, setContactToDelete] = useState(null);
-  const [deletingContactId, setDeletingContactId] = useState(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
 
-  const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [selectedPeople, setSelectedPeople] = useState([]);
+  const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
+  const [isDeleteCircleOpen, setIsDeleteCircleOpen] = useState(false);
+  const [selectedContactToDelete, setSelectedContactToDelete] = useState(null);
+  const [selectedCircleToDelete, setSelectedCircleToDelete] = useState(null);
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
+  const [isDeletingCircle, setIsDeletingCircle] = useState(false);
+  const [deleteContactError, setDeleteContactError] = useState("");
+  const [deleteCircleError, setDeleteCircleError] = useState("");
+
   const [eventMode, setEventMode] = useState("calendar");
-  const [selectedEventId, setSelectedEventId] = useState(String(calendarEvents[0]?.id || ""));
-  const [selectedHintContactId, setSelectedHintContactId] = useState("mine");
+  const [selectedEventId, setSelectedEventId] = useState(String(safeDefaultEvent.id || ""));
+  const [selectedPeople, setSelectedPeople] = useState([]);
+  const [selectedHintContactId, setSelectedHintContactId] = useState(null);
   const [linkPreview, setLinkPreview] = useState(null);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
-  const [createError, setCreateError] = useState("");
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
 
-  const [circleToDelete, setCircleToDelete] = useState(null);
-  const [deletingCircleId, setDeletingCircleId] = useState(null);
-
   const [form, setForm] = useState({
-    eventTitle: calendarEvents[0]?.title || "",
-    eventDate: calendarEvents[0]?.date || "",
-    deadline: calendarEvents[0]?.date || "",
-    fundingMode: "flexible",
+    eventTitle: safeDefaultEvent.title || "",
+    eventDate: safeDefaultEvent.date || "",
+    deadline: safeDefaultEvent.date || "",
     goalType: "item",
-    itemSource: "hint",
-    selectedHintId: "",
-    selectedHintOrigin: "mine",
-    itemUrl: "",
-    currency: "GBP",
     goalValue: "",
+    currency: "GBP",
+    fundingMode: "flexible",
+    itemSource: "url",
+    selectedHintId: "",
+    itemUrl: "",
   });
 
-  const resetCreateCircleState = useCallback(() => {
-    setSelectedPeople([]);
-    setEventMode("calendar");
-    setSelectedEventId(String(calendarEvents[0]?.id || ""));
-    setSelectedHintContactId("mine");
-    setLinkPreview(null);
-    setCreateError("");
-    setForm({
-      eventTitle: calendarEvents[0]?.title || "",
-      eventDate: calendarEvents[0]?.date || "",
-      deadline: calendarEvents[0]?.date || "",
-      fundingMode: "flexible",
-      goalType: "item",
-      itemSource: "hint",
-      selectedHintId: "",
-      selectedHintOrigin: "mine",
-      itemUrl: "",
-      currency: "GBP",
-      goalValue: "",
-    });
-  }, []);
+  const displayedCircles = useMemo(() => {
+    if (realCircles.length > 0) return realCircles;
+    return [exampleCircle];
+  }, [realCircles]);
 
-  const loadSessionAndProfile = useCallback(async () => {
-    const {
-      data: { user: authUser },
-      error,
-    } = await supabase.auth.getUser();
+  const resetCircleForm = useCallback(() => {
+    const fallbackEvent = safeCalendarEvents[0] || {
+      id: "",
+      title: "",
+      date: "",
+      type: "Event",
+    };
+
+    setEventMode("calendar");
+    setSelectedEventId(String(fallbackEvent.id || ""));
+    setSelectedPeople([]);
+    setSelectedHintContactId((prev) => prev ?? contacts?.[0]?.id ?? null);
+    setLinkPreview(null);
+    setCircleError("");
+    setCircleSuccess("");
+    setForm({
+      eventTitle: fallbackEvent.title || "",
+      eventDate: fallbackEvent.date || "",
+      deadline: fallbackEvent.date || "",
+      goalType: "item",
+      goalValue: "",
+      currency: "GBP",
+      fundingMode: "flexible",
+      itemSource: "url",
+      selectedHintId: "",
+      itemUrl: "",
+    });
+  }, [contacts, safeCalendarEvents]);
+
+  const loadProfile = useCallback(async (userId) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
 
     if (error) {
-      setPageError(normalizeSupabaseError(error, "Unable to load your session."));
-      return null;
+      throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
     }
 
-    setUser(authUser || null);
-
-    if (authUser) {
-      const displayName =
-        authUser.user_metadata?.full_name ||
-        authUser.user_metadata?.name ||
-        authUser.email ||
-        "You";
-      setUserDisplayName(displayName);
-    }
-
-    return authUser;
+    setProfile(data || null);
+    return data || null;
   }, [supabase]);
 
-  const loadContacts = useCallback(
-    async (authUser) => {
-      if (!authUser?.id) {
-        setContacts([]);
-        setLoadingContacts(false);
-        return;
-      }
+  const loadContacts = useCallback(async (userId) => {
+    setIsLoadingContacts(true);
+    setContactError("");
 
-      setLoadingContacts(true);
+    const { data, error } = await supabase
+      .from("profile_connections")
+      .select("*")
+      .eq("profile_id", userId)
+      .order("created_at", { ascending: false });
 
-      const { data, error } = await supabase
-        .from("profile_connections")
-        .select("*")
-        .eq("profile_id", authUser.id)
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        setPageError(normalizeSupabaseError(error, "Unable to load contacts."));
-        setContacts([]);
-        setLoadingContacts(false);
-        return;
-      }
-
-      const mapped = Array.isArray(data)
-        ? data.map((row, index) => buildContactRecordFromRow(row, index))
-        : [];
-
-      const demoMapped = mapped.map((contact, index) =>
-        index === 0 ? { ...contact, id: "demo-contact-1" } : contact
+    if (error) {
+      setContacts([]);
+      setIsLoadingContacts(false);
+      throw new Error(
+        normalizeSupabaseError(
+          error,
+          "Failed to load contacts from profile_connections."
+        )
       );
+    }
 
-      setContacts(demoMapped);
-      setLoadingContacts(false);
-    },
-    [supabase]
-  );
+    const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
+    setContacts(mapped);
+    setIsLoadingContacts(false);
+    return mapped;
+  }, [supabase]);
 
-  const loadCircles = useCallback(
-    async (authUser) => {
-      if (!authUser?.id) {
-        setCircles([]);
-        setLoadingCircles(false);
-        return;
-      }
+  const loadCircles = useCallback(async (userId, currentProfile) => {
+    setIsLoadingCircles(true);
+    setCircleError("");
 
-      setLoadingCircles(true);
+    const { data: circlesData, error: circlesError } = await supabase
+      .from("circles")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-      const { data: circleRows, error: circlesError } = await supabase
-        .from("circles")
+    if (circlesError) {
+      setRealCircles([]);
+      setIsLoadingCircles(false);
+      throw new Error(normalizeSupabaseError(circlesError, "Failed to load circles."));
+    }
+
+    const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
+
+    let inviteMap = {};
+    if (circleIds.length > 0) {
+      const { data: inviteData, error: inviteError } = await supabase
+        .from("circle_invites")
         .select("*")
-        .eq("user_id", authUser.id)
-        .order("created_at", { ascending: false });
+        .in("circle_id", circleIds);
 
-      if (circlesError) {
-        setPageError(normalizeSupabaseError(circlesError, "Unable to load circles."));
-        setCircles([]);
-        setLoadingCircles(false);
-        return;
+      if (inviteError) {
+        setIsLoadingCircles(false);
+        throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
       }
 
-      const circleIds = (circleRows || []).map((circle) => circle.id);
-
-      let inviteRows = [];
-      if (circleIds.length) {
-        const { data, error } = await supabase
-          .from("circle_invites")
-          .select("*")
-          .in("circle_id", circleIds);
-
-        if (error) {
-          setPageError(normalizeSupabaseError(error, "Unable to load circle invites."));
-          setCircles([]);
-          setLoadingCircles(false);
-          return;
-        }
-
-        inviteRows = data || [];
-      }
-
-      const invitesByCircle = inviteRows.reduce((acc, invite) => {
+      inviteMap = (inviteData || []).reduce((acc, invite) => {
         if (!acc[invite.circle_id]) acc[invite.circle_id] = [];
         acc[invite.circle_id].push(invite);
         return acc;
       }, {});
+    }
 
-      const mapped = (circleRows || []).map((row) =>
-        buildCircleViewModel(row, invitesByCircle[row.id] || [], userDisplayName)
-      );
+    const currentUserName =
+      getGoogleName(currentProfile || {}) ||
+      currentProfile?.full_name ||
+      currentProfile?.name ||
+      "You";
 
-      setCircles(mapped);
-      setLoadingCircles(false);
-    },
-    [supabase, userDisplayName]
-  );
+    const mapped = (circlesData || []).map((circle) =>
+      buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
+    );
+
+    setRealCircles(mapped);
+    setIsLoadingCircles(false);
+    return mapped;
+  }, [supabase]);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
-      const authUser = await loadSessionAndProfile();
-      if (!active) return;
+      try {
+        setPageError("");
 
-      if (authUser) {
-        await Promise.all([loadContacts(authUser), loadCircles(authUser)]);
-      } else {
-        setLoadingContacts(false);
-        setLoadingCircles(false);
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw new Error(normalizeSupabaseError(userError, "Failed to get logged-in user."));
+        }
+
+        if (!user) {
+          throw new Error("You must be signed in to view circles.");
+        }
+
+        if (!active) return;
+        setSessionUser(user);
+
+        const currentProfile = await loadProfile(user.id);
+        if (!active) return;
+
+        await loadContacts(user.id);
+        if (!active) return;
+
+        await loadCircles(user.id, currentProfile);
+      } catch (error) {
+        console.error("Circles bootstrap failed:", error);
+        if (active) {
+          setPageError(error?.message || "Failed to load the Circles page.");
+          setIsLoadingContacts(false);
+          setIsLoadingCircles(false);
+        }
       }
     }
 
@@ -2202,441 +2114,611 @@ export default function CirclesClient() {
     return () => {
       active = false;
     };
-  }, [loadSessionAndProfile, loadContacts, loadCircles]);
+  }, [supabase, loadProfile, loadContacts, loadCircles]);
 
-  const visibleCircles = useMemo(() => {
-    if (circles.length > 0) return circles;
-    return [exampleCircle];
-  }, [circles]);
+  useEffect(() => {
+    if (!selectedHintContactId && contacts.length > 0) {
+      setSelectedHintContactId(contacts[0].id);
+    }
+  }, [contacts, selectedHintContactId]);
 
-  async function handleFetchPreview() {
-    const safeUrl = String(form.itemUrl || "").trim();
-
-    if (!safeUrl) {
-      setCreateError("Paste a valid link first.");
+  const handleFetchPreview = async () => {
+    if (!form.itemUrl.trim()) {
+      setCircleError("Paste a product or experience link first.");
       return;
     }
 
-    setIsFetchingPreview(true);
-    setCreateError("");
-
     try {
+      setIsFetchingPreview(true);
+      setCircleError("");
+      setLinkPreview(null);
+
       const response = await fetch("/api/link-preview", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ url: safeUrl }),
+        body: JSON.stringify({ url: form.itemUrl.trim() }),
       });
 
       const rawText = await response.text();
-      let result = null;
+      let data = null;
 
-      try {
-        result = rawText ? JSON.parse(rawText) : null;
-      } catch {
-        result = null;
-      }
-
-      if (!response.ok) {
-        throw new Error(result?.error || "Failed to fetch preview.");
-      }
-
-      if (!result) {
-        throw new Error("Preview service returned an empty response.");
-      }
-
-      setLinkPreview(result);
-      setForm((prev) => ({
-        ...prev,
-        currency: prev.currency || "GBP",
-      }));
-    } catch (error) {
-      console.error("Preview fetch failed:", error);
-      setCreateError(error?.message || "Failed to fetch preview.");
-      setLinkPreview(null);
-    } finally {
-      setIsFetchingPreview(false);
-    }
-  }
-
-  async function handleSaveContact(contactInput) {
-    if (!user?.id) {
-      throw new Error("You need to be signed in to save contacts.");
-    }
-
-    const payload = {
-      profile_id: user.id,
-      name: contactInput.name.trim(),
-      email: contactInput.email.trim().toLowerCase(),
-      relationship_types: contactInput.relationshipTypes || ["Friend"],
-      status: "saved",
-    };
-
-    const { data, error } = await supabase
-      .from("profile_connections")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error) {
-      throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
-    }
-
-    const newContact = buildContactRecordFromRow(data);
-
-    setContacts((prev) => [newContact, ...prev]);
-
-    if (!selectedHintContactId) {
-      setSelectedHintContactId(newContact.id);
-    }
-  }
-
-  async function handleDeleteContact() {
-    if (!contactToDelete?.profileConnectionId) return;
-
-    setDeletingContactId(contactToDelete.profileConnectionId);
-
-    const { error } = await supabase
-      .from("profile_connections")
-      .delete()
-      .eq("id", contactToDelete.profileConnectionId);
-
-    if (error) {
-      setPageError(normalizeSupabaseError(error, "Failed to delete contact."));
-      setDeletingContactId(null);
-      return;
-    }
-
-    setContacts((prev) =>
-      prev.filter((contact) => contact.profileConnectionId !== contactToDelete.profileConnectionId)
-    );
-    setSelectedPeople((prev) =>
-      prev.filter((contact) => contact.profileConnectionId !== contactToDelete.profileConnectionId)
-    );
-    if (String(selectedHintContactId) === String(contactToDelete.id)) {
-      setSelectedHintContactId("mine");
-    }
-    setContactToDelete(null);
-    setDeletingContactId(null);
-  }
-
-  async function handleCreateCircle() {
-    if (!user?.id) {
-      setCreateError("You need to be signed in to create a circle.");
-      return;
-    }
-
-    if (!form.eventTitle.trim()) {
-      setCreateError("Choose or enter an event title.");
-      return;
-    }
-
-    if (!form.eventDate) {
-      setCreateError("Choose an event date.");
-      return;
-    }
-
-    if (!form.deadline) {
-      setCreateError("Choose a contribution deadline.");
-      return;
-    }
-
-    let itemTitle = "";
-    let itemUrl = "";
-    let itemImageUrl = "";
-    let itemDescription = "";
-    let itemAmount = 0;
-
-    if (form.goalType === "amount") {
-      itemTitle = "Shared contribution pot";
-      itemAmount = parseAmount(form.goalValue);
-
-      if (!itemAmount || itemAmount <= 0) {
-        setCreateError("Enter a valid target amount.");
-        return;
-      }
-    } else if (form.itemSource === "hint") {
-      const selectedHint =
-        [...myHintLibrary, ...(publicHintsByContact[selectedHintContactId] || [])].find(
-          (hint) => String(hint.id) === String(form.selectedHintId)
-        ) || null;
-
-      if (!selectedHint) {
-        setCreateError("Choose a hint first.");
-        return;
-      }
-
-      itemTitle = buildStoredItemTitle(selectedHint.title);
-      itemUrl = selectedHint.url || "";
-      itemImageUrl = selectedHint.image || "";
-      itemDescription = selectedHint.description || "";
-      itemAmount = extractHintAmount(selectedHint);
-
-      if (!itemAmount || itemAmount <= 0) {
-        setCreateError("The selected hint needs a valid amount for now.");
-        return;
-      }
-    } else {
-      if (!linkPreview) {
-        setCreateError("Fetch a link preview first.");
-        return;
-      }
-
-      itemTitle = buildStoredItemTitle(linkPreview.title);
-      itemUrl = linkPreview.url || form.itemUrl || "";
-      itemImageUrl = linkPreview.image || "";
-      itemDescription = linkPreview.description || "";
-      itemAmount = extractPreviewAmount(linkPreview);
-
-      if (!itemAmount || itemAmount <= 0) {
-        setCreateError("We couldn’t detect a valid item price from that link yet.");
-        return;
-      }
-    }
-
-    const totals = calculateCircleTotals(itemAmount);
-
-    setIsCreatingCircle(true);
-    setCreateError("");
-
-    try {
-      const { data: circleRow, error: circleError } = await supabase
-        .from("circles")
-        .insert({
-          user_id: user.id,
-          title: form.eventTitle.trim(),
-          occasion_type: eventMode === "calendar"
-            ? calendarEvents.find((event) => String(event.id) === selectedEventId)?.type || "Event"
-            : "Event",
-          event_date: safeIsoDate(form.eventDate),
-          deadline_at: safeIsoTimestampEndOfDay(form.deadline),
-          funding_mode: fundingModeToDb(form.fundingMode),
-          source_type: sourceTypeFromForm(form.goalType, form.itemSource, form.selectedHintOrigin),
-          item_title: itemTitle,
-          item_url: itemUrl,
-          item_image_url: itemImageUrl,
-          item_description: itemDescription,
-          currency: form.currency,
-          item_amount: totals.itemAmount,
-          hinted_fee_amount: totals.feeAmount,
-          total_target_amount: totals.totalAmount,
-        })
-        .select()
-        .single();
-
-      if (circleError) {
-        throw new Error(normalizeSupabaseError(circleError, "Failed to create circle."));
-      }
-
-      if (selectedPeople.length) {
-        const invitePayload = selectedPeople.map((person) => ({
-          circle_id: circleRow.id,
-          user_id: user.id,
-          contact_id: person.profileConnectionId || null,
-          invite_name: person.name,
-          invite_email: person.email || null,
-          status: "invited",
-          reminder_count: 0,
-        }));
-
-        const { error: inviteError } = await supabase.from("circle_invites").insert(invitePayload);
-
-        if (inviteError) {
-          throw new Error(normalizeSupabaseError(inviteError, "Circle created, but invites failed to save."));
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          throw new Error("Link preview API returned an invalid response.");
         }
       }
 
-      await loadCircles(user);
-      setCreateModalOpen(false);
-      resetCreateCircleState();
+      if (!response.ok) {
+        throw new Error(data?.error || `Failed to fetch preview (${response.status}).`);
+      }
+
+      if (!data) {
+        throw new Error("Link preview API returned an empty response.");
+      }
+
+      setLinkPreview(data);
     } catch (error) {
-      console.error(error);
-      setCreateError(error?.message || "Failed to create circle.");
+      console.error("Link preview fetch failed:", error);
+
+      setLinkPreview({
+        title: "Preview unavailable",
+        description:
+          "We could not pull a preview from that link yet, but you can still use the URL.",
+        image: "",
+        siteName: form.itemUrl,
+        url: form.itemUrl,
+      });
+
+      setCircleError(error?.message || "Failed to fetch link preview.");
+    } finally {
+      setIsFetchingPreview(false);
+    }
+  };
+
+  async function handleSaveContact(contactPayload) {
+    setContactError("");
+
+    if (!sessionUser?.id) {
+      throw new Error("You must be signed in to save contacts.");
+    }
+
+    const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
+
+    if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
+      throw new Error("A valid email address is required.");
+    }
+
+    const insertPayload = {
+      profile_id: sessionUser.id,
+      name: contactPayload.name,
+      email: cleanedEmail,
+      relationship_types: contactPayload.relationshipTypes || ["Friend"],
+    };
+
+    const { error } = await supabase
+      .from("profile_connections")
+      .insert(insertPayload);
+
+    if (error) {
+      throw new Error(
+        normalizeSupabaseError(
+          error,
+          "Failed to save contact to profile_connections. Check RLS, required fields, and column names."
+        )
+      );
+    }
+
+    await loadContacts(sessionUser.id);
+  }
+
+  function openDeleteContactModal(contact) {
+    setDeleteContactError("");
+    setSelectedContactToDelete(contact);
+    setIsDeleteContactOpen(true);
+  }
+
+  function openDeleteCircleModal(circle) {
+    setDeleteCircleError("");
+    setSelectedCircleToDelete(circle);
+    setIsDeleteCircleOpen(true);
+  }
+
+  async function handleConfirmDeleteContact(contact) {
+    setDeleteContactError("");
+    setContactError("");
+    setCircleSuccess("");
+
+    if (!contact?.id) {
+      setDeleteContactError("Missing contact id.");
+      return;
+    }
+
+    setIsDeletingContact(true);
+
+    try {
+      const { error } = await supabase
+        .from("profile_connections")
+        .delete()
+        .eq("id", contact.id);
+
+      if (error) {
+        throw new Error(
+          normalizeSupabaseError(
+            error,
+            "Failed to delete contact from profile_connections."
+          )
+        );
+      }
+
+      const remainingContacts = contacts.filter((item) => item.id !== contact.id);
+
+      setContacts(remainingContacts);
+      setSelectedPeople((prev) => prev.filter((item) => item.id !== contact.id));
+
+      if (String(selectedHintContactId) === String(contact.id)) {
+        setSelectedHintContactId(remainingContacts[0]?.id || null);
+        setForm((prev) => ({ ...prev, selectedHintId: "" }));
+      }
+
+      setIsDeleteContactOpen(false);
+      setSelectedContactToDelete(null);
+      setCircleSuccess("Contact deleted successfully.");
+    } catch (error) {
+      console.error("Delete contact failed:", error);
+      setDeleteContactError(error?.message || "Failed to delete contact.");
+    } finally {
+      setIsDeletingContact(false);
+    }
+  }
+
+  async function handleConfirmDeleteCircle(circle) {
+    setDeleteCircleError("");
+    setCircleError("");
+    setCircleSuccess("");
+
+    if (!circle?.id) {
+      setDeleteCircleError("Missing circle id.");
+      return;
+    }
+
+    setIsDeletingCircle(true);
+
+    try {
+      const { error: inviteDeleteError } = await supabase
+        .from("circle_invites")
+        .delete()
+        .eq("circle_id", circle.id);
+
+      if (inviteDeleteError) {
+        throw new Error(
+          normalizeSupabaseError(
+            inviteDeleteError,
+            "Failed to delete related circle invites."
+          )
+        );
+      }
+
+      const { error: circleDeleteError } = await supabase
+        .from("circles")
+        .delete()
+        .eq("id", circle.id);
+
+      if (circleDeleteError) {
+        throw new Error(
+          normalizeSupabaseError(
+            circleDeleteError,
+            "Failed to delete circle."
+          )
+        );
+      }
+
+      setRealCircles((prev) => prev.filter((item) => item.id !== circle.id));
+
+      setIsDeleteCircleOpen(false);
+      setSelectedCircleToDelete(null);
+      setCircleSuccess("Circle deleted successfully.");
+    } catch (error) {
+      console.error("Delete circle failed:", error);
+      setDeleteCircleError(error?.message || "Failed to delete circle.");
+    } finally {
+      setIsDeletingCircle(false);
+    }
+  }
+
+  async function handleCreateCircle() {
+    setCircleError("");
+    setCircleSuccess("");
+
+    const selectedEvent =
+      eventMode === "calendar"
+        ? safeCalendarEvents.find((event) => String(event.id) === String(selectedEventId))
+        : null;
+
+    const eventTitle =
+      eventMode === "calendar"
+        ? selectedEvent?.title || form.eventTitle || ""
+        : form.eventTitle?.trim() || "";
+
+    const eventDate =
+      eventMode === "calendar"
+        ? selectedEvent?.date || form.eventDate || ""
+        : form.eventDate || "";
+
+    if (!sessionUser?.id) {
+      setCircleError("You must be signed in to create a circle.");
+      return;
+    }
+
+    if (!eventTitle.trim()) {
+      setCircleError("Event title is required.");
+      return;
+    }
+
+    if (!safeIsoDate(eventDate)) {
+      setCircleError("Event date is required.");
+      return;
+    }
+
+    if (!safeIsoTimestampEndOfDay(form.deadline || eventDate)) {
+      setCircleError("Contribution deadline is required.");
+      return;
+    }
+
+    const contactsWithoutEmail = selectedPeople.filter(
+      (person) => !String(person.email || "").trim() || !isValidEmail(person.email)
+    );
+
+    if (contactsWithoutEmail.length > 0) {
+      setCircleError("Every invited contact must have a valid email address.");
+      return;
+    }
+
+    const selectedHint =
+      publicHintsByContact?.[selectedHintContactId]?.find((hint) => hint.id === form.selectedHintId) || null;
+
+    let itemTitle = "Shared contribution pot";
+    let itemUrl = null;
+    let itemImageUrl = null;
+    let itemDescription = null;
+    let itemTargetAmount = 0;
+    let organisingFeeAmount = 0;
+    let totalTargetAmount = 0;
+
+    if (form.goalType === "item") {
+      if (form.itemSource === "hint") {
+        if (!selectedHint) {
+          setCircleError("Choose a public hint or switch to pasted link.");
+          return;
+        }
+
+        const baseAmount = extractHintAmount(selectedHint);
+
+        if (baseAmount <= 0) {
+          setCircleError("We couldn’t find a valid item price for that hint.");
+          return;
+        }
+
+        const totals = calculateCircleTotals(baseAmount);
+
+        itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
+        itemUrl = selectedHint.url || null;
+        itemImageUrl = selectedHint.image || null;
+        itemDescription = selectedHint.description || null;
+        itemTargetAmount = totals.itemAmount;
+        organisingFeeAmount = totals.feeAmount;
+        totalTargetAmount = totals.totalAmount;
+      } else {
+        if (!form.itemUrl.trim()) {
+          setCircleError("Paste a product or experience link.");
+          return;
+        }
+
+        const baseAmount = extractPreviewAmount(linkPreview);
+
+        if (baseAmount <= 0) {
+          setCircleError(
+            "We couldn’t detect a price from that link preview yet. Add pricing to the preview response or use a hint with a valid amount."
+          );
+          return;
+        }
+
+        const totals = calculateCircleTotals(baseAmount);
+
+        itemTitle = buildStoredItemTitle(linkPreview?.title || "Shared item");
+        itemUrl = linkPreview?.url || form.itemUrl.trim();
+        itemImageUrl = linkPreview?.image || null;
+        itemDescription = linkPreview?.description || null;
+        itemTargetAmount = totals.itemAmount;
+        organisingFeeAmount = totals.feeAmount;
+        totalTargetAmount = totals.totalAmount;
+      }
+    } else {
+      const manualAmount = parseAmount(form.goalValue);
+
+      if (manualAmount <= 0) {
+        setCircleError("Target amount must be greater than 0.");
+        return;
+      }
+
+      itemTitle = "Shared contribution pot";
+      itemTargetAmount = roundCurrency(manualAmount);
+      organisingFeeAmount = calculateHintedFee(itemTargetAmount);
+      totalTargetAmount = roundCurrency(itemTargetAmount + organisingFeeAmount);
+    }
+
+    const circleInsertPayload = {
+      user_id: sessionUser.id,
+      recipient_contact_id: null,
+      title: eventTitle.trim(),
+      occasion_type: eventMode === "calendar" ? selectedEvent?.type || "Event" : "Event",
+      event_date: safeIsoDate(eventDate),
+      deadline_at: safeIsoTimestampEndOfDay(form.deadline || eventDate),
+      source_type: sourceTypeFromForm(form.goalType, form.itemSource),
+      hint_id: null,
+      item_title: itemTitle,
+      item_url: itemUrl,
+      item_image_url: itemImageUrl,
+      item_description: itemDescription,
+      currency: form.currency || "GBP",
+      item_target_amount: itemTargetAmount,
+      organising_fee_amount: organisingFeeAmount,
+      total_target_amount: totalTargetAmount,
+      fee_mode: "included_in_target",
+      payout_mode: "release_to_organiser",
+      funding_mode: fundingModeToDb(form.fundingMode),
+      status: "draft",
+    };
+
+    setIsCreatingCircle(true);
+
+    try {
+      const { data: insertedRows, error: insertCircleError } = await supabase
+        .from("circles")
+        .insert(circleInsertPayload)
+        .select("*");
+
+      if (insertCircleError) {
+        throw new Error(
+          normalizeSupabaseError(
+            insertCircleError,
+            "Failed to insert into circles. Check RLS, schema columns, required values, and date formatting."
+          )
+        );
+      }
+
+      const insertedCircle = Array.isArray(insertedRows) ? insertedRows[0] : null;
+
+      if (!insertedCircle?.id) {
+        throw new Error("Circle was inserted, but the new row could not be returned.");
+      }
+
+      const inviteRows = selectedPeople.map((person) => ({
+        circle_id: insertedCircle.id,
+        user_id: sessionUser.id,
+        contact_id: null,
+        invite_name: person.name || null,
+        invite_email: person.email.trim().toLowerCase(),
+        status: "pending",
+        reminder_count: 0,
+      }));
+
+      let insertedInvites = [];
+      if (inviteRows.length > 0) {
+        const { data: inviteData, error: inviteError } = await supabase
+          .from("circle_invites")
+          .insert(inviteRows)
+          .select("*");
+
+        if (inviteError) {
+          throw new Error(
+            normalizeSupabaseError(
+              inviteError,
+              "Circle created but invite insert failed in circle_invites. Check RLS, invite_email, and schema constraints."
+            )
+          );
+        }
+
+        insertedInvites = inviteData || [];
+      }
+
+      const currentUserName =
+        getGoogleName(profile || {}) ||
+        profile?.full_name ||
+        profile?.name ||
+        "You";
+
+      const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
+
+      setRealCircles((prev) => [mappedCircle, ...prev]);
+      setCircleSuccess("Circle created successfully.");
+      setIsCreateOpen(false);
+      resetCircleForm();
+    } catch (error) {
+      console.error("Error creating circle:", error);
+      setCircleError(error?.message || "Failed to create circle.");
     } finally {
       setIsCreatingCircle(false);
     }
   }
 
-  async function handleDeleteCircle() {
-    if (!circleToDelete?.id) return;
-
-    setDeletingCircleId(circleToDelete.id);
-
-    try {
-      const { error: invitesError } = await supabase
-        .from("circle_invites")
-        .delete()
-        .eq("circle_id", circleToDelete.id);
-
-      if (invitesError) {
-        throw new Error(normalizeSupabaseError(invitesError, "Failed to delete circle invites."));
-      }
-
-      const { error: circleError } = await supabase
-        .from("circles")
-        .delete()
-        .eq("id", circleToDelete.id);
-
-      if (circleError) {
-        throw new Error(normalizeSupabaseError(circleError, "Failed to delete circle."));
-      }
-
-      setCircles((prev) => prev.filter((circle) => circle.id !== circleToDelete.id));
-      setCircleToDelete(null);
-    } catch (error) {
-      console.error(error);
-      setPageError(error?.message || "Failed to delete circle.");
-    } finally {
-      setDeletingCircleId(null);
-    }
-  }
-
   return (
-    <main className="min-h-screen bg-[#fcf8f5] text-slate-900">
-      <header className="border-b border-[#efe0d7] bg-[#fffaf7]">
-        <div className="mx-auto flex max-w-[1320px] items-center justify-between gap-4 px-5 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <Link href="/feed" className="flex items-center gap-3">
-              <LogoMark />
-              <div>
-                <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-[#df7b59]">
-                  hinted
-                </p>
-                <p className="text-sm text-slate-500">Circles</p>
-              </div>
-            </Link>
+    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/feed" className="flex items-center gap-3.5">
+            <LogoMark />
+            <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
+              Hinted<span className="text-[#f36f64]">.io</span>
+            </div>
+          </Link>
 
-            <nav className="hidden items-center gap-2 rounded-full border border-[#ead8ce] bg-white p-1.5 sm:flex">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <nav className="flex items-center gap-2 sm:gap-3">
               <Link
                 href="/feed"
-                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 transition hover:bg-[#fff3ec] hover:text-slate-900"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
               >
                 Feed
               </Link>
               <Link
                 href="/hints"
-                className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 transition hover:bg-[#fff3ec] hover:text-slate-900"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
               >
                 Hints
               </Link>
-              <span className="rounded-full bg-[#2f3b2d] px-4 py-2 text-sm font-semibold text-white">
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
                 Circles
-              </span>
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
             </nav>
-          </div>
 
-          <AvatarMenu />
+            <AvatarMenu />
+          </div>
         </div>
       </header>
 
-      <section className="mx-auto max-w-[1320px] px-5 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
-          <aside className="space-y-5">
-            <section className="rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+      <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
+        {(pageError || contactError || circleError || circleSuccess) ? (
+          <div className="mb-5 space-y-3">
+            {pageError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {pageError}
+              </div>
+            ) : null}
+
+            {contactError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {contactError}
+              </div>
+            ) : null}
+
+            {circleError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {circleError}
+              </div>
+            ) : null}
+
+            {circleSuccess ? (
+              <div className="rounded-[22px] border border-[#d8e8d3] bg-[#f3fbf1] px-4 py-3 text-sm text-[#4a7a3a]">
+                {circleSuccess}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
+          <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+            <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
+              <aside className="space-y-4">
+                <div className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                     Contacts
                   </p>
-                  <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-slate-900">
-                    Your people
-                  </h2>
+                  <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-slate-900">
+                    People you can add
+                  </h1>
+                  <p className="mt-2 text-[14px] leading-7 text-slate-600">
+                    Invite people into shared circles, then track who has joined and who is still pending.
+                  </p>
+
+                  <div className="mt-5 space-y-3">
+                    {isLoadingContacts ? (
+                      <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                        Loading contacts...
+                      </div>
+                    ) : contacts.length ? (
+                      contacts.map((contact) => (
+                        <ContactCard
+                          key={contact.id}
+                          contact={contact}
+                          onDeleteClick={openDeleteContactModal}
+                        />
+                      ))
+                    ) : (
+                      <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                        No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsAddContactOpen(true)}
+                    className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
+                  >
+                    Add new contact
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowAddContactModal(true)}
-                  className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 text-sm font-semibold text-white shadow-lg"
-                >
-                  Add contact
-                </button>
-              </div>
+                <PotTypeGuide />
+              </aside>
 
-              <p className="mt-3 text-[14px] leading-7 text-slate-600">
-                Save the people you organise gifts for, then pull them into circles when it is time to coordinate.
-              </p>
+              <section className="min-w-0">
+                <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <div className="inline-flex rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e37b57]">
+                      Shared gifting
+                    </div>
+                    <h2 className="mt-3 text-[34px] font-semibold tracking-[-0.06em] text-slate-900 sm:text-[40px]">
+                      Build circles around the people and moments that matter.
+                    </h2>
+                    <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
+                      Create a circle around an event, invite people, choose a public hint or pasted link, and let the pot stay flexible if everyone does not join.
+                    </p>
+                  </div>
 
-              {pageError ? (
-                <div className="mt-4 rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-                  {pageError}
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateOpen(true)}
+                    className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+                  >
+                    Create new circle
+                  </button>
                 </div>
-              ) : null}
 
-              <div className="mt-5 space-y-3">
-                {loadingContacts ? (
-                  <div className="rounded-[20px] border border-[#f0dfd6] bg-[#fffdfa] p-4 text-sm text-slate-500">
-                    Loading contacts...
-                  </div>
-                ) : contacts.length ? (
-                  contacts.map((contact) => (
-                    <ContactCard
-                      key={contact.contactKey || contact.id}
-                      contact={contact}
-                      onDeleteClick={setContactToDelete}
-                    />
-                  ))
-                ) : (
-                  <div className="rounded-[22px] border border-dashed border-[#ead8ce] bg-[#fffaf7] p-5 text-sm leading-7 text-slate-500">
-                    No contacts yet. Add your first contact to start building real circles.
-                  </div>
-                )}
-              </div>
-            </section>
-
-            <PotTypeGuide />
-          </aside>
-
-          <section className="space-y-5">
-            <div className="flex flex-wrap items-center justify-between gap-4 rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Circles
-                </p>
-                <h1 className="mt-1 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
-                  Shared gifting circles
-                </h1>
-                <p className="mt-2 max-w-[65ch] text-[14px] leading-7 text-slate-600">
-                  Create one clear shared goal, invite the right people, and let the pot do the awkward coordination for you.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  resetCreateCircleState();
-                  setCreateModalOpen(true);
-                }}
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[#2f3b2d] px-5 text-sm font-semibold text-white"
-              >
-                Create circle
-              </button>
+                <div className="space-y-5">
+                  {isLoadingCircles ? (
+                    <div className="rounded-[24px] border border-[#f0dfd6] bg-white p-5 text-sm text-slate-500">
+                      Loading circles...
+                    </div>
+                  ) : (
+                    displayedCircles.map((circle) => (
+                      <CircleCard
+                        key={circle.id}
+                        circle={circle}
+                        onDeleteCircleClick={openDeleteCircleModal}
+                        deletingCircleId={isDeletingCircle ? selectedCircleToDelete?.id : null}
+                      />
+                    ))
+                  )}
+                </div>
+              </section>
             </div>
-
-            {loadingCircles ? (
-              <div className="rounded-[30px] border border-[#f0dfd6] bg-white p-6 shadow-sm">
-                <p className="text-sm text-slate-500">Loading circles...</p>
-              </div>
-            ) : (
-              visibleCircles.map((circle) => (
-                <CircleCard
-                  key={circle.id}
-                  circle={circle}
-                  onDeleteCircleClick={setCircleToDelete}
-                  deletingCircleId={deletingCircleId}
-                />
-              ))
-            )}
-          </section>
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
 
       <CreateCircleModal
-        open={createModalOpen}
-        onClose={() => setCreateModalOpen(false)}
+        open={isCreateOpen}
+        onClose={() => {
+          setIsCreateOpen(false);
+          resetCircleForm();
+        }}
         onSubmit={handleCreateCircle}
         contacts={contacts}
-        calendarEvents={calendarEvents}
+        calendarEvents={safeCalendarEvents}
         selectedPeople={selectedPeople}
         setSelectedPeople={setSelectedPeople}
         eventMode={eventMode}
@@ -2650,31 +2732,48 @@ export default function CirclesClient() {
         handleFetchPreview={handleFetchPreview}
         selectedHintContactId={selectedHintContactId}
         setSelectedHintContactId={setSelectedHintContactId}
-        errorMessage={createError}
+        errorMessage={circleError}
         isSubmitting={isCreatingCircle}
       />
 
       <AddContactModal
-        open={showAddContactModal}
-        onClose={() => setShowAddContactModal(false)}
-        onSave={handleSaveContact}
+        open={isAddContactOpen}
+        onClose={() => setIsAddContactOpen(false)}
+        onSave={async (payload) => {
+          try {
+            await handleSaveContact(payload);
+          } catch (error) {
+            setContactError(error?.message || "Failed to save contact.");
+            throw error;
+          }
+        }}
         supabase={supabase}
       />
 
-      <ConfirmDeleteContactModal
-        open={Boolean(contactToDelete)}
-        onClose={() => setContactToDelete(null)}
-        onConfirm={handleDeleteContact}
-        contact={contactToDelete}
-        isDeleting={Boolean(deletingContactId)}
+      <DeleteContactModal
+        open={isDeleteContactOpen}
+        onClose={() => {
+          setIsDeleteContactOpen(false);
+          setSelectedContactToDelete(null);
+          setDeleteContactError("");
+        }}
+        onConfirm={handleConfirmDeleteContact}
+        contact={selectedContactToDelete}
+        isDeleting={isDeletingContact}
+        errorMessage={deleteContactError}
       />
 
-      <ConfirmDeleteCircleModal
-        open={Boolean(circleToDelete)}
-        onClose={() => setCircleToDelete(null)}
-        onConfirm={handleDeleteCircle}
-        circle={circleToDelete}
-        isDeleting={Boolean(deletingCircleId)}
+      <DeleteCircleModal
+        open={isDeleteCircleOpen}
+        onClose={() => {
+          setIsDeleteCircleOpen(false);
+          setSelectedCircleToDelete(null);
+          setDeleteCircleError("");
+        }}
+        onConfirm={handleConfirmDeleteCircle}
+        circle={selectedCircleToDelete}
+        isDeleting={isDeletingCircle}
+        errorMessage={deleteCircleError}
       />
     </main>
   );
