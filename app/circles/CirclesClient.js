@@ -344,6 +344,65 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
   ];
 
   const totalTarget = Number(circleRow?.total_target_amount || 0);
+  const hasPot = totalTarget > 0;
+  const fullItemTitle = circleRow?.item_title || "";
+
+  return {
+    id: circleRow.id,
+    name: circleRow.title || "Untitled circle",
+    subtitle: `${circleRow.occasion_type || "Event"} · ${formatDateLabel(circleRow.event_date)}`,
+    description:
+      "A shared circle built around one event, one goal, and a clear fallback if invitees do not join.",
+    members,
+    pot: hasPot
+      ? {
+          active: true,
+          item: toDisplayPotTitle(fullItemTitle),
+          fullItemTitle,
+          source:
+            circleRow.source_type === "external_link"
+              ? "From pasted link"
+              : circleRow.source_type === "recipient_public_hint"
+                ? "From public hints"
+                : "Shared goal",
+          sourceUrl: circleRow.item_url || "",
+          previewImage: circleRow.item_image_url || "",
+          previewDescription: circleRow.item_description || "",
+          target: totalTarget,
+          currency: circleRow.currency || "GBP",
+          raised: 0,
+          note:
+            circleRow.funding_mode === "all_or_nothing"
+              ? "This circle will only proceed if the group reaches the target by the deadline."
+              : circleRow.funding_mode === "organiser_covers"
+                ? "If the full target is not reached, the organiser can choose to cover the gap."
+                : "This circle can stay flexible if fewer people join than expected.",
+          fundingMode: fundingModeToLabel(circleRow.funding_mode),
+          deadline: circleRow.deadline_at || circleRow.event_date || "",
+          goalType: fullItemTitle && fullItemTitle !== "Shared contribution pot" ? "item" : "amount",
+        }
+      : {
+          active: false,
+          item: "",
+          fullItemTitle: "",
+          source: "",
+          sourceUrl: "",
+          previewImage: "",
+          previewDescription: "",
+          target: 0,
+          currency: circleRow.currency || "GBP",
+          raised: 0,
+          note: "Choose a public hint or paste a link so the circle has one shared goal.",
+          fundingMode: fundingModeToLabel(circleRow.funding_mode),
+          deadline: circleRow.deadline_at || circleRow.event_date || "",
+          goalType: "item",
+        },
+    raw: circleRow,
+    invites: inviteRows,
+  };
+}
+
+  const totalTarget = Number(circleRow?.total_target_amount || 0);
   const fullItemTitle = circleRow?.item_title || "Shared gift";
 
   return {
@@ -2807,73 +2866,72 @@ export default function CirclesClient() {
     }
   }
 
-  async function handleDeletePot() {
-    if (!editingCircle?.id) return;
+async function handleDeletePot() {
+  if (!editingCircle?.id) return;
 
-    setIsDeletingPot(true);
-    setCircleError("");
-    setEditingPotError("");
+  setIsDeletingPot(true);
+  setCircleError("");
+  setEditingPotError("");
 
-    try {
-      const clearPotPayload = {
-        source_type: null,
-        hint_id: null,
-        item_title: null,
-        item_url: null,
-        item_image_url: null,
-        item_description: null,
-        item_target_amount: null,
-        organising_fee_amount: null,
-        total_target_amount: null,
-        fee_mode: null,
-        payout_mode: null,
-        status: "draft",
-      };
+  try {
+    const clearPotPayload = {
+      source_type: null,
+      hint_id: null,
+      item_title: null,
+      item_url: null,
+      item_image_url: null,
+      item_description: null,
+      item_target_amount: null,
+      organising_fee_amount: null,
+      total_target_amount: null,
+      fee_mode: null,
+      payout_mode: null,
+      status: "draft",
+    };
 
-      const { data, error } = await supabase
-        .from("circles")
-        .update(clearPotPayload)
-        .eq("id", editingCircle.id)
-        .select("*")
-        .single();
+    const { data, error } = await supabase
+      .from("circles")
+      .update(clearPotPayload)
+      .eq("id", editingCircle.id)
+      .select("*")
+      .single();
 
-      if (error) {
-        throw new Error(
-          normalizeSupabaseError(
-            error,
-            "Failed to delete the whole pot from circles."
-          )
-        );
-      }
-
-      const currentUserName =
-        getGoogleName(profile || {}) ||
-        profile?.full_name ||
-        profile?.name ||
-        "You";
-
-      const nextCircle = buildCircleViewModel(
-        data,
-        editingCircle.invites || [],
-        currentUserName
+    if (error) {
+      throw new Error(
+        normalizeSupabaseError(
+          error,
+          "Failed to delete the whole pot from circles."
+        )
       );
+    }
 
-      nextCircle.pot = {
-        active: false,
-        item: "",
-        fullItemTitle: "",
-        source: "",
-        sourceUrl: "",
-        previewImage: "",
-        previewDescription: "",
-        target: 0,
-        currency: data?.currency || "GBP",
-        raised: 0,
-        note: "Choose a public hint or paste a link so the circle has one shared goal.",
-        fundingMode: fundingModeToLabel(data?.funding_mode),
-        deadline: data?.deadline_at || data?.event_date || "",
-        goalType: "item",
-      };
+    const currentUserName =
+      getGoogleName(profile || {}) ||
+      profile?.full_name ||
+      profile?.name ||
+      "You";
+
+    const nextCircle = buildCircleViewModel(
+      data,
+      editingCircle.invites || [],
+      currentUserName
+    );
+
+    setRealCircles((prev) =>
+      prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
+    );
+
+    setIsDeletePotOpen(false);
+    setIsEditPotOpen(false);
+    setEditingCircle(null);
+    setEditingPotError("");
+  } catch (error) {
+    console.error("Delete pot failed:", error);
+    setCircleError(error?.message || "Failed to delete pot.");
+  } finally {
+    setIsDeletingPot(false);
+  }
+}
 
       setRealCircles((prev) =>
         prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
@@ -3102,6 +3160,7 @@ export default function CirclesClient() {
         isSaving={isSavingPot}
         errorMessage={editingPotError}
       />
+      
 
       <AddContactModal
         open={isAddContactOpen}
