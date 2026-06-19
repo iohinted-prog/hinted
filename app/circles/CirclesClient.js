@@ -110,7 +110,7 @@ const myHintLibrary = [
 ];
 
 const publicHintsByContact = {
-  demo-contact-1: [
+  "demo-contact-1": [
     {
       id: "contact-hint-1",
       title: "Polaroid camera",
