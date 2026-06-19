@@ -241,6 +241,18 @@ function formatPrice(value = "", currency = "") {
   return symbol ? `${symbol}${amount}` : amount;
 }
 
+function extractNumericPrice(value = "") {
+  const cleaned = String(value).replace(/,/g, "");
+  const match =
+    cleaned.match(/(?:£|\$|€|A\$|NZ\$|C\$|R)\s?(\d+(?:\.\d{1,2})?)/) ||
+    cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+
+  if (!match) return null;
+
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function extractPriceFromMeta($) {
   const directPrice =
     getMeta($, [
@@ -369,6 +381,134 @@ function extractPrice($) {
   return extractPriceFromMeta($) || extractPriceFromJsonLd($) || extractPriceFromText($) || "";
 }
 
+async function fetchViaMicrolink(inputUrl) {
+  const apiKey = process.env.MICROLINK_API_KEY;
+  const endpoint = apiKey ? "https://pro.microlink.io/" : "https://api.microlink.io/";
+  const url = new URL(endpoint);
+
+  url.searchParams.set("url", inputUrl);
+  url.searchParams.set("meta", "true");
+  url.searchParams.set("palette", "false");
+  url.searchParams.set("screenshot", "false");
+  url.searchParams.set("audio", "false");
+  url.searchParams.set("video", "false");
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: apiKey ? { "x-api-key": apiKey } : {},
+    cache: "no-store",
+  });
+
+  const json = await response.json().catch(() => null);
+
+  if (!response.ok || !json || json.status === "fail") {
+    throw new Error(json?.message || "Microlink could not extract this URL.");
+  }
+
+  const data = json.data || {};
+  const meta = data.meta || {};
+  const canonicalUrl = stripAmazonParams(data.url || inputUrl);
+
+  const title =
+    cleanText(data.title) ||
+    cleanText(meta.title) ||
+    cleanText(meta["og:title"]) ||
+    cleanText(meta["twitter:title"]) ||
+    "Shared item";
+
+  const description =
+    cleanText(data.description) ||
+    cleanText(meta.description) ||
+    cleanText(meta["og:description"]) ||
+    cleanText(meta["twitter:description"]) ||
+    "";
+
+  const image =
+    data.image?.url ||
+    data.logo?.url ||
+    meta.image ||
+    meta["og:image"] ||
+    meta["twitter:image"] ||
+    "";
+
+  const siteName =
+    cleanText(data.publisher) ||
+    cleanText(meta.publisher) ||
+    cleanText(meta["og:site_name"]) ||
+    getHostnameLabel(canonicalUrl);
+
+  const rawPrice =
+    cleanText(meta["product:price:amount"]) ||
+    cleanText(meta["og:price:amount"]) ||
+    cleanText(meta.price) ||
+    "";
+
+  const rawCurrency =
+    cleanText(meta["product:price:currency"]) ||
+    cleanText(meta["og:price:currency"]) ||
+    "GBP";
+
+  const priceText = rawPrice ? formatPrice(rawPrice, rawCurrency) : "";
+  const numericPrice = extractNumericPrice(priceText);
+
+  return {
+    url: canonicalUrl,
+    title,
+    description,
+    image,
+    siteName,
+    priceText,
+    numericPrice,
+  };
+}
+
+async function fetchViaFallbackScraper(inputUrl) {
+  const response = await fetch(inputUrl, {
+    method: "GET",
+    headers: REQUEST_HEADERS,
+    redirect: "follow",
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Unable to fetch link (${response.status}).`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    throw new Error("That URL did not return an HTML page.");
+  }
+
+  const html = await response.text();
+  if (!html || !html.trim()) {
+    throw new Error("The page returned an empty response.");
+  }
+
+  const finalUrl = response.url || inputUrl;
+  const $ = cheerio.load(html);
+
+  let canonicalUrl = extractCanonical($, finalUrl);
+  if (getHostnameLabel(canonicalUrl).includes("amazon.")) {
+    canonicalUrl = stripAmazonParams(canonicalUrl);
+  }
+
+  const title = extractTitle($, canonicalUrl);
+  const description = extractDescription($, canonicalUrl);
+  const image = extractImage($, finalUrl, canonicalUrl);
+  const siteName = extractSiteName($, canonicalUrl);
+  const priceText = extractPrice($);
+
+  return {
+    url: canonicalUrl,
+    title: title || "Shared item",
+    description: description || "",
+    image: image || "",
+    siteName: siteName || getHostnameLabel(canonicalUrl),
+    priceText: priceText || "",
+    numericPrice: extractNumericPrice(priceText || ""),
+  };
+}
+
 export async function POST(request) {
   try {
     const body = await request.json().catch(() => null);
@@ -381,58 +521,15 @@ export async function POST(request) {
       );
     }
 
-    const response = await fetch(inputUrl, {
-      method: "GET",
-      headers: REQUEST_HEADERS,
-      redirect: "follow",
-      cache: "no-store",
-    });
+    try {
+      const result = await fetchViaMicrolink(inputUrl);
+      return NextResponse.json(result);
+    } catch (microlinkError) {
+      console.warn("Microlink failed, using fallback scraper:", microlinkError);
 
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: `Unable to fetch link (${response.status}).` },
-        { status: 400 }
-      );
+      const result = await fetchViaFallbackScraper(inputUrl);
+      return NextResponse.json(result);
     }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.includes("text/html")) {
-      return NextResponse.json(
-        { error: "That URL did not return an HTML page." },
-        { status: 400 }
-      );
-    }
-
-    const html = await response.text();
-    if (!html || !html.trim()) {
-      return NextResponse.json(
-        { error: "The page returned an empty response." },
-        { status: 400 }
-      );
-    }
-
-    const finalUrl = response.url || inputUrl;
-    const $ = cheerio.load(html);
-
-    let canonicalUrl = extractCanonical($, finalUrl);
-    if (getHostnameLabel(canonicalUrl).includes("amazon.")) {
-      canonicalUrl = stripAmazonParams(canonicalUrl);
-    }
-
-    const title = extractTitle($, canonicalUrl);
-    const description = extractDescription($, canonicalUrl);
-    const image = extractImage($, finalUrl, canonicalUrl);
-    const siteName = extractSiteName($, canonicalUrl);
-    const priceText = extractPrice($);
-
-    return NextResponse.json({
-      url: canonicalUrl,
-      title: title || "Shared item",
-      description: description || "",
-      image: image || "",
-      siteName: siteName || getHostnameLabel(canonicalUrl),
-      priceText: priceText || "",
-    });
   } catch (error) {
     console.error("link-preview route error:", error);
 
