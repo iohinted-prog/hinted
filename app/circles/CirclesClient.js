@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
+const HINTED_SERVICE_FEE_RATE = 0.0275;
+
 const currencyOptions = [
   { code: "GBP", symbol: "£", label: "British Pound" },
   { code: "USD", symbol: "$", label: "US Dollar" },
@@ -71,7 +73,9 @@ const exampleCircle = {
       "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80",
     previewDescription:
       "This is just a single example pot so the layout still demonstrates the feature without showing multiple fake pots.",
-    target: 120,
+    target: 123.3,
+    itemTarget: 120,
+    fee: 3.3,
     currency: "GBP",
     raised: 40,
     note: "Example only.",
@@ -80,6 +84,10 @@ const exampleCircle = {
     goalType: "item",
   },
 };
+
+function roundCurrency(value) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
 
 function getInitials(name) {
   return String(name || "")
@@ -224,6 +232,62 @@ function buildContactRecordFromRow(row) {
   };
 }
 
+function calculateHintedFee(itemAmount) {
+  return roundCurrency(itemAmount * HINTED_SERVICE_FEE_RATE);
+}
+
+function calculateCircleTotals(itemAmount) {
+  const safeItemAmount = roundCurrency(itemAmount);
+  const feeAmount = calculateHintedFee(safeItemAmount);
+  const totalAmount = roundCurrency(safeItemAmount + feeAmount);
+
+  return {
+    itemAmount: safeItemAmount,
+    feeAmount,
+    totalAmount,
+  };
+}
+
+function extractHintAmount(hint) {
+  const amount = Number(hint?.amount);
+  return Number.isFinite(amount) && amount > 0 ? roundCurrency(amount) : 0;
+}
+
+function extractPreviewAmount(preview) {
+  const directCandidates = [
+    preview?.price,
+    preview?.amount,
+    preview?.targetAmount,
+    preview?.priceAmount,
+  ];
+
+  for (const candidate of directCandidates) {
+    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
+    if (Number.isFinite(amount) && amount > 0) {
+      return roundCurrency(amount);
+    }
+  }
+
+  const textCandidates = [
+    preview?.priceText,
+    preview?.subtitle,
+    preview?.description,
+    preview?.title,
+  ];
+
+  for (const text of textCandidates) {
+    const match = String(text || "").match(/(?:£|\$|€|A\$|NZ\$|C\$|R)?\s*(\d+(?:\.\d{1,2})?)/);
+    if (match?.[1]) {
+      const amount = Number(match[1]);
+      if (Number.isFinite(amount) && amount > 0) {
+        return roundCurrency(amount);
+      }
+    }
+  }
+
+  return 0;
+}
+
 function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You") {
   const members = [
     {
@@ -244,6 +308,10 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
     })),
   ];
 
+  const itemTarget = Number(circleRow.item_target_amount || 0);
+  const feeAmount = Number(circleRow.organising_fee_amount || 0);
+  const totalTarget = Number(circleRow.total_target_amount || 0);
+
   return {
     id: circleRow.id,
     name: circleRow.title || "Untitled circle",
@@ -252,7 +320,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       "A shared circle built around one event, one goal, and a clear fallback if invitees do not join.",
     members,
     pot: {
-      active: true,
+      active: totalTarget > 0,
       item: circleRow.item_title || "Untitled item",
       source:
         circleRow.source_type === "external_link"
@@ -263,7 +331,9 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       sourceUrl: circleRow.item_url || "",
       previewImage: circleRow.item_image_url || "",
       previewDescription: circleRow.item_description || "",
-      target: Number(circleRow.total_target_amount || 0),
+      target: totalTarget,
+      itemTarget,
+      fee: feeAmount,
       currency: circleRow.currency || "GBP",
       raised: 0,
       note:
@@ -275,7 +345,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
       goalType:
-        Number(circleRow.item_target_amount || 0) > 0 && circleRow.item_title !== "Shared contribution pot"
+        itemTarget > 0 && circleRow.item_title !== "Shared contribution pot"
           ? "item"
           : "amount",
     },
@@ -638,6 +708,33 @@ function CircleCard({ circle, onEditPot }) {
                   {raisedLabel} of {moneyLabel}
                 </p>
 
+                <div className="mt-4 grid w-full gap-2 sm:grid-cols-3">
+                  <div className="rounded-[18px] bg-white px-3 py-3 text-left">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Item
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatMoney(circle.pot.itemTarget || 0, circle.pot.currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-[18px] bg-white px-3 py-3 text-left">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                      Hinted fee
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatMoney(circle.pot.fee || 0, circle.pot.currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-[18px] bg-[#fff4ee] px-3 py-3 text-left">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                      Total target
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-slate-900">
+                      {formatMoney(circle.pot.target || 0, circle.pot.currency)}
+                    </p>
+                  </div>
+                </div>
+
                 <div className="mt-4 flex -space-x-3">
                   {circle.members.map((member) => (
                     <div
@@ -784,6 +881,17 @@ function CreateCircleModal({
     ? publicHintsByContact[selectedHintContactId] || []
     : [];
   const amountMode = form.goalType === "amount";
+  const selectedHint =
+    publicHintsByContact?.[selectedHintContactId]?.find((hint) => hint.id === form.selectedHintId) || null;
+
+  const liveBaseAmount =
+    form.goalType === "item"
+      ? form.itemSource === "hint"
+        ? extractHintAmount(selectedHint)
+        : extractPreviewAmount(linkPreview)
+      : parseAmount(form.goalValue);
+
+  const liveTotals = calculateCircleTotals(liveBaseAmount);
 
   return (
     <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
@@ -1159,6 +1267,42 @@ function CreateCircleModal({
             </div>
           ) : null}
 
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">Hinted fee</p>
+            <p className="mt-1 text-[13px] leading-6 text-slate-500">
+              Hinted adds a 2.75% service fee to the circle target from the start.
+            </p>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-[18px] bg-[#fffaf7] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Item amount
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatMoney(liveTotals.itemAmount, form.currency)}
+                </p>
+              </div>
+
+              <div className="rounded-[18px] bg-[#fffaf7] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Hinted fee
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatMoney(liveTotals.feeAmount, form.currency)}
+                </p>
+              </div>
+
+              <div className="rounded-[18px] bg-[#fff4ee] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                  Total target
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatMoney(liveTotals.totalAmount, form.currency)}
+                </p>
+              </div>
+            </div>
+          </div>
+
           {errorMessage ? (
             <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
               {errorMessage}
@@ -1283,437 +1427,6 @@ function CreateCircleModal({
                 }`}
               >
                 {isSubmitting ? "Creating..." : "Create circle"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function EditPotModal({
-  open,
-  onClose,
-  onSave,
-  onDelete,
-  circle,
-  contacts,
-  form,
-  setForm,
-  linkPreview,
-  isFetchingPreview,
-  handleFetchPreview,
-  selectedHintContactId,
-  setSelectedHintContactId,
-  errorMessage,
-  isSaving,
-}) {
-  if (!open || !circle) return null;
-
-  const selectedHintContact = contacts.find(
-    (contact) => String(contact.id) === String(selectedHintContactId)
-  );
-  const visibleHints = selectedHintContactId
-    ? publicHintsByContact[selectedHintContactId] || []
-    : [];
-  const amountMode = form.goalType === "amount";
-
-  return (
-    <ModalShell open={open} onClose={onClose} eyebrow="Edit pot" title={`Update ${circle.name}`}>
-      <div className="grid gap-0 lg:grid-cols-[1.04fr_0.96fr]">
-        <div className="max-h-[calc(92vh-90px)] space-y-6 overflow-y-auto p-6">
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Pot goal</p>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Goal type</span>
-                <select
-                  value={form.goalType}
-                  onChange={(e) => {
-                    const nextValue = e.target.value;
-                    setForm((prev) => ({
-                      ...prev,
-                      goalType: nextValue,
-                      itemSource: nextValue === "amount" ? "" : prev.itemSource || "hint",
-                      selectedHintId: nextValue === "amount" ? "" : prev.selectedHintId,
-                      itemUrl: nextValue === "amount" ? "" : prev.itemUrl,
-                      item:
-                        nextValue === "amount"
-                          ? "Shared contribution pot"
-                          : prev.item || "",
-                    }));
-                  }}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                >
-                  <option value="item">Specific item</option>
-                  <option value="amount">Target amount</option>
-                </select>
-              </label>
-
-              <CurrencyAmountInput
-                currency={form.currency}
-                amount={form.target}
-                onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
-                onAmountChange={(value) => setForm((prev) => ({ ...prev, target: value }))}
-              />
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Rules and timing</p>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Contribution deadline</span>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                />
-              </label>
-
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Funding mode</span>
-                <select
-                  value={form.fundingMode}
-                  onChange={(e) => setForm((prev) => ({ ...prev, fundingMode: e.target.value }))}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                >
-                  <option value="Flexible pot">Flexible pot</option>
-                  <option value="All-or-nothing">All-or-nothing</option>
-                  <option value="Organizer covers gap">Organizer covers gap</option>
-                </select>
-              </label>
-
-              <label className="space-y-2 sm:col-span-2">
-                <span className="text-sm font-medium text-slate-700">Pot note</span>
-                <textarea
-                  value={form.note}
-                  onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-                  rows={4}
-                  className="w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                  placeholder="Add context for the group"
-                />
-              </label>
-            </div>
-          </div>
-
-          {!amountMode ? (
-            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-              <p className="text-sm font-semibold text-slate-900">Choose or replace the item</p>
-
-              <div className="mt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      itemSource: "hint",
-                      itemUrl: "",
-                    }))
-                  }
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    form.itemSource === "hint"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  From public hints
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      itemSource: "url",
-                      selectedHintId: "",
-                    }))
-                  }
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    form.itemSource === "url"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  Paste a link
-                </button>
-              </div>
-
-              {form.itemSource === "hint" ? (
-                <div className="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-3">
-                    <p className="px-2 pb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      Contacts
-                    </p>
-                    <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
-                      {contacts.map((contact) => {
-                        const selected = String(contact.id) === String(selectedHintContactId);
-
-                        return (
-                          <button
-                            key={contact.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedHintContactId(contact.id);
-                              setForm((prev) => ({
-                                ...prev,
-                                selectedHintId: "",
-                              }));
-                            }}
-                            className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                              selected
-                                ? "border-[#f0a384] bg-[#fff4ee]"
-                                : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
-                            }`}
-                          >
-                            <div
-                              className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                            >
-                              {contact.initials}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-                              <p className="text-[12px] text-slate-500">{contact.role}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-
-                      {!contacts.length ? (
-                        <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                          Add a contact first to choose from public hints.
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-4">
-                    {selectedHintContact ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${selectedHintContact.colors}`}
-                          >
-                            {selectedHintContact.initials}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {selectedHintContact.name}'s public hints
-                            </p>
-                            <p className="text-[13px] text-slate-500">
-                              Replace the current shared goal with one of these.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                          {visibleHints.length ? (
-                            visibleHints.map((hint) => (
-                              <label
-                                key={hint.id}
-                                className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
-                                  form.selectedHintId === hint.id
-                                    ? "border-[#f0a384] bg-[#fff4ee]"
-                                    : "border-[#efe1d9] bg-white"
-                                }`}
-                              >
-                                <div className="min-w-0 pr-4">
-                                  <p className="text-sm font-semibold text-slate-900">{hint.title}</p>
-                                  <p className="mt-1 text-[13px] text-slate-500">{hint.subtitle}</p>
-                                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                                    {hint.description}
-                                  </p>
-                                  {hint.url ? (
-                                    <p className="mt-2 truncate text-[12px] text-slate-400">
-                                      {hint.url}
-                                    </p>
-                                  ) : null}
-                                </div>
-
-                                <input
-                                  type="radio"
-                                  name="editSelectedHint"
-                                  className="mt-1 h-4 w-4 accent-[#f36f64]"
-                                  checked={form.selectedHintId === hint.id}
-                                  onChange={() =>
-                                    setForm((prev) => ({
-                                      ...prev,
-                                      selectedHintId: hint.id,
-                                      item: hint.title,
-                                      target: String(hint.amount || prev.target),
-                                      currency: hint.currency || prev.currency,
-                                      source: `From ${selectedHintContact.name}'s public hints`,
-                                      sourceUrl: hint.url || "",
-                                      previewImage: hint.image || "",
-                                      previewDescription: hint.description || "",
-                                    }))
-                                  }
-                                />
-                              </label>
-                            ))
-                          ) : (
-                            <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                              No public hints available for this contact yet.
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex h-full min-h-[220px] items-center justify-center rounded-[18px] bg-white p-6 text-center text-sm text-slate-500">
-                        Select a contact to view their public hints.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <input
-                      type="url"
-                      value={form.itemUrl}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, itemUrl: e.target.value }))
-                      }
-                      placeholder="Paste product or experience link"
-                      className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleFetchPreview}
-                      className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
-                    >
-                      {isFetchingPreview ? "Fetching..." : "Fetch preview"}
-                    </button>
-                  </div>
-
-                  {linkPreview ? (
-                    <div className="space-y-3">
-                      <PotPreviewCard
-                        image={linkPreview.image}
-                        title={linkPreview.title}
-                        description={linkPreview.description}
-                        url={linkPreview.url}
-                        sourceLabel={linkPreview.siteName || "Fetched link"}
-                      />
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) => ({
-                            ...prev,
-                            item: linkPreview.title || prev.item,
-                            source: linkPreview.siteName || "From pasted link",
-                            sourceUrl: linkPreview.url || prev.sourceUrl,
-                            previewImage: linkPreview.image || prev.previewImage,
-                            previewDescription: linkPreview.description || prev.previewDescription,
-                          }))
-                        }
-                        className="inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
-                      >
-                        Use this preview
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {errorMessage ? (
-            <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-              {errorMessage}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="max-h-[calc(92vh-90px)] overflow-y-auto border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
-          <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Preview</p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-500">
-              Review the updated pot before saving changes.
-            </p>
-
-            <div className="mt-5 rounded-[24px] border border-[#efe1d9] bg-[#fffdfa] p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Shared pot
-              </p>
-              <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                {form.goalType === "amount" ? "Shared contribution pot" : form.item || "Untitled item"}
-              </h3>
-              <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                {form.source || "Updated pot source"}
-              </p>
-
-              <div className="mt-5 rounded-[22px] bg-[radial-gradient(circle_at_top,_#fff7f2,_#fffdfa_62%)] p-5 text-center">
-                <ContributionRing
-                  raised={circle.pot.raised}
-                  target={parseAmount(form.target)}
-                  ringId={`edit-ring-${circle.id}`}
-                />
-                <p className="mt-3 text-sm text-slate-500">
-                  {formatMoney(circle.pot.raised, form.currency)} of {formatMoney(parseAmount(form.target), form.currency)}
-                </p>
-              </div>
-
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-                  {form.fundingMode}
-                </span>
-                <span className="rounded-full bg-[#eef4ff] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                  {form.currency}
-                </span>
-                <span className="rounded-full bg-[#f3f6fb] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                  Deadline {formatDateLabel(form.deadline)}
-                </span>
-              </div>
-
-              <p className="mt-4 text-[14px] leading-7 text-slate-600">
-                {form.note || "No note added yet."}
-              </p>
-
-              {!amountMode ? (
-                <div className="mt-5">
-                  <PotPreviewCard
-                    image={form.previewImage}
-                    title={form.item}
-                    description={form.previewDescription}
-                    url={form.sourceUrl}
-                    sourceLabel={form.source}
-                  />
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3">
-              <button
-                type="button"
-                onClick={onSave}
-                disabled={isSaving}
-                className={`inline-flex h-12 items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
-                  isSaving
-                    ? "cursor-not-allowed bg-[#e9a48d]"
-                    : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
-                }`}
-              >
-                {isSaving ? "Saving..." : "Save changes"}
-              </button>
-
-              <button
-                type="button"
-                onClick={onDelete}
-                className="inline-flex h-12 items-center justify-center rounded-full border border-[#efc0ba] bg-white px-6 text-sm font-semibold text-[#b14f43] hover:bg-[#fff4f2]"
-              >
-                Delete pot
-              </button>
-
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-              >
-                Cancel
               </button>
             </div>
           </div>
@@ -2127,13 +1840,8 @@ export default function CirclesClient() {
   const [linkPreview, setLinkPreview] = useState(null);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const [editingCircle, setEditingCircle] = useState(null);
-  const [isEditPotOpen, setIsEditPotOpen] = useState(false);
   const [isDeletePotOpen, setIsDeletePotOpen] = useState(false);
-  const [editLinkPreview, setEditLinkPreview] = useState(null);
-  const [isFetchingEditPreview, setIsFetchingEditPreview] = useState(false);
-  const [editSelectedHintContactId, setEditSelectedHintContactId] = useState(null);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
-  const [isSavingPot, setIsSavingPot] = useState(false);
   const [isDeletingPot, setIsDeletingPot] = useState(false);
 
   const [form, setForm] = useState({
@@ -2144,23 +1852,6 @@ export default function CirclesClient() {
     goalValue: "",
     currency: "GBP",
     fundingMode: "flexible",
-    itemSource: "hint",
-    selectedHintId: "",
-    itemUrl: "",
-  });
-
-  const [editPotForm, setEditPotForm] = useState({
-    goalType: "item",
-    item: "",
-    target: "",
-    currency: "GBP",
-    deadline: "",
-    fundingMode: "Flexible pot",
-    note: "",
-    source: "",
-    sourceUrl: "",
-    previewImage: "",
-    previewDescription: "",
     itemSource: "hint",
     selectedHintId: "",
     itemUrl: "",
@@ -2345,11 +2036,7 @@ export default function CirclesClient() {
     if (!selectedHintContactId && contacts.length > 0) {
       setSelectedHintContactId(contacts[0].id);
     }
-
-    if (!editSelectedHintContactId && contacts.length > 0) {
-      setEditSelectedHintContactId(contacts[0].id);
-    }
-  }, [contacts, selectedHintContactId, editSelectedHintContactId]);
+  }, [contacts, selectedHintContactId]);
 
   const handleFetchPreview = async () => {
     if (!form.itemUrl.trim()) return;
@@ -2387,42 +2074,6 @@ export default function CirclesClient() {
     }
   };
 
-  const handleFetchEditPreview = async () => {
-    if (!editPotForm.itemUrl.trim()) return;
-
-    try {
-      setIsFetchingEditPreview(true);
-      setCircleError("");
-
-      const response = await fetch("/api/link-preview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: editPotForm.itemUrl.trim() }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Failed to fetch preview");
-      }
-
-      setEditLinkPreview(data);
-    } catch (error) {
-      setEditLinkPreview({
-        title: "Preview unavailable",
-        description: "We could not pull a preview from that link yet, but you can still use the URL.",
-        image: "",
-        siteName: editPotForm.itemUrl,
-        url: editPotForm.itemUrl,
-      });
-      setCircleError(error?.message || "Failed to fetch edit preview.");
-    } finally {
-      setIsFetchingEditPreview(false);
-    }
-  };
-
   async function handleSaveContact(contactPayload) {
     setContactError("");
 
@@ -2437,11 +2088,9 @@ export default function CirclesClient() {
       relationship_types: contactPayload.relationshipTypes || ["Friend"],
     };
 
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("profile_connections")
-      .insert(insertPayload)
-      .select("*")
-      .single();
+      .insert(insertPayload);
 
     if (error) {
       throw new Error(
@@ -2452,18 +2101,7 @@ export default function CirclesClient() {
       );
     }
 
-    const nextContact = buildContactRecordFromRow(data);
-
-    setContacts((prev) => {
-      const exists = prev.some((item) => item.id === nextContact.id);
-      return exists ? prev : [nextContact, ...prev];
-    });
-
-    if (!selectedHintContactId) {
-      setSelectedHintContactId(nextContact.id);
-    }
-
-    return nextContact;
+    await loadContacts(sessionUser.id);
   }
 
   async function handleCreateCircle() {
@@ -2505,20 +2143,12 @@ export default function CirclesClient() {
       return;
     }
 
-    const targetNumber = parseAmount(form.goalValue);
-    if (targetNumber <= 0) {
-      setCircleError("Target amount must be greater than 0.");
-      return;
-    }
-
     const contactsWithoutEmail = selectedPeople.filter((person) => !String(person.email || "").trim());
     if (contactsWithoutEmail.length > 0) {
       setCircleError("Every invited contact must have an email because circle_invites.invite_email is required.");
       return;
     }
 
-    const selectedHintContact =
-      contacts.find((contact) => String(contact.id) === String(selectedHintContactId)) || null;
     const selectedHint =
       publicHintsByContact?.[selectedHintContactId]?.find((hint) => hint.id === form.selectedHintId) || null;
 
@@ -2526,6 +2156,9 @@ export default function CirclesClient() {
     let itemUrl = null;
     let itemImageUrl = null;
     let itemDescription = null;
+    let itemTargetAmount = 0;
+    let organisingFeeAmount = 0;
+    let totalTargetAmount = 0;
 
     if (form.goalType === "item") {
       if (form.itemSource === "hint") {
@@ -2534,21 +2167,58 @@ export default function CirclesClient() {
           return;
         }
 
+        const baseAmount = extractHintAmount(selectedHint);
+
+        if (baseAmount <= 0) {
+          setCircleError("We couldn’t find a valid item price for that hint.");
+          return;
+        }
+
+        const totals = calculateCircleTotals(baseAmount);
+
         itemTitle = selectedHint.title || "Shared item";
         itemUrl = selectedHint.url || null;
         itemImageUrl = selectedHint.image || null;
         itemDescription = selectedHint.description || null;
+        itemTargetAmount = totals.itemAmount;
+        organisingFeeAmount = totals.feeAmount;
+        totalTargetAmount = totals.totalAmount;
       } else {
         if (!form.itemUrl.trim()) {
           setCircleError("Paste a product or experience link.");
           return;
         }
 
+        const baseAmount = extractPreviewAmount(linkPreview);
+
+        if (baseAmount <= 0) {
+          setCircleError(
+            "We couldn’t detect a price from that link preview yet. Add pricing to the preview response or use a hint with a valid amount."
+          );
+          return;
+        }
+
+        const totals = calculateCircleTotals(baseAmount);
+
         itemTitle = linkPreview?.title || "Shared item";
         itemUrl = linkPreview?.url || form.itemUrl.trim();
         itemImageUrl = linkPreview?.image || null;
         itemDescription = linkPreview?.description || null;
+        itemTargetAmount = totals.itemAmount;
+        organisingFeeAmount = totals.feeAmount;
+        totalTargetAmount = totals.totalAmount;
       }
+    } else {
+      const manualAmount = parseAmount(form.goalValue);
+
+      if (manualAmount <= 0) {
+        setCircleError("Target amount must be greater than 0.");
+        return;
+      }
+
+      itemTargetAmount = roundCurrency(manualAmount);
+      organisingFeeAmount = calculateHintedFee(itemTargetAmount);
+      totalTargetAmount = roundCurrency(itemTargetAmount + organisingFeeAmount);
     }
 
     const circleInsertPayload = {
@@ -2565,9 +2235,9 @@ export default function CirclesClient() {
       item_image_url: itemImageUrl,
       item_description: itemDescription,
       currency: form.currency || "GBP",
-      item_target_amount: targetNumber,
-      organising_fee_amount: 0,
-      total_target_amount: targetNumber,
+      item_target_amount: itemTargetAmount,
+      organising_fee_amount: organisingFeeAmount,
+      total_target_amount: totalTargetAmount,
       fee_mode: "included_in_target",
       payout_mode: "release_to_organiser",
       funding_mode: fundingModeToDb(form.fundingMode),
@@ -2577,17 +2247,34 @@ export default function CirclesClient() {
     setIsCreatingCircle(true);
 
     try {
-      const { data: insertedCircle, error: insertCircleError } = await supabase
+      const { error: insertCircleError } = await supabase
         .from("circles")
-        .insert(circleInsertPayload)
-        .select("*")
-        .single();
+        .insert(circleInsertPayload);
 
       if (insertCircleError) {
         throw new Error(
           normalizeSupabaseError(
             insertCircleError,
             "Failed to insert into circles. Check RLS, schema columns, required values, and date formatting."
+          )
+        );
+      }
+
+      const { data: insertedCircle, error: fetchCircleError } = await supabase
+        .from("circles")
+        .select("*")
+        .eq("user_id", sessionUser.id)
+        .eq("title", circleInsertPayload.title)
+        .eq("event_date", circleInsertPayload.event_date)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (fetchCircleError || !insertedCircle) {
+        throw new Error(
+          normalizeSupabaseError(
+            fetchCircleError,
+            "Circle was inserted, but the new row could not be fetched afterwards."
           )
         );
       }
@@ -2630,7 +2317,9 @@ export default function CirclesClient() {
       const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
 
       setRealCircles((prev) => [mappedCircle, ...prev]);
-      setCircleSuccess("Circle created successfully.");
+      setCircleSuccess(
+        `Circle created successfully. Hinted fee included: ${formatMoney(organisingFeeAmount, form.currency || "GBP")}.`
+      );
       setIsCreateOpen(false);
       resetCircleForm();
     } catch (error) {
@@ -2638,101 +2327,6 @@ export default function CirclesClient() {
       setCircleError(error?.message || "Failed to create circle.");
     } finally {
       setIsCreatingCircle(false);
-    }
-  }
-
-  function openEditPot(circle) {
-    if (!circle || circle.id === "example-circle") return;
-
-    setEditingCircle(circle);
-    setEditSelectedHintContactId(contacts[0]?.id ?? null);
-    setEditLinkPreview(null);
-    setCircleError("");
-    setEditPotForm({
-      goalType: circle.pot.goalType || "item",
-      item: circle.pot.item || "",
-      target: String(circle.pot.target || ""),
-      currency: circle.pot.currency || "GBP",
-      deadline: safeIsoDate(circle.pot.deadline) || "",
-      fundingMode: circle.pot.fundingMode || "Flexible pot",
-      note: circle.pot.note || "",
-      source: circle.pot.source || "",
-      sourceUrl: circle.pot.sourceUrl || "",
-      previewImage: circle.pot.previewImage || "",
-      previewDescription: circle.pot.previewDescription || "",
-      itemSource: circle.pot.sourceUrl ? "url" : "hint",
-      selectedHintId: "",
-      itemUrl: circle.pot.sourceUrl || "",
-    });
-    setIsEditPotOpen(true);
-  }
-
-  async function handleSavePot() {
-    if (!editingCircle?.id) return;
-
-    const updatedTarget = parseAmount(editPotForm.target);
-    if (updatedTarget <= 0) {
-      setCircleError("Target amount must be greater than 0.");
-      return;
-    }
-
-    if (!safeIsoTimestampEndOfDay(editPotForm.deadline)) {
-      setCircleError("Deadline must be valid.");
-      return;
-    }
-
-    setIsSavingPot(true);
-    setCircleError("");
-
-    try {
-      const payload = {
-        source_type: sourceTypeFromForm(editPotForm.goalType, editPotForm.itemSource),
-        item_title: editPotForm.goalType === "amount" ? "Shared contribution pot" : editPotForm.item || "Shared item",
-        item_url: editPotForm.goalType === "amount" ? null : editPotForm.sourceUrl || null,
-        item_image_url: editPotForm.goalType === "amount" ? null : editPotForm.previewImage || null,
-        item_description: editPotForm.goalType === "amount" ? editPotForm.note || null : editPotForm.previewDescription || editPotForm.note || null,
-        currency: editPotForm.currency || "GBP",
-        item_target_amount: updatedTarget,
-        total_target_amount: updatedTarget,
-        funding_mode: fundingModeToDb(editPotForm.fundingMode),
-        deadline_at: safeIsoTimestampEndOfDay(editPotForm.deadline),
-      };
-
-      const { data, error } = await supabase
-        .from("circles")
-        .update(payload)
-        .eq("id", editingCircle.id)
-        .select("*")
-        .single();
-
-      if (error) {
-        throw new Error(
-          normalizeSupabaseError(
-            error,
-            "Failed to update circle pot. Check RLS, column names, and value formatting."
-          )
-        );
-      }
-
-      const currentUserName =
-        getGoogleName(profile || {}) ||
-        profile?.full_name ||
-        profile?.name ||
-        "You";
-
-      const nextCircle = buildCircleViewModel(data, editingCircle.invites || [], currentUserName);
-
-      setRealCircles((prev) =>
-        prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
-      );
-
-      setEditingCircle(nextCircle);
-      setIsEditPotOpen(false);
-    } catch (error) {
-      console.error("Save pot failed:", error);
-      setCircleError(error?.message || "Failed to save pot.");
-    } finally {
-      setIsSavingPot(false);
     }
   }
 
@@ -2750,6 +2344,7 @@ export default function CirclesClient() {
         item_image_url: null,
         item_description: null,
         item_target_amount: 0,
+        organising_fee_amount: 0,
         total_target_amount: 0,
       };
 
@@ -2781,7 +2376,6 @@ export default function CirclesClient() {
       );
 
       setIsDeletePotOpen(false);
-      setIsEditPotOpen(false);
       setEditingCircle(null);
     } catch (error) {
       console.error("Delete pot failed:", error);
@@ -2949,7 +2543,7 @@ export default function CirclesClient() {
                       <CircleCard
                         key={circle.id}
                         circle={circle}
-                        onEditPot={openEditPot}
+                        onEditPot={setEditingCircle}
                       />
                     ))
                   )}
@@ -2984,27 +2578,6 @@ export default function CirclesClient() {
         setSelectedHintContactId={setSelectedHintContactId}
         errorMessage={circleError}
         isSubmitting={isCreatingCircle}
-      />
-
-      <EditPotModal
-        open={isEditPotOpen}
-        onClose={() => {
-          setIsEditPotOpen(false);
-          setEditingCircle(null);
-        }}
-        onSave={handleSavePot}
-        onDelete={() => setIsDeletePotOpen(true)}
-        circle={editingCircle}
-        contacts={contacts}
-        form={editPotForm}
-        setForm={setEditPotForm}
-        linkPreview={editLinkPreview}
-        isFetchingPreview={isFetchingEditPreview}
-        handleFetchPreview={handleFetchEditPreview}
-        selectedHintContactId={editSelectedHintContactId}
-        setSelectedHintContactId={setEditSelectedHintContactId}
-        errorMessage={circleError}
-        isSaving={isSavingPot}
       />
 
       <DeletePotModal
