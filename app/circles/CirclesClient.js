@@ -67,6 +67,7 @@ const exampleCircle = {
   pot: {
     active: true,
     item: "Example item",
+    fullItemTitle: "Example item",
     source: "Example shared goal",
     sourceUrl: "https://example.com/example-item",
     previewImage:
@@ -74,8 +75,6 @@ const exampleCircle = {
     previewDescription:
       "This is just a single example pot so the layout still demonstrates the feature without showing multiple fake pots.",
     target: 123.3,
-    itemTarget: 120,
-    fee: 3.3,
     currency: "GBP",
     raised: 40,
     note: "Example only.",
@@ -288,6 +287,32 @@ function extractPreviewAmount(preview) {
   return 0;
 }
 
+function toDisplayPotTitle(value) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "Shared gift";
+
+  const cleaned = text
+    .replace(/[|–—•,:;()[\]{}]+/g, " ")
+    .replace(/\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const words = cleaned.split(" ").filter(Boolean);
+  if (words.length === 0) return "Shared gift";
+  return words.slice(0, 3).join(" ");
+}
+
+function buildStoredItemTitle(value) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text || "Shared gift";
+}
+
 function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You") {
   const members = [
     {
@@ -308,9 +333,8 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
     })),
   ];
 
-  const itemTarget = Number(circleRow.item_target_amount || 0);
-  const feeAmount = Number(circleRow.organising_fee_amount || 0);
   const totalTarget = Number(circleRow.total_target_amount || 0);
+  const fullItemTitle = circleRow.item_title || "Shared gift";
 
   return {
     id: circleRow.id,
@@ -321,7 +345,8 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
     members,
     pot: {
       active: totalTarget > 0,
-      item: circleRow.item_title || "Untitled item",
+      item: toDisplayPotTitle(fullItemTitle),
+      fullItemTitle,
       source:
         circleRow.source_type === "external_link"
           ? "From pasted link"
@@ -332,8 +357,6 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       previewImage: circleRow.item_image_url || "",
       previewDescription: circleRow.item_description || "",
       target: totalTarget,
-      itemTarget,
-      fee: feeAmount,
       currency: circleRow.currency || "GBP",
       raised: 0,
       note:
@@ -345,7 +368,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
       goalType:
-        itemTarget > 0 && circleRow.item_title !== "Shared contribution pot"
+        totalTarget > 0 && fullItemTitle !== "Shared contribution pot"
           ? "item"
           : "amount",
     },
@@ -623,14 +646,15 @@ function PotTypeGuide() {
 }
 
 function CircleCard({ circle, onEditPot }) {
-  const joinedCount = circle.members.filter((member) => member.status === "joined").length;
-  const invitedCount = circle.members.length;
-  const moneyLabel = formatMoney(circle.pot.target, circle.pot.currency);
-  const raisedLabel = formatMoney(circle.pot.raised, circle.pot.currency);
+  const safeMembers = Array.isArray(circle?.members) ? circle.members : [];
+  const joinedCount = safeMembers.filter((member) => member.status === "joined").length;
+  const invitedCount = safeMembers.length;
+  const moneyLabel = formatMoney(circle?.pot?.target, circle?.pot?.currency);
+  const raisedLabel = formatMoney(circle?.pot?.raised, circle?.pot?.currency);
   const showItemPreview =
-    circle.pot.active &&
-    circle.pot.goalType === "item" &&
-    (circle.pot.previewImage || circle.pot.previewDescription || circle.pot.sourceUrl);
+    circle?.pot?.active &&
+    circle?.pot?.goalType === "item" &&
+    (circle?.pot?.previewImage || circle?.pot?.previewDescription || circle?.pot?.sourceUrl);
 
   return (
     <article className="rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm sm:p-6">
@@ -642,9 +666,9 @@ function CircleCard({ circle, onEditPot }) {
                 Circle
               </p>
               <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.05em] text-slate-900">
-                {circle.name}
+                {circle?.name || "Untitled circle"}
               </h2>
-              <p className="mt-2 text-sm text-slate-500">{circle.subtitle}</p>
+              <p className="mt-2 text-sm text-slate-500">{circle?.subtitle || "No subtitle"}</p>
             </div>
 
             <div className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
@@ -653,7 +677,7 @@ function CircleCard({ circle, onEditPot }) {
           </div>
 
           <p className="mt-4 max-w-[60ch] text-[14px] leading-7 text-slate-600">
-            {circle.description}
+            {circle?.description || "A shared gifting circle."}
           </p>
 
           <div className="mt-5 rounded-[24px] border border-dashed border-[#e6d7cd] bg-[#fffaf7] p-4">
@@ -671,11 +695,11 @@ function CircleCard({ circle, onEditPot }) {
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {circle.members.map((member) => (
+              {safeMembers.map((member) => (
                 <MemberPill
-                  key={`${circle.id}-${member.name}`}
+                  key={`${circle?.id}-${member.name}`}
                   member={member}
-                  currency={circle.pot.currency}
+                  currency={circle?.pot?.currency}
                 />
               ))}
             </div>
@@ -688,19 +712,19 @@ function CircleCard({ circle, onEditPot }) {
               Shared pot
             </p>
             <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-              {circle.pot.active ? circle.pot.item : "No pot created yet"}
+              {circle?.pot?.active ? circle.pot.item : "No pot created yet"}
             </h3>
             <p className="mt-2 max-w-[28ch] text-[13px] leading-6 text-slate-500">
-              {circle.pot.active ? circle.pot.source : circle.pot.note}
+              {circle?.pot?.active ? circle?.pot?.source : circle?.pot?.note}
             </p>
 
-            {circle.pot.active ? (
+            {circle?.pot?.active ? (
               <>
                 <div className="mt-5">
                   <ContributionRing
-                    raised={circle.pot.raised}
-                    target={circle.pot.target}
-                    ringId={`circle-gradient-${circle.id}`}
+                    raised={circle?.pot?.raised || 0}
+                    target={circle?.pot?.target || 0}
+                    ringId={`circle-gradient-${circle?.id}`}
                   />
                 </div>
 
@@ -708,37 +732,10 @@ function CircleCard({ circle, onEditPot }) {
                   {raisedLabel} of {moneyLabel}
                 </p>
 
-                <div className="mt-4 grid w-full gap-2 sm:grid-cols-3">
-                  <div className="rounded-[18px] bg-white px-3 py-3 text-left">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Item
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatMoney(circle.pot.itemTarget || 0, circle.pot.currency)}
-                    </p>
-                  </div>
-                  <div className="rounded-[18px] bg-white px-3 py-3 text-left">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                      Hinted fee
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatMoney(circle.pot.fee || 0, circle.pot.currency)}
-                    </p>
-                  </div>
-                  <div className="rounded-[18px] bg-[#fff4ee] px-3 py-3 text-left">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
-                      Total target
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">
-                      {formatMoney(circle.pot.target || 0, circle.pot.currency)}
-                    </p>
-                  </div>
-                </div>
-
                 <div className="mt-4 flex -space-x-3">
-                  {circle.members.map((member) => (
+                  {safeMembers.map((member) => (
                     <div
-                      key={`${circle.id}-${member.name}-avatar`}
+                      key={`${circle?.id}-${member.name}-avatar`}
                       className={`flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-gradient-to-b text-[11px] font-bold text-white shadow-sm ${member.colors}`}
                       title={member.name}
                     >
@@ -749,32 +746,32 @@ function CircleCard({ circle, onEditPot }) {
 
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <span className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-                    {circle.pot.fundingMode}
+                    {circle?.pot?.fundingMode}
                   </span>
                   <span className="rounded-full bg-[#f3f6fb] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                    Deadline {formatDateLabel(circle.pot.deadline)}
+                    Deadline {formatDateLabel(circle?.pot?.deadline)}
                   </span>
                   <span className="rounded-full bg-[#edf3ff] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                    {circle.pot.currency}
+                    {circle?.pot?.currency || "GBP"}
                   </span>
                 </div>
 
                 {showItemPreview ? (
                   <div className="mt-5 w-full text-left">
                     <PotPreviewCard
-                      image={circle.pot.previewImage}
-                      title={circle.pot.item}
-                      description={circle.pot.previewDescription}
-                      url={circle.pot.sourceUrl}
-                      sourceLabel={circle.pot.source}
+                      image={circle?.pot?.previewImage}
+                      title={circle?.pot?.fullItemTitle || circle?.pot?.item}
+                      description={circle?.pot?.previewDescription}
+                      url={circle?.pot?.sourceUrl}
+                      sourceLabel={circle?.pot?.source}
                       compact
                     />
                   </div>
                 ) : null}
 
-                <p className="mt-4 text-[14px] leading-7 text-slate-600">{circle.pot.note}</p>
+                <p className="mt-4 text-[14px] leading-7 text-slate-600">{circle?.pot?.note}</p>
 
-                {circle.id !== "example-circle" ? (
+                {circle?.id !== "example-circle" ? (
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
                     <button
                       type="button"
@@ -795,7 +792,7 @@ function CircleCard({ circle, onEditPot }) {
                   </p>
                 </div>
 
-                {circle.id !== "example-circle" ? (
+                {circle?.id !== "example-circle" ? (
                   <button
                     type="button"
                     onClick={() => onEditPot(circle)}
@@ -1268,38 +1265,18 @@ function CreateCircleModal({
           ) : null}
 
           <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Hinted fee</p>
+            <p className="text-sm font-semibold text-slate-900">Total target</p>
             <p className="mt-1 text-[13px] leading-6 text-slate-500">
-              Hinted adds a 2.75% service fee to the circle target from the start.
+              This is the amount shown on the circle.
             </p>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-[18px] bg-[#fffaf7] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Item amount
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {formatMoney(liveTotals.itemAmount, form.currency)}
-                </p>
-              </div>
-
-              <div className="rounded-[18px] bg-[#fffaf7] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Hinted fee
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {formatMoney(liveTotals.feeAmount, form.currency)}
-                </p>
-              </div>
-
-              <div className="rounded-[18px] bg-[#fff4ee] p-4">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
-                  Total target
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {formatMoney(liveTotals.totalAmount, form.currency)}
-                </p>
-              </div>
+            <div className="mt-4 rounded-[18px] bg-[#fff4ee] p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                Total
+              </p>
+              <p className="mt-2 text-lg font-semibold text-slate-900">
+                {formatMoney(liveTotals.totalAmount, form.currency)}
+              </p>
             </div>
           </div>
 
@@ -1430,6 +1407,153 @@ function CreateCircleModal({
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function EditPotModal({
+  open,
+  onClose,
+  onSave,
+  circle,
+  isSaving,
+  errorMessage,
+}) {
+  const [mode, setMode] = useState("url");
+  const [itemUrl, setItemUrl] = useState("");
+  const [itemTitle, setItemTitle] = useState("");
+  const [itemDescription, setItemDescription] = useState("");
+  const [targetAmount, setTargetAmount] = useState("");
+  const [currency, setCurrency] = useState("GBP");
+
+  useEffect(() => {
+    if (!open || !circle) return;
+    setMode(circle?.raw?.item_url ? "url" : "amount");
+    setItemUrl(circle?.raw?.item_url || "");
+    setItemTitle(circle?.raw?.fullItemTitle || circle?.raw?.item_title || "");
+    setItemDescription(circle?.raw?.item_description || "");
+    setTargetAmount(String(circle?.raw?.item_target_amount || ""));
+    setCurrency(circle?.raw?.currency || "GBP");
+  }, [open, circle]);
+
+  if (!open || !circle) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Edit pot"
+      title={`Update ${circle.name}`}
+      maxWidth="max-w-[760px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setMode("url")}
+            className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+              mode === "url"
+                ? "bg-[#2f3b2d] text-white"
+                : "border border-[#ead8ce] bg-white text-slate-700"
+            }`}
+          >
+            Link or item
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("amount")}
+            className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+              mode === "amount"
+                ? "bg-[#2f3b2d] text-white"
+                : "border border-[#ead8ce] bg-white text-slate-700"
+            }`}
+          >
+            Amount only
+          </button>
+        </div>
+
+        {mode === "url" ? (
+          <>
+            <label className="block">
+              <span className="block text-sm font-medium text-slate-900">Item title</span>
+              <input
+                type="text"
+                value={itemTitle}
+                onChange={(e) => setItemTitle(e.target.value)}
+                className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                placeholder="Le Creuset dish"
+              />
+            </label>
+
+            <label className="block">
+              <span className="block text-sm font-medium text-slate-900">Item link</span>
+              <input
+                type="url"
+                value={itemUrl}
+                onChange={(e) => setItemUrl(e.target.value)}
+                className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                placeholder="https://..."
+              />
+            </label>
+
+            <label className="block">
+              <span className="block text-sm font-medium text-slate-900">Short description</span>
+              <textarea
+                value={itemDescription}
+                onChange={(e) => setItemDescription(e.target.value)}
+                rows={4}
+                className="mt-2 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                placeholder="Optional supporting detail"
+              />
+            </label>
+          </>
+        ) : null}
+
+        <CurrencyAmountInput
+          currency={currency}
+          amount={targetAmount}
+          onCurrencyChange={setCurrency}
+          onAmountChange={setTargetAmount}
+          label="Base amount"
+        />
+
+        {errorMessage ? (
+          <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isSaving}
+            onClick={() =>
+              onSave({
+                mode,
+                itemUrl,
+                itemTitle,
+                itemDescription,
+                targetAmount,
+                currency,
+              })
+            }
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isSaving
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+            }`}
+          >
+            {isSaving ? "Saving..." : "Save changes"}
+          </button>
         </div>
       </div>
     </ModalShell>
@@ -1833,6 +1957,7 @@ export default function CirclesClient() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [isEditPotOpen, setIsEditPotOpen] = useState(false);
   const [eventMode, setEventMode] = useState("calendar");
   const [selectedEventId, setSelectedEventId] = useState(String(safeDefaultEvent.id || ""));
   const [selectedPeople, setSelectedPeople] = useState([]);
@@ -1843,6 +1968,8 @@ export default function CirclesClient() {
   const [isDeletePotOpen, setIsDeletePotOpen] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
   const [isDeletingPot, setIsDeletingPot] = useState(false);
+  const [isSavingPot, setIsSavingPot] = useState(false);
+  const [editingPotError, setEditingPotError] = useState("");
 
   const [form, setForm] = useState({
     eventTitle: safeDefaultEvent.title || "",
@@ -1852,7 +1979,7 @@ export default function CirclesClient() {
     goalValue: "",
     currency: "GBP",
     fundingMode: "flexible",
-    itemSource: "hint",
+    itemSource: "url",
     selectedHintId: "",
     itemUrl: "",
   });
@@ -1885,7 +2012,7 @@ export default function CirclesClient() {
       goalValue: "",
       currency: "GBP",
       fundingMode: "flexible",
-      itemSource: "hint",
+      itemSource: "url",
       selectedHintId: "",
       itemUrl: "",
     });
@@ -2176,7 +2303,7 @@ export default function CirclesClient() {
 
         const totals = calculateCircleTotals(baseAmount);
 
-        itemTitle = selectedHint.title || "Shared item";
+        itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
         itemUrl = selectedHint.url || null;
         itemImageUrl = selectedHint.image || null;
         itemDescription = selectedHint.description || null;
@@ -2200,7 +2327,7 @@ export default function CirclesClient() {
 
         const totals = calculateCircleTotals(baseAmount);
 
-        itemTitle = linkPreview?.title || "Shared item";
+        itemTitle = buildStoredItemTitle(linkPreview?.title || "Shared item");
         itemUrl = linkPreview?.url || form.itemUrl.trim();
         itemImageUrl = linkPreview?.image || null;
         itemDescription = linkPreview?.description || null;
@@ -2216,6 +2343,7 @@ export default function CirclesClient() {
         return;
       }
 
+      itemTitle = "Shared contribution pot";
       itemTargetAmount = roundCurrency(manualAmount);
       organisingFeeAmount = calculateHintedFee(itemTargetAmount);
       totalTargetAmount = roundCurrency(itemTargetAmount + organisingFeeAmount);
@@ -2247,9 +2375,10 @@ export default function CirclesClient() {
     setIsCreatingCircle(true);
 
     try {
-      const { error: insertCircleError } = await supabase
+      const { data: insertedRows, error: insertCircleError } = await supabase
         .from("circles")
-        .insert(circleInsertPayload);
+        .insert(circleInsertPayload)
+        .select("*");
 
       if (insertCircleError) {
         throw new Error(
@@ -2260,23 +2389,10 @@ export default function CirclesClient() {
         );
       }
 
-      const { data: insertedCircle, error: fetchCircleError } = await supabase
-        .from("circles")
-        .select("*")
-        .eq("user_id", sessionUser.id)
-        .eq("title", circleInsertPayload.title)
-        .eq("event_date", circleInsertPayload.event_date)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const insertedCircle = Array.isArray(insertedRows) ? insertedRows[0] : null;
 
-      if (fetchCircleError || !insertedCircle) {
-        throw new Error(
-          normalizeSupabaseError(
-            fetchCircleError,
-            "Circle was inserted, but the new row could not be fetched afterwards."
-          )
-        );
+      if (!insertedCircle?.id) {
+        throw new Error("Circle was inserted, but the new row could not be returned.");
       }
 
       const inviteRows = selectedPeople.map((person) => ({
@@ -2317,9 +2433,7 @@ export default function CirclesClient() {
       const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
 
       setRealCircles((prev) => [mappedCircle, ...prev]);
-      setCircleSuccess(
-        `Circle created successfully. Hinted fee included: ${formatMoney(organisingFeeAmount, form.currency || "GBP")}.`
-      );
+      setCircleSuccess("Circle created successfully.");
       setIsCreateOpen(false);
       resetCircleForm();
     } catch (error) {
@@ -2327,6 +2441,84 @@ export default function CirclesClient() {
       setCircleError(error?.message || "Failed to create circle.");
     } finally {
       setIsCreatingCircle(false);
+    }
+  }
+
+  async function handleSavePotEdits(payload) {
+    if (!editingCircle?.id) return;
+
+    setIsSavingPot(true);
+    setEditingPotError("");
+
+    try {
+      const baseAmount = roundCurrency(parseAmount(payload.targetAmount));
+
+      if (baseAmount <= 0) {
+        throw new Error("Base amount must be greater than 0.");
+      }
+
+      const totals = calculateCircleTotals(baseAmount);
+
+      const updatePayload =
+        payload.mode === "url"
+          ? {
+              item_title: buildStoredItemTitle(payload.itemTitle),
+              item_url: payload.itemUrl?.trim() || null,
+              item_description: payload.itemDescription?.trim() || null,
+              currency: payload.currency || "GBP",
+              item_target_amount: totals.itemAmount,
+              organising_fee_amount: totals.feeAmount,
+              total_target_amount: totals.totalAmount,
+              source_type: "external_link",
+            }
+          : {
+              item_title: "Shared contribution pot",
+              item_url: null,
+              item_description: null,
+              currency: payload.currency || "GBP",
+              item_target_amount: totals.itemAmount,
+              organising_fee_amount: totals.feeAmount,
+              total_target_amount: totals.totalAmount,
+              source_type: "external_link",
+            };
+
+      const { data, error } = await supabase
+        .from("circles")
+        .update(updatePayload)
+        .eq("id", editingCircle.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        throw new Error(
+          normalizeSupabaseError(error, "Failed to update pot in circles.")
+        );
+      }
+
+      const currentUserName =
+        getGoogleName(profile || {}) ||
+        profile?.full_name ||
+        profile?.name ||
+        "You";
+
+      const nextCircle = buildCircleViewModel(
+        data,
+        editingCircle.invites || [],
+        currentUserName
+      );
+
+      setRealCircles((prev) =>
+        prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
+      );
+
+      setIsEditPotOpen(false);
+      setEditingCircle(null);
+      setEditingPotError("");
+    } catch (error) {
+      console.error("Pot edit failed:", error);
+      setEditingPotError(error?.message || "Failed to update pot.");
+    } finally {
+      setIsSavingPot(false);
     }
   }
 
@@ -2543,7 +2735,11 @@ export default function CirclesClient() {
                       <CircleCard
                         key={circle.id}
                         circle={circle}
-                        onEditPot={setEditingCircle}
+                        onEditPot={(selectedCircle) => {
+                          setEditingCircle(selectedCircle);
+                          setEditingPotError("");
+                          setIsEditPotOpen(true);
+                        }}
                       />
                     ))
                   )}
@@ -2578,6 +2774,19 @@ export default function CirclesClient() {
         setSelectedHintContactId={setSelectedHintContactId}
         errorMessage={circleError}
         isSubmitting={isCreatingCircle}
+      />
+
+      <EditPotModal
+        open={isEditPotOpen}
+        onClose={() => {
+          setIsEditPotOpen(false);
+          setEditingCircle(null);
+          setEditingPotError("");
+        }}
+        onSave={handleSavePotEdits}
+        circle={editingCircle}
+        isSaving={isSavingPot}
+        errorMessage={editingPotError}
       />
 
       <DeletePotModal
