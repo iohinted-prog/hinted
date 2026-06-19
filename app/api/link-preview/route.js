@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 const REQUEST_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; HintedLinkPreviewBot/1.0; +https://hinted.io)",
   Accept: "text/html,application/xhtml+xml",
@@ -343,3 +346,101 @@ function extractPriceFromJsonLd($) {
   return "";
 }
 
+function extractPriceFromText($) {
+  const textCandidates = [
+    getText($, [".priceToPay .a-offscreen"]),
+    getText($, [".a-price .a-offscreen"]),
+    getText($, ["[data-testid='price']"]),
+    getText($, [".price"]),
+    getText($, ["main"]),
+  ].filter(Boolean);
+
+  for (const text of textCandidates) {
+    const match = String(text).match(/(?:£|\$|€|A\$|NZ\$|C\$|R)\s?\d+(?:[.,]\d{1,2})?/);
+    if (match?.[0]) {
+      return match[0].replace(",", "");
+    }
+  }
+
+  return "";
+}
+
+function extractPrice($) {
+  return extractPriceFromMeta($) || extractPriceFromJsonLd($) || extractPriceFromText($) || "";
+}
+
+export async function POST(request) {
+  try {
+    const body = await request.json().catch(() => null);
+    const inputUrl = ensureHttpUrl(body?.url || "");
+
+    if (!inputUrl) {
+      return NextResponse.json(
+        { error: "Please provide a valid URL." },
+        { status: 400 }
+      );
+    }
+
+    const response = await fetch(inputUrl, {
+      method: "GET",
+      headers: REQUEST_HEADERS,
+      redirect: "follow",
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return NextResponse.json(
+        { error: `Unable to fetch link (${response.status}).` },
+        { status: 400 }
+      );
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("text/html")) {
+      return NextResponse.json(
+        { error: "That URL did not return an HTML page." },
+        { status: 400 }
+      );
+    }
+
+    const html = await response.text();
+    if (!html || !html.trim()) {
+      return NextResponse.json(
+        { error: "The page returned an empty response." },
+        { status: 400 }
+      );
+    }
+
+    const finalUrl = response.url || inputUrl;
+    const $ = cheerio.load(html);
+
+    let canonicalUrl = extractCanonical($, finalUrl);
+    if (getHostnameLabel(canonicalUrl).includes("amazon.")) {
+      canonicalUrl = stripAmazonParams(canonicalUrl);
+    }
+
+    const title = extractTitle($, canonicalUrl);
+    const description = extractDescription($, canonicalUrl);
+    const image = extractImage($, finalUrl, canonicalUrl);
+    const siteName = extractSiteName($, canonicalUrl);
+    const priceText = extractPrice($);
+
+    return NextResponse.json({
+      url: canonicalUrl,
+      title: title || "Shared item",
+      description: description || "",
+      image: image || "",
+      siteName: siteName || getHostnameLabel(canonicalUrl),
+      priceText: priceText || "",
+    });
+  } catch (error) {
+    console.error("link-preview route error:", error);
+
+    return NextResponse.json(
+      {
+        error: error?.message || "Failed to fetch preview.",
+      },
+      { status: 500 }
+    );
+  }
+}
