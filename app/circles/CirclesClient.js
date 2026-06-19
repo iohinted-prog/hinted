@@ -296,7 +296,10 @@ function toDisplayPotTitle(value) {
 
   const cleaned = text
     .replace(/[|–—•,:;()[\]{}]+/g, " ")
-    .replace(/\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi, " ")
+    .replace(
+      /\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi,
+      " "
+    )
     .replace(/\s+/g, " ")
     .trim();
 
@@ -340,8 +343,8 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
     })),
   ];
 
-  const totalTarget = Number(circleRow.total_target_amount || 0);
-  const fullItemTitle = circleRow.item_title || "Shared gift";
+  const totalTarget = Number(circleRow?.total_target_amount || 0);
+  const fullItemTitle = circleRow?.item_title || "Shared gift";
 
   return {
     id: circleRow.id,
@@ -440,7 +443,7 @@ function ModalShell({
   );
 }
 
-function ContactCard({ contact, onAdd, onDelete, deleting }) {
+function ContactCard({ contact, onDelete, deleting }) {
   return (
     <article
       className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
@@ -461,28 +464,18 @@ function ContactCard({ contact, onAdd, onDelete, deleting }) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onAdd(contact)}
-            className="inline-flex h-9 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-3 text-[12px] font-semibold text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Add
-          </button>
-
-          <button
-            type="button"
-            onClick={() => onDelete(contact)}
-            disabled={deleting}
-            className={`inline-flex h-9 items-center justify-center rounded-full px-3 text-[12px] font-semibold ${
-              deleting
-                ? "cursor-not-allowed bg-[#f3ece8] text-slate-400"
-                : "border border-[#f0d4cc] bg-[#fff7f5] text-[#b45a4c] hover:bg-[#fff1ed]"
-            }`}
-          >
-            {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onDelete(contact)}
+          disabled={deleting}
+          className={`inline-flex h-9 shrink-0 items-center justify-center rounded-full px-3 text-[12px] font-semibold ${
+            deleting
+              ? "cursor-not-allowed bg-[#f3ece8] text-slate-400"
+              : "border border-[#f0d4cc] bg-[#fff7f5] text-[#b45a4c] hover:bg-[#fff1ed]"
+          }`}
+        >
+          {deleting ? "Deleting..." : "Delete"}
+        </button>
       </div>
     </article>
   );
@@ -1491,7 +1484,7 @@ function EditPotModal({
     if (!open || !circle) return;
     setMode(circle?.raw?.item_url ? "url" : "amount");
     setItemUrl(circle?.raw?.item_url || "");
-    setItemTitle(circle?.raw?.fullItemTitle || circle?.raw?.item_title || "");
+    setItemTitle(circle?.pot?.fullItemTitle || circle?.raw?.item_title || "");
     setItemDescription(circle?.raw?.item_description || "");
     setTargetAmount(String(circle?.raw?.item_target_amount || ""));
     setCurrency(circle?.raw?.currency || "GBP");
@@ -1742,10 +1735,10 @@ function DeletePotModal({ open, onClose, onConfirm, circle, isDeleting }) {
       <div className="p-6">
         <div className="rounded-[24px] border border-[#f1d6d1] bg-[#fff7f5] p-5">
           <p className="text-sm font-semibold text-[#a44b42]">
-            This will remove the shared pot from {circle.name}.
+            This will remove the whole shared pot from {circle.name}.
           </p>
           <p className="mt-2 text-[14px] leading-7 text-slate-600">
-            The circle will remain, but the item, target, service fee, and pot details will be cleared. To confirm, type the circle name exactly.
+            The circle will remain, but all pot fields will be cleared and this card will return to the no-pot state. To confirm, type the circle name exactly.
           </p>
         </div>
 
@@ -2193,99 +2186,108 @@ export default function CirclesClient() {
     });
   }, [contacts, safeCalendarEvents]);
 
-  const loadProfile = useCallback(async (userId) => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) {
-      throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
-    }
-
-    setProfile(data || null);
-    return data || null;
-  }, [supabase]);
-
-  const loadContacts = useCallback(async (userId) => {
-    setIsLoadingContacts(true);
-    setContactError("");
-
-    const { data, error } = await supabase
-      .from("profile_connections")
-      .select("*")
-      .eq("profile_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      setContacts([]);
-      setIsLoadingContacts(false);
-      throw new Error(
-        normalizeSupabaseError(
-          error,
-          "Failed to load contacts from profile_connections."
-        )
-      );
-    }
-
-    const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
-    setContacts(mapped);
-    setIsLoadingContacts(false);
-    return mapped;
-  }, [supabase]);
-
-  const loadCircles = useCallback(async (userId, currentProfile) => {
-    setIsLoadingCircles(true);
-    setCircleError("");
-
-    const { data: circlesData, error: circlesError } = await supabase
-      .from("circles")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (circlesError) {
-      setRealCircles([]);
-      setIsLoadingCircles(false);
-      throw new Error(normalizeSupabaseError(circlesError, "Failed to load circles."));
-    }
-
-    const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
-
-    let inviteMap = {};
-    if (circleIds.length > 0) {
-      const { data: inviteData, error: inviteError } = await supabase
-        .from("circle_invites")
+  const loadProfile = useCallback(
+    async (userId) => {
+      const { data, error } = await supabase
+        .from("profiles")
         .select("*")
-        .in("circle_id", circleIds);
+        .eq("id", userId)
+        .maybeSingle();
 
-      if (inviteError) {
-        setIsLoadingCircles(false);
-        throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
+      if (error) {
+        throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
       }
 
-      inviteMap = (inviteData || []).reduce((acc, invite) => {
-        if (!acc[invite.circle_id]) acc[invite.circle_id] = [];
-        acc[invite.circle_id].push(invite);
-        return acc;
-      }, {});
-    }
+      setProfile(data || null);
+      return data || null;
+    },
+    [supabase]
+  );
 
-    const currentUserName =
-      getGoogleName(currentProfile || {}) ||
-      currentProfile?.full_name ||
-      currentProfile?.name ||
-      "You";
+  const loadContacts = useCallback(
+    async (userId) => {
+      setIsLoadingContacts(true);
+      setContactError("");
 
-    const mapped = (circlesData || []).map((circle) =>
-      buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
-    );
+      const { data, error } = await supabase
+        .from("profile_connections")
+        .select("*")
+        .eq("profile_id", userId)
+        .order("created_at", { ascending: false });
 
-    setRealCircles(mapped);
-    setIsLoadingCircles(false);
-    return mapped;
-  }, [supabase]);
+      if (error) {
+        setContacts([]);
+        setIsLoadingContacts(false);
+        throw new Error(
+          normalizeSupabaseError(
+            error,
+            "Failed to load contacts from profile_connections."
+          )
+        );
+      }
+
+      const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
+      setContacts(mapped);
+      setIsLoadingContacts(false);
+      return mapped;
+    },
+    [supabase]
+  );
+
+  const loadCircles = useCallback(
+    async (userId, currentProfile) => {
+      setIsLoadingCircles(true);
+      setCircleError("");
+
+      const { data: circlesData, error: circlesError } = await supabase
+        .from("circles")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (circlesError) {
+        setRealCircles([]);
+        setIsLoadingCircles(false);
+        throw new Error(normalizeSupabaseError(circlesError, "Failed to load circles."));
+      }
+
+      const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
+
+      let inviteMap = {};
+      if (circleIds.length > 0) {
+        const { data: inviteData, error: inviteError } = await supabase
+          .from("circle_invites")
+          .select("*")
+          .in("circle_id", circleIds);
+
+        if (inviteError) {
+          setIsLoadingCircles(false);
+          throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
+        }
+
+        inviteMap = (inviteData || []).reduce((acc, invite) => {
+          if (!acc[invite.circle_id]) acc[invite.circle_id] = [];
+          acc[invite.circle_id].push(invite);
+          return acc;
+        }, {});
+      }
+
+      const currentUserName =
+        getGoogleName(currentProfile || {}) ||
+        currentProfile?.full_name ||
+        currentProfile?.name ||
+        "You";
+
+      const mapped = (circlesData || []).map((circle) =>
+        buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
+      );
+
+      setRealCircles(mapped);
+      setIsLoadingCircles(false);
+      return mapped;
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     let active = true;
@@ -2341,11 +2343,15 @@ export default function CirclesClient() {
   }, [contacts, selectedHintContactId]);
 
   const handleFetchPreview = async () => {
-    if (!form.itemUrl.trim()) return;
+    if (!form.itemUrl.trim()) {
+      setCircleError("Paste a product or experience link first.");
+      return;
+    }
 
     try {
       setIsFetchingPreview(true);
       setCircleError("");
+      setLinkPreview(null);
 
       const response = await fetch("/api/link-preview", {
         method: "POST",
@@ -2358,29 +2364,46 @@ export default function CirclesClient() {
       const data = await response.json();
 
       if (!response.ok) {
-        setLinkPreview({
-          manualFallback: true,
-          url: form.itemUrl.trim(),
-          title: form.manualItemTitle || "Shared item",
-          image: "",
-        });
+        setCircleError(data?.error || "Unable to fetch preview.");
+
+        if (data?.manualFallback) {
+          setLinkPreview({
+            url: data.url || form.itemUrl.trim(),
+            title: data.title || "Shared item",
+            description: data.description || "",
+            siteName: data.siteName || "",
+            image: data.image || "",
+            price: data.price || "",
+            manualFallback: true,
+          });
+        } else {
+          setLinkPreview(null);
+        }
+
         return;
       }
 
-      setLinkPreview(data);
-      if (data?.manualFallback) {
-        setForm((prev) => ({
-          ...prev,
-          manualItemTitle: prev.manualItemTitle || data?.title || "",
-        }));
-      }
-    } catch (error) {
-      console.error("Link preview error:", error);
+      setCircleError("");
       setLinkPreview({
-        manualFallback: true,
+        url: data.url || form.itemUrl.trim(),
+        title: data.title || "Shared item",
+        description: data.description || "",
+        siteName: data.siteName || "",
+        image: data.image || "",
+        price: data.price || "",
+        manualFallback: !!data.manualFallback,
+      });
+    } catch (error) {
+      console.error("Link preview request failed:", error);
+      setCircleError(error?.message || "Unable to fetch preview.");
+      setLinkPreview({
         url: form.itemUrl.trim(),
-        title: form.manualItemTitle || "Shared item",
+        title: "Shared item",
+        description: "",
+        siteName: "",
         image: "",
+        price: "",
+        manualFallback: true,
       });
     } finally {
       setIsFetchingPreview(false);
@@ -2727,16 +2750,21 @@ export default function CirclesClient() {
               organising_fee_amount: totals.feeAmount,
               total_target_amount: totals.totalAmount,
               source_type: "external_link",
+              fee_mode: "included_in_target",
+              payout_mode: "release_to_organiser",
             }
           : {
               item_title: "Shared contribution pot",
               item_url: null,
+              item_image_url: null,
               item_description: null,
               currency: payload.currency || "GBP",
               item_target_amount: totals.itemAmount,
               organising_fee_amount: totals.feeAmount,
               total_target_amount: totals.totalAmount,
               source_type: "external_link",
+              fee_mode: "included_in_target",
+              payout_mode: "release_to_organiser",
             };
 
       const { data, error } = await supabase
@@ -2784,30 +2812,37 @@ export default function CirclesClient() {
 
     setIsDeletingPot(true);
     setCircleError("");
+    setEditingPotError("");
 
     try {
-      const payload = {
-        source_type: "external_link",
-        item_title: "Shared contribution pot",
+      const clearPotPayload = {
+        source_type: null,
+        hint_id: null,
+        item_title: null,
         item_url: null,
         item_image_url: null,
         item_description: null,
-        item_target_amount: 0,
-        organising_fee_amount: 0,
-        total_target_amount: 0,
-        fee_mode: "included_in_target",
+        item_target_amount: null,
+        organising_fee_amount: null,
+        total_target_amount: null,
+        fee_mode: null,
+        payout_mode: null,
+        status: "draft",
       };
 
       const { data, error } = await supabase
         .from("circles")
-        .update(payload)
+        .update(clearPotPayload)
         .eq("id", editingCircle.id)
         .select("*")
         .single();
 
       if (error) {
         throw new Error(
-          normalizeSupabaseError(error, "Failed to clear pot details from circles.")
+          normalizeSupabaseError(
+            error,
+            "Failed to delete the whole pot from circles."
+          )
         );
       }
 
@@ -2817,9 +2852,28 @@ export default function CirclesClient() {
         profile?.name ||
         "You";
 
-      const nextCircle = buildCircleViewModel(data, editingCircle.invites || [], currentUserName);
-      nextCircle.pot.active = false;
-      nextCircle.pot.note = "Choose a public hint or paste a link to turn this into a communal goal.";
+      const nextCircle = buildCircleViewModel(
+        data,
+        editingCircle.invites || [],
+        currentUserName
+      );
+
+      nextCircle.pot = {
+        active: false,
+        item: "",
+        fullItemTitle: "",
+        source: "",
+        sourceUrl: "",
+        previewImage: "",
+        previewDescription: "",
+        target: 0,
+        currency: data?.currency || "GBP",
+        raised: 0,
+        note: "Choose a public hint or paste a link so the circle has one shared goal.",
+        fundingMode: fundingModeToLabel(data?.funding_mode),
+        deadline: data?.deadline_at || data?.event_date || "",
+        goalType: "item",
+      };
 
       setRealCircles((prev) =>
         prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
@@ -2936,12 +2990,6 @@ export default function CirclesClient() {
                           key={contact.id}
                           contact={contact}
                           deleting={isDeletingContact && contactPendingDelete?.id === contact.id}
-                          onAdd={(person) => {
-                            setSelectedPeople((prev) =>
-                              prev.some((item) => item.id === person.id) ? prev : [...prev, person]
-                            );
-                            setIsCreateOpen(true);
-                          }}
                           onDelete={(person) => {
                             setContactPendingDelete(person);
                             setIsDeleteContactOpen(true);
@@ -3055,6 +3103,13 @@ export default function CirclesClient() {
         errorMessage={editingPotError}
       />
 
+      <AddContactModal
+        open={isAddContactOpen}
+        onClose={() => setIsAddContactOpen(false)}
+        onSave={handleSaveContact}
+        supabase={supabase}
+      />
+
       <DeleteContactModal
         open={isDeleteContactOpen}
         onClose={() => {
@@ -3072,20 +3127,6 @@ export default function CirclesClient() {
         onConfirm={handleDeletePot}
         circle={editingCircle}
         isDeleting={isDeletingPot}
-      />
-
-      <AddContactModal
-        open={isAddContactOpen}
-        onClose={() => setIsAddContactOpen(false)}
-        onSave={async (payload) => {
-          try {
-            await handleSaveContact(payload);
-          } catch (error) {
-            setContactError(error?.message || "Failed to save contact.");
-            throw error;
-          }
-        }}
-        supabase={supabase}
       />
     </main>
   );
