@@ -3181,12 +3181,12 @@ async function handleDeletePot() {
       />
 
       <DeletePotModal
-        open={isDeletePotOpen}
-        onClose={() => setIsDeletePotOpen(false)}
-        onConfirm={handleDeletePot}
-        circle={editingCircle}
-        isDeleting={isDeletingPot}
-      />
+  open={isDeletePotOpen}
+  onClose={() => setIsDeletePotOpen(false)}
+  onConfirm={handleDeletePot}
+  circle={editingCircle}
+  isDeleting={isDeletingPot}
+/>
     </main>
   );
 }
