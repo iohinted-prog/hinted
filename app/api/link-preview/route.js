@@ -33,6 +33,7 @@ function cleanText(value = "") {
 function ensureHttpUrl(rawUrl = "") {
   const trimmed = String(rawUrl).trim();
   if (!trimmed) return "";
+
   const withProtocol =
     trimmed.startsWith("http://") || trimmed.startsWith("https://")
       ? trimmed
@@ -73,7 +74,7 @@ function stripAmazonParams(url = "") {
   }
 }
 
-function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
+function getMeta($, selectors = []) {
   for (const selector of selectors) {
     const value = $(selector).attr("content");
     const cleaned = cleanText(value || "");
@@ -82,11 +83,7 @@ function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
   return "";
 }
 
-function getAttr(
-  $: cheerio.CheerioAPI,
-  selectors: string[] = [],
-  attr = "content"
-) {
+function getAttr($, selectors = [], attr = "content") {
   for (const selector of selectors) {
     const value = $(selector).attr(attr);
     const cleaned = String(value || "").trim();
@@ -95,7 +92,7 @@ function getAttr(
   return "";
 }
 
-function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
+function getText($, selectors = []) {
   for (const selector of selectors) {
     const value = $(selector).first().text();
     const cleaned = cleanText(value || "");
@@ -104,7 +101,7 @@ function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
   return "";
 }
 
-function extractCanonical($: cheerio.CheerioAPI, fallbackUrl: string) {
+function extractCanonical($, fallbackUrl) {
   const canonical =
     getAttr($, ['link[rel="canonical"]'], "href") ||
     getMeta($, ['meta[property="og:url"]', 'meta[name="og:url"]']);
@@ -121,7 +118,7 @@ function cleanAmazonTitle(title = "") {
     .trim();
 }
 
-function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractTitle($, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let title =
@@ -142,7 +139,7 @@ function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
   return title || hostname || "Shared item";
 }
 
-function extractDescription($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractDescription($, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let description =
@@ -174,11 +171,7 @@ function looksLikeBadImage(url = "") {
   return /logo|sprite|icon|favicon|avatar|placeholder|spacer/i.test(url);
 }
 
-function extractImage(
-  $: cheerio.CheerioAPI,
-  baseUrl: string,
-  canonicalUrl: string
-) {
+function extractImage($, baseUrl, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let image =
@@ -207,7 +200,7 @@ function extractImage(
   return image;
 }
 
-function extractSiteName($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractSiteName($, canonicalUrl) {
   return (
     getMeta($, [
       'meta[property="og:site_name"]',
@@ -245,7 +238,7 @@ function formatPrice(value = "", currency = "") {
   return symbol ? `${symbol}${amount}` : amount;
 }
 
-function extractPriceFromMeta($: cheerio.CheerioAPI) {
+function extractPriceFromMeta($) {
   const directPrice =
     getMeta($, [
       'meta[property="product:price:amount"]',
@@ -276,7 +269,7 @@ function safeJsonParse(value = "") {
   }
 }
 
-function pickPriceFromOffer(offer: any): string {
+function pickPriceFromOffer(offer) {
   if (!offer || typeof offer !== "object") return "";
 
   if (offer.price) return formatPrice(offer.price, offer.priceCurrency);
@@ -292,7 +285,7 @@ function pickPriceFromOffer(offer: any): string {
   return "";
 }
 
-function findPriceInJsonLdNode(node: any): string {
+function findPriceInJsonLdNode(node) {
   if (!node) return "";
 
   if (Array.isArray(node)) {
@@ -333,7 +326,7 @@ function findPriceInJsonLdNode(node: any): string {
   return "";
 }
 
-function extractPriceFromJsonLd($: cheerio.CheerioAPI) {
+function extractPriceFromJsonLd($) {
   const scripts = $('script[type="application/ld+json"]');
 
   for (let i = 0; i < scripts.length; i += 1) {
@@ -350,161 +343,3 @@ function extractPriceFromJsonLd($: cheerio.CheerioAPI) {
   return "";
 }
 
-function extractPriceFromHtml($: cheerio.CheerioAPI, html = "") {
-  const knownPrice =
-    getText($, [
-      ".a-price .a-offscreen",
-      "#corePrice_feature_div .a-offscreen",
-      "#price_inside_buybox",
-      "#kindle-price",
-      '[data-testid="price"]',
-      ".price",
-      ".product-price",
-    ]) || "";
-
-  if (knownPrice) return knownPrice.replace(/\s+/g, "");
-
-  const patterns = [
-    /£\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /€\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /A\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /NZ\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /C\$\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-    /R\s?\d{1,3}(?:,\d{3})*(?:\.\d{1,2})?/i,
-  ];
-
-  for (const pattern of patterns) {
-    const match = html.match(pattern);
-    if (match?.[0]) return match[0].replace(/\s+/g, "");
-  }
-
-  return "";
-}
-
-function extractPrice($: cheerio.CheerioAPI, html = "") {
-  return (
-    extractPriceFromMeta($) ||
-    extractPriceFromJsonLd($) ||
-    extractPriceFromHtml($, html) ||
-    ""
-  );
-}
-
-function buildManualFallback(url = "", title = "", siteName = "") {
-  return {
-    url,
-    title: title || siteName || "Shared item",
-    description: "",
-    siteName: siteName || getHostnameLabel(url),
-    image: "",
-    price: "",
-    manualFallback: true,
-  };
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json().catch(() => null);
-    const rawUrl = body?.url || "";
-    const targetUrl = ensureHttpUrl(rawUrl);
-
-    if (!targetUrl) {
-      return NextResponse.json(
-        { error: "Enter a valid product or experience URL." },
-        { status: 400 }
-      );
-    }
-
-    let parsedTarget: URL;
-    try {
-      parsedTarget = new URL(targetUrl);
-    } catch {
-      return NextResponse.json(
-        { error: "That URL is not valid." },
-        { status: 400 }
-      );
-    }
-
-    const response = await fetch(parsedTarget.toString(), {
-      method: "GET",
-      headers: REQUEST_HEADERS,
-      redirect: "follow",
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return NextResponse.json(
-        {
-          error: `Could not fetch that URL (${response.status}).`,
-          manualFallback: true,
-          url: parsedTarget.toString(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    if (!contentType.toLowerCase().includes("text/html")) {
-      return NextResponse.json(
-        {
-          error: "That URL did not return an HTML page.",
-          manualFallback: true,
-          url: response.url || parsedTarget.toString(),
-        },
-        { status: 400 }
-      );
-    }
-
-    const finalUrl = response.url || parsedTarget.toString();
-    const html = await response.text();
-    const $ = cheerio.load(html);
-
-    let canonical = extractCanonical($, finalUrl);
-    if (getHostnameLabel(canonical).includes("amazon.")) {
-      canonical = stripAmazonParams(canonical);
-    }
-
-    const title = extractTitle($, canonical);
-    const description = extractDescription($, canonical);
-    const siteName = extractSiteName($, canonical);
-    const image = extractImage($, canonical, canonical);
-    const price = extractPrice($, html);
-
-    const hasStrongPreview = Boolean(title || description || image || price);
-
-    if (!hasStrongPreview) {
-      return NextResponse.json(buildManualFallback(canonical, "", siteName));
-    }
-
-    if (!price && !image) {
-      return NextResponse.json({
-        url: canonical,
-        title,
-        description,
-        siteName,
-        image,
-        price,
-        manualFallback: true,
-      });
-    }
-
-    return NextResponse.json({
-      url: canonical,
-      title,
-      description,
-      siteName,
-      image,
-      price,
-      manualFallback: false,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      {
-        error: error?.message || "Unable to build preview.",
-        manualFallback: true,
-      },
-      { status: 500 }
-    );
-  }
-}
