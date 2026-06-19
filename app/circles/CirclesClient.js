@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
-const HINTED_SERVICE_FEE_RATE = 0.0275;
+const HINTED_SERVICE_FEE_RATE = 0.02;
 
 const currencyOptions = [
   { code: "GBP", symbol: "£", label: "British Pound" },
@@ -74,7 +74,7 @@ const exampleCircle = {
       "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80",
     previewDescription:
       "This is just a single example pot so the layout still demonstrates the feature without showing multiple fake pots.",
-    target: 123.3,
+    target: 122.4,
     currency: "GBP",
     raised: 40,
     note: "Example only.",
@@ -296,13 +296,14 @@ function toDisplayPotTitle(value) {
 
   const cleaned = text
     .replace(/[|–—•,:;()[\]{}]+/g, " ")
-    .replace(/\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit)\b/gi, " ")
+    .replace(/\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 
   const words = cleaned.split(" ").filter(Boolean);
   if (words.length === 0) return "Shared gift";
-  return words.slice(0, 3).join(" ");
+
+  return words.slice(0, 2).join(" ");
 }
 
 function buildStoredItemTitle(value) {
@@ -549,49 +550,45 @@ function ContributionRing({ raised, target, ringId }) {
   );
 }
 
-function PotPreviewCard({ image, title, description, url, sourceLabel, compact = false }) {
-  if (!title && !description && !url && !image) return null;
+function PotPreviewCard({ image, title, url, compact = false }) {
+  if (!title && !url && !image) return null;
 
   return (
-    <div className={`rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] ${compact ? "p-3" : "p-4"}`}>
+    <div
+      className={`overflow-hidden rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] ${
+        compact ? "p-3" : "p-4"
+      }`}
+    >
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
         Linked item
       </p>
 
-      <div className={`mt-3 flex ${compact ? "gap-3" : "gap-4"}`}>
-        {image ? (
-          <img
-            src={image}
-            alt={title || "Linked item preview"}
-            className={`${compact ? "h-16 w-16 rounded-[16px]" : "h-20 w-20 rounded-[18px]"} object-cover`}
-          />
-        ) : (
-          <div className={`${compact ? "h-16 w-16 rounded-[16px]" : "h-20 w-20 rounded-[18px]"} bg-[#f5ebe4]`} />
-        )}
+      <div className="mt-3 min-w-0">
+        <div className="relative w-full overflow-hidden rounded-[18px] bg-[#f5ebe4] aspect-[4/3]">
+          {image ? (
+            <img
+              src={image}
+              alt={title || "Linked item preview"}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-[#f5ebe4]" />
+          )}
+        </div>
 
-        <div className="min-w-0 flex-1">
-          <p className={`${compact ? "text-[13px]" : "text-sm"} font-semibold text-slate-900`}>
-            {title || "Untitled item"}
+        <div className="mt-3 min-w-0">
+          <p className="truncate text-[13px] font-semibold text-slate-900">
+            {toDisplayPotTitle(title)}
           </p>
-
-          {description ? (
-            <p className={`mt-1 ${compact ? "text-[12px] leading-5" : "text-[13px] leading-6"} text-slate-500`}>
-              {description}
-            </p>
-          ) : null}
-
-          {sourceLabel ? (
-            <p className="mt-2 text-[12px] font-medium text-[#df7b59]">{sourceLabel}</p>
-          ) : null}
 
           {url ? (
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 inline-block truncate text-[12px] text-slate-500 underline decoration-[#e8b4a0] underline-offset-4"
+              className="mt-1 inline-block max-w-full truncate text-[12px] text-slate-500 underline decoration-[#e8b4a0] underline-offset-4"
             >
-              {url}
+              View item
             </a>
           ) : null}
         </div>
@@ -654,7 +651,7 @@ function CircleCard({ circle, onEditPot }) {
   const showItemPreview =
     circle?.pot?.active &&
     circle?.pot?.goalType === "item" &&
-    (circle?.pot?.previewImage || circle?.pot?.previewDescription || circle?.pot?.sourceUrl);
+    (circle?.pot?.previewImage || circle?.pot?.sourceUrl);
 
   return (
     <article className="rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm sm:p-6">
@@ -757,13 +754,11 @@ function CircleCard({ circle, onEditPot }) {
                 </div>
 
                 {showItemPreview ? (
-                  <div className="mt-5 w-full text-left">
+                  <div className="mt-5 w-full min-w-0 text-left">
                     <PotPreviewCard
                       image={circle?.pot?.previewImage}
                       title={circle?.pot?.fullItemTitle || circle?.pot?.item}
-                      description={circle?.pot?.previewDescription}
                       url={circle?.pot?.sourceUrl}
-                      sourceLabel={circle?.pot?.source}
                       compact
                     />
                   </div>
@@ -1254,9 +1249,7 @@ function CreateCircleModal({
                     <PotPreviewCard
                       image={linkPreview.image}
                       title={linkPreview.title}
-                      description={linkPreview.description}
                       url={linkPreview.url}
-                      sourceLabel={linkPreview.siteName || "Fetched link"}
                     />
                   ) : null}
                 </div>
@@ -1276,6 +1269,9 @@ function CreateCircleModal({
               </p>
               <p className="mt-2 text-lg font-semibold text-slate-900">
                 {formatMoney(liveTotals.totalAmount, form.currency)}
+              </p>
+              <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                *includes our 2% service fee so you can avoid the awkward reminders
               </p>
             </div>
           </div>
@@ -1519,6 +1515,18 @@ function EditPotModal({
           label="Base amount"
         />
 
+        <div className="rounded-[18px] bg-[#fff4ee] p-4">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+            Total shown to contributors
+          </p>
+          <p className="mt-2 text-lg font-semibold text-slate-900">
+            {formatMoney(calculateCircleTotals(parseAmount(targetAmount)).totalAmount, currency)}
+          </p>
+          <p className="mt-2 text-[12px] leading-5 text-slate-500">
+            *includes our 2% service fee so you can avoid the awkward reminders
+          </p>
+        </div>
+
         {errorMessage ? (
           <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
             {errorMessage}
@@ -1553,80 +1561,6 @@ function EditPotModal({
             }`}
           >
             {isSaving ? "Saving..." : "Save changes"}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function DeletePotModal({ open, onClose, onConfirm, circle, isDeleting }) {
-  const [confirmation, setConfirmation] = useState("");
-
-  useEffect(() => {
-    if (!open) setConfirmation("");
-  }, [open]);
-
-  if (!open || !circle) return null;
-
-  const expected = circle.name;
-  const matches = confirmation.trim() === expected;
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={() => {
-        setConfirmation("");
-        onClose();
-      }}
-      eyebrow="Delete pot"
-      title="Confirm pot deletion"
-      maxWidth="max-w-[640px]"
-    >
-      <div className="p-6">
-        <div className="rounded-[24px] border border-[#f1d6d1] bg-[#fff7f5] p-5">
-          <p className="text-sm font-semibold text-[#a44b42]">This will remove the shared pot from {circle.name}.</p>
-          <p className="mt-2 text-[14px] leading-7 text-slate-600">
-            The circle will remain, but the item, target, and pot details will be cleared. To confirm, type the event name exactly.
-          </p>
-        </div>
-
-        <div className="mt-5 space-y-2">
-          <span className="text-sm font-medium text-slate-700">Type {expected}</span>
-          <input
-            type="text"
-            value={confirmation}
-            onChange={(e) => setConfirmation(e.target.value)}
-            className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#d9796e]"
-            placeholder={expected}
-          />
-        </div>
-
-        <div className="mt-6 flex gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setConfirmation("");
-              onClose();
-            }}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!matches || isDeleting}
-            onClick={() => {
-              onConfirm();
-              setConfirmation("");
-            }}
-            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold ${
-              matches && !isDeleting
-                ? "bg-[#b14f43] text-white"
-                : "cursor-not-allowed border border-[#edd8d4] bg-[#f7f2f0] text-slate-400"
-            }`}
-          >
-            {isDeleting ? "Deleting..." : "Delete pot"}
           </button>
         </div>
       </div>
@@ -1965,9 +1899,7 @@ export default function CirclesClient() {
   const [linkPreview, setLinkPreview] = useState(null);
   const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const [editingCircle, setEditingCircle] = useState(null);
-  const [isDeletePotOpen, setIsDeletePotOpen] = useState(false);
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
-  const [isDeletingPot, setIsDeletingPot] = useState(false);
   const [isSavingPot, setIsSavingPot] = useState(false);
   const [editingPotError, setEditingPotError] = useState("");
 
@@ -2522,61 +2454,6 @@ export default function CirclesClient() {
     }
   }
 
-  async function handleDeletePot() {
-    if (!editingCircle?.id) return;
-
-    setIsDeletingPot(true);
-    setCircleError("");
-
-    try {
-      const payload = {
-        source_type: "external_link",
-        item_title: "Shared contribution pot",
-        item_url: null,
-        item_image_url: null,
-        item_description: null,
-        item_target_amount: 0,
-        organising_fee_amount: 0,
-        total_target_amount: 0,
-      };
-
-      const { data, error } = await supabase
-        .from("circles")
-        .update(payload)
-        .eq("id", editingCircle.id)
-        .select("*")
-        .single();
-
-      if (error) {
-        throw new Error(
-          normalizeSupabaseError(error, "Failed to clear pot details from circles.")
-        );
-      }
-
-      const currentUserName =
-        getGoogleName(profile || {}) ||
-        profile?.full_name ||
-        profile?.name ||
-        "You";
-
-      const nextCircle = buildCircleViewModel(data, editingCircle.invites || [], currentUserName);
-      nextCircle.pot.active = false;
-      nextCircle.pot.note = "Choose a public hint or paste a link to turn this into a communal goal.";
-
-      setRealCircles((prev) =>
-        prev.map((circle) => (circle.id === editingCircle.id ? nextCircle : circle))
-      );
-
-      setIsDeletePotOpen(false);
-      setEditingCircle(null);
-    } catch (error) {
-      console.error("Delete pot failed:", error);
-      setCircleError(error?.message || "Failed to delete pot.");
-    } finally {
-      setIsDeletingPot(false);
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
@@ -2787,14 +2664,6 @@ export default function CirclesClient() {
         circle={editingCircle}
         isSaving={isSavingPot}
         errorMessage={editingPotError}
-      />
-
-      <DeletePotModal
-        open={isDeletePotOpen}
-        onClose={() => setIsDeletePotOpen(false)}
-        onConfirm={handleDeletePot}
-        circle={editingCircle}
-        isDeleting={isDeletingPot}
       />
 
       <AddContactModal
