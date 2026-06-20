@@ -126,10 +126,25 @@ function extractNumericPrice(value) {
 
 function getPriceBand(price) {
   if (price == null) return "small";
-  if (price >= 250) return "high";
+  if (price >= 260) return "high";
   if (price >= 140) return "premium";
   if (price >= 60) return "mid";
   return "small";
+}
+
+function getCardSize(price) {
+  if (price == null) return "small";
+  if (price >= 260) return "xl";
+  if (price >= 140) return "large";
+  if (price >= 60) return "medium";
+  return "small";
+}
+
+function getTileHeightClass(size) {
+  if (size === "xl") return "min-h-[680px]";
+  if (size === "large") return "min-h-[560px]";
+  if (size === "medium") return "min-h-[430px]";
+  return "min-h-[320px]";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -252,33 +267,6 @@ function shortenTitle(title = "", retailer = "") {
 
   const compact = finalWords.join(" ").trim();
   return compact.charAt(0).toUpperCase() + compact.slice(1);
-}
-
-function getCardSize(price, index = 0) {
-  if (price == null) {
-    return index % 4 === 0 ? "medium" : "small";
-  }
-
-  if (price >= 260) {
-    return index % 3 === 0 ? "xl" : "large";
-  }
-
-  if (price >= 140) {
-    return "large";
-  }
-
-  if (price >= 60) {
-    return index % 2 === 0 ? "medium" : "small";
-  }
-
-  return "small";
-}
-
-function getTileHeightClass(size) {
-  if (size === "xl") return "min-h-[680px]";
-  if (size === "large") return "min-h-[560px]";
-  if (size === "medium") return "min-h-[430px]";
-  return "min-h-[320px]";
 }
 
 function getPricePill(priceBand) {
@@ -863,7 +851,7 @@ export default function HintsPage() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: row.size || getCardSize(row.numeric_price, index),
+          size: getCardSize(row.numeric_price),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1033,7 +1021,7 @@ export default function HintsPage() {
       );
 
       setHints((current) =>
-        current.map((hint, index) => {
+        current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
 
           return {
@@ -1048,7 +1036,7 @@ export default function HintsPage() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: getCardSize(numericPrice, index),
+            size: getCardSize(numericPrice),
           };
         })
       );
@@ -1139,7 +1127,7 @@ export default function HintsPage() {
         tags: [],
         starred: false,
         private: draftHint.private,
-        size: getCardSize(draftHint.numericPrice, 0),
+        size: getCardSize(draftHint.numericPrice),
         url: draftHint.url,
         position: 0,
       };
