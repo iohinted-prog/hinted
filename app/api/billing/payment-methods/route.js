@@ -1,3 +1,152 @@
+Skip to content
+iohinted-prog
+hinted
+Repository navigation
+Code
+Issues
+Pull requests
+Agents
+Actions
+Projects
+Wiki
+Security and quality
+Insights
+Settings
+Files
+Go to file
+t
+T
+payment-methods content loaded
+app
+account
+actions
+api
+billing
+customer
+payment-methods
+[paymentMethodId]
+route.js
+portal-session
+setup-intent
+BillingClient.jsx
+link-preview
+auth/callback
+billing
+circles
+components
+feed
+hints
+HintsClient.jsx
+page.js
+onboarding
+privacy
+settings
+shop
+terms
+test
+favicon.ico
+globals.css
+layout.js
+page.js
+robots.js
+sitemap.js
+lib
+public
+.env.local
+.gitignore
+AGENTS.md
+CLAUDE.md
+README.md
+eslint.config.mjs
+jsconfig.json
+next.config.mjs
+package-lock.json
+package.json
+postcss.config.mjs
+proxy.js
+hinted/app/api/billing/payment-methods
+/
+route.js
+in
+main
+
+Edit
+
+Preview
+Indent mode
+
+Spaces
+Indent size
+
+2
+Line wrap mode
+
+No wrap
+Editing route.js file contents
+  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "../../../../lib/supabase/server";
@@ -61,3 +210,6 @@ export async function GET() {
     );
   }
 }
+
+Use Control + Shift + m to toggle the tab key moving focus. Alternatively, use esc then tab to move to the next interactive element on the page.
+payment-methods content loaded
