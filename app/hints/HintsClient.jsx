@@ -35,7 +35,7 @@ const demoHints = [
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     starred: true,
     private: false,
-    size: "xl",
+    size: "tall",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -51,7 +51,7 @@ const demoHints = [
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     starred: true,
     private: false,
-    size: "lg",
+    size: "tall",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -67,7 +67,7 @@ const demoHints = [
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
     starred: false,
     private: false,
-    size: "md",
+    size: "medium",
     url: "https://classbento.co.uk/",
     position: 2,
   },
@@ -83,7 +83,7 @@ const demoHints = [
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
     starred: false,
     private: true,
-    size: "sm",
+    size: "short",
     url: "https://www.johnlewis.com/",
     position: 3,
   },
@@ -206,46 +206,32 @@ function shortenTitle(title = "", retailer = "") {
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
-function getBoardSize(price, index, allPrices) {
-  if (price == null) return index % 4 === 0 ? "md" : "sm";
-
-  const sorted = [...allPrices].sort((a, b) => a - b);
-  const topCut = sorted[Math.max(0, Math.floor(sorted.length * 0.75))] ?? price;
-  const middleCut = sorted[Math.max(0, Math.floor(sorted.length * 0.45))] ?? price;
-
-  if (price >= topCut && price >= 180) {
-    return index % 2 === 0 ? "xl" : "lg";
-  }
-
-  if (price >= middleCut && price >= 70) {
-    return "md";
-  }
-
-  return "sm";
+function getBoardSize(price) {
+  if (price == null) return "short";
+  if (price >= 220) return "tall";
+  if (price >= 90) return "medium";
+  return "short";
 }
 
 function getTileClass(size) {
-  if (size === "xl") return "md:col-span-6 md:row-span-13";
-  if (size === "lg") return "md:col-span-4 md:row-span-11";
-  if (size === "md") return "md:col-span-4 md:row-span-9";
-  return "md:col-span-4 md:row-span-7";
+  if (size === "tall") return "md:col-span-3 md:row-span-12";
+  if (size === "medium") return "md:col-span-3 md:row-span-10";
+  return "md:col-span-3 md:row-span-8";
 }
 
 function getTitleClass(size) {
-  if (size === "xl") return "text-[23px] sm:text-[24px]";
-  if (size === "lg") return "text-[20px] sm:text-[21px]";
-  if (size === "md") return "text-[18px] sm:text-[19px]";
+  if (size === "tall") return "text-[19px] sm:text-[20px]";
+  if (size === "medium") return "text-[17px] sm:text-[18px]";
   return "text-[15px] sm:text-[16px]";
 }
 
 function getTitleLines(size) {
-  if (size === "sm") return 1;
+  if (size === "short") return 1;
   return 2;
 }
 
 function getImagePosition(size) {
-  if (size === "xl") return "center center";
-  if (size === "lg") return "center center";
+  if (size === "tall") return "center center";
   return "center top";
 }
 
@@ -351,22 +337,13 @@ function ComposerModal({
               />
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[20px] border border-[#f0e0d7] bg-[#fffaf7] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Retailer
-                </p>
-                <p className="mt-1 text-sm text-slate-700">
-                  {draft.retailer || "Saved link"}
-                </p>
-              </div>
-
-              <div className="rounded-[20px] border border-[#f0e0d7] bg-[#fffaf7] px-4 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Price
-                </p>
-                <p className="mt-1 text-sm text-slate-700">{draft.priceLabel}</p>
-              </div>
+            <div className="rounded-[20px] border border-[#f0e0d7] bg-[#fffaf7] px-4 py-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                Retailer
+              </p>
+              <p className="mt-1 text-sm text-slate-700">
+                {draft.retailer || "Saved link"}
+              </p>
             </div>
 
             <div className="flex items-center gap-3">
@@ -405,7 +382,7 @@ function ComposerModal({
           <button
             type="button"
             onClick={onSave}
-            disabled={isSaving}
+            disabled={isSaving || !draft.url.trim() || !draft.title.trim()}
             className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
           >
             {isSaving ? "Saving..." : "Save hint"}
@@ -561,16 +538,16 @@ function HintCard({
 
   return (
     <article
-      className={`group relative flex h-full min-h-[300px] flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
+      className={`group relative flex h-full min-h-[300px] flex-col overflow-hidden rounded-[30px] border transition-all duration-300 ${
         dragging
-          ? "rotate-[1.5deg] border-[#f0cdbf] bg-white shadow-[0_28px_70px_rgba(115,70,45,0.22)]"
+          ? "rotate-[1deg] border-[#f0cdbf] bg-white shadow-[0_28px_70px_rgba(115,70,45,0.22)]"
           : hint.private
           ? "border-white/50 bg-white/60 shadow-[0_10px_24px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(176,118,86,0.14)]"
           : "border-[#f0dfd6] bg-white shadow-[0_8px_22px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(176,118,86,0.14)]"
       }`}
     >
       <div className="relative flex h-full flex-col">
-        <div className="relative min-h-[76%] flex-1 overflow-hidden">
+        <div className="relative min-h-[74%] flex-1 overflow-hidden">
           {showImage ? (
             <>
               <img
@@ -584,7 +561,7 @@ function HintCard({
                 referrerPolicy="no-referrer"
                 onError={() => setImageFailed(true)}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,16,13,0.22)] via-[rgba(20,16,13,0.02)] to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,16,13,0.18)] via-[rgba(20,16,13,0.02)] to-transparent" />
             </>
           ) : (
             <div
@@ -648,13 +625,13 @@ function HintCard({
           </div>
         </div>
 
-        <div className="relative -mt-4 flex flex-1 px-3 pb-3 sm:px-4 sm:pb-4">
+        <div className="relative -mt-3 flex flex-1 px-3 pb-3 sm:px-4 sm:pb-4">
           <div
-            className={`flex w-full flex-1 flex-col rounded-[24px] p-4 shadow-sm backdrop-blur-md ${
+            className={`flex w-full min-h-[122px] flex-1 flex-col rounded-[22px] p-4 shadow-sm backdrop-blur-md ${
               hint.private ? "bg-white/80" : "bg-white/88"
             }`}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-2">
               <span
                 className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
                   hint.priceBand
@@ -664,19 +641,21 @@ function HintCard({
               </span>
             </div>
 
-            <h2
-              className={`mt-2 min-w-0 overflow-hidden font-semibold leading-[1.02] tracking-[-0.05em] text-slate-900 ${getTitleClass(
-                hint.size
-              )}`}
-              style={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: getTitleLines(hint.size),
-                overflow: "hidden",
-              }}
-            >
-              {hint.title}
-            </h2>
+            <div className="min-h-[42px]">
+              <h2
+                className={`mt-2 min-w-0 overflow-hidden font-semibold leading-[1.03] tracking-[-0.05em] text-slate-900 ${getTitleClass(
+                  hint.size
+                )}`}
+                style={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: getTitleLines(hint.size),
+                  overflow: "hidden",
+                }}
+              >
+                {hint.title}
+              </h2>
+            </div>
 
             <p className="mt-1 truncate text-[12px] text-slate-500">{hint.retailer}</p>
 
@@ -788,12 +767,6 @@ export default function HintsClient() {
   const visibleHints = hasRealHints ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
 
-  const numericPrices = useMemo(() => {
-    return hints
-      .map((hint) => hint.numericPrice)
-      .filter((value) => typeof value === "number");
-  }, [hints]);
-
   useEffect(() => {
     const supabase = createClient();
 
@@ -832,23 +805,25 @@ export default function HintsClient() {
       }
 
       const rows = data || [];
-      const prices = rows
-        .map((row) => row.numeric_price)
-        .filter((value) => typeof value === "number");
 
       setHints(
         rows.map((row, index) => ({
           id: row.id,
           title: row.title || "Saved hint",
           retailer: row.retailer || normaliseRetailer(row.url || ""),
-          priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
-          numericPrice: row.numeric_price,
-          priceBand: getPriceBand(row.numeric_price),
+          priceLabel: row.price_text || "Price unavailable",
+          numericPrice:
+            typeof row.numeric_price === "number" ? row.numeric_price : null,
+          priceBand: getPriceBand(
+            typeof row.numeric_price === "number" ? row.numeric_price : null
+          ),
           image: row.image_url || "",
           fallbackGradient: buildFallbackGradient(index),
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: row.size || getBoardSize(row.numeric_price, index, prices),
+          size: getBoardSize(
+            typeof row.numeric_price === "number" ? row.numeric_price : null
+          ),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1016,7 +991,7 @@ export default function HintsClient() {
       const refreshedTitle = shortenTitle(data.title || editForm.title || "", retailer);
 
       setHints((current) =>
-        current.map((hint, index) => {
+        current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
 
           return {
@@ -1031,7 +1006,7 @@ export default function HintsClient() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: getBoardSize(numericPrice, index, numericPrices),
+            size: getBoardSize(numericPrice),
           };
         })
       );
@@ -1084,7 +1059,7 @@ export default function HintsClient() {
       const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
 
       setDraftHint({
-        title: shortTitle,
+        title: shortTitle || "Saved hint",
         url: data.url || trimmed,
         image:
           typeof data.image === "string" && data.image.startsWith("http")
@@ -1111,24 +1086,31 @@ export default function HintsClient() {
     setError("");
 
     try {
-      const incomingPriceSet = [
-        ...numericPrices,
-        ...(draftHint.numericPrice != null ? [draftHint.numericPrice] : []),
-      ];
+      const trimmedTitle = draftHint.title.trim() || "Saved hint";
+      const trimmedUrl = draftHint.url.trim();
+
+      if (!trimmedUrl) {
+        throw new Error("A link is required.");
+      }
 
       const newHint = {
         id: crypto.randomUUID(),
-        title: shortenTitle(draftHint.title || "Saved hint", draftHint.retailer),
-        retailer: draftHint.retailer || normaliseRetailer(draftHint.url),
-        priceLabel: draftHint.priceLabel,
-        numericPrice: draftHint.numericPrice,
-        priceBand: getPriceBand(draftHint.numericPrice),
+        title: shortenTitle(trimmedTitle, draftHint.retailer),
+        retailer: draftHint.retailer || normaliseRetailer(trimmedUrl),
+        priceLabel: draftHint.priceLabel || "Price unavailable",
+        numericPrice:
+          typeof draftHint.numericPrice === "number" ? draftHint.numericPrice : null,
+        priceBand: getPriceBand(
+          typeof draftHint.numericPrice === "number" ? draftHint.numericPrice : null
+        ),
         image: draftHint.image || "",
         fallbackGradient: buildFallbackGradient(hints.length),
         starred: false,
         private: draftHint.private,
-        size: getBoardSize(draftHint.numericPrice, hints.length, incomingPriceSet),
-        url: draftHint.url,
+        size: getBoardSize(
+          typeof draftHint.numericPrice === "number" ? draftHint.numericPrice : null
+        ),
+        url: trimmedUrl,
         position: 0,
       };
 
@@ -1259,7 +1241,7 @@ export default function HintsClient() {
               <p className="mt-3 text-sm font-medium text-[#c45c42]">{error}</p>
             ) : (
               <p className="mt-3 text-sm text-slate-500">
-                We’ll pull the image, title, and price first, then you can name it and choose privacy before saving.
+                We’ll pull the image and any details we can, then you can name it and choose privacy before saving.
               </p>
             )}
           </div>
@@ -1282,16 +1264,16 @@ export default function HintsClient() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
 
             {isLoading ? (
-              <div className="relative grid auto-rows-[30px] grid-cols-1 gap-8 md:grid-cols-12">
+              <div className="relative grid auto-rows-[24px] grid-cols-1 gap-8 md:grid-cols-12">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`overflow-hidden rounded-[32px] border border-[#efdfd6] bg-[#f9f8f5] ${
-                      i === 1
-                        ? "md:col-span-6 md:row-span-13"
-                        : i === 2
-                        ? "md:col-span-4 md:row-span-11"
-                        : "md:col-span-4 md:row-span-9"
+                    className={`overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] ${
+                      i <= 2
+                        ? "md:col-span-3 md:row-span-12"
+                        : i === 3
+                        ? "md:col-span-3 md:row-span-10"
+                        : "md:col-span-3 md:row-span-8"
                     }`}
                   >
                     <div className="skeleton h-full min-h-[300px] w-full" />
@@ -1309,7 +1291,7 @@ export default function HintsClient() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid auto-rows-[30px] grid-cols-1 gap-8 md:grid-cols-12">
+                  <div className="relative grid auto-rows-[24px] grid-cols-1 gap-8 md:grid-cols-12">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1329,7 +1311,7 @@ export default function HintsClient() {
                   }}
                 >
                   {activeHint ? (
-                    <div className={`${getTileClass(activeHint.size)} w-[min(92vw,420px)]`}>
+                    <div className="w-[min(92vw,320px)]">
                       <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
