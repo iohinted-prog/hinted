@@ -29,14 +29,14 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    priceBand: "high",
+    priceBand: "mid",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     tags: ["Travel"],
     starred: true,
     private: false,
-    size: "large",
+    size: "medium",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -46,14 +46,14 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    priceBand: "high",
+    priceBand: "mid",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     tags: ["Tech"],
     starred: true,
     private: false,
-    size: "large",
+    size: "medium",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -63,14 +63,14 @@ const demoHints = [
     retailer: "classbento.co.uk",
     priceLabel: "About £78",
     numericPrice: 78,
-    priceBand: "mid",
+    priceBand: "small",
     image:
       "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
     tags: ["Experience"],
     starred: false,
     private: false,
-    size: "medium",
+    size: "small",
     url: "https://classbento.co.uk/",
     position: 2,
   },
@@ -126,10 +126,15 @@ function extractNumericPrice(value) {
 
 function getPriceBand(price) {
   if (price == null) return "small";
-  if (price >= 220) return "high";
-  if (price >= 120) return "premium";
-  if (price >= 60) return "mid";
+  if (price > 1000) return "high";
+  if (price > 100) return "mid";
   return "small";
+}
+
+function getCardSize(price) {
+  if (price == null || price <= 100) return "small";
+  if (price <= 1000) return "medium";
+  return "large";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -254,41 +259,15 @@ function shortenTitle(title = "", retailer = "") {
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
-function getRelativePriceSize(price, allPrices = []) {
-  const valid = allPrices
-    .filter((value) => typeof value === "number" && Number.isFinite(value))
-    .sort((a, b) => a - b);
-
-  if (price == null) return "medium";
-  if (valid.length < 3) return "medium";
-
-  const lowIndex = Math.floor((valid.length - 1) * 0.33);
-  const highIndex = Math.floor((valid.length - 1) * 0.66);
-
-  const lowCut = valid[lowIndex];
-  const highCut = valid[highIndex];
-
-  if (price <= lowCut) return "small";
-  if (price >= highCut) return "large";
-  return "medium";
-}
-
 function getTileHeightClass(size) {
-  if (size === "large") return "min-h-[520px]";
-  if (size === "medium") return "min-h-[430px]";
-  return "min-h-[340px]";
-}
-
-function getBoardSpanClass(size) {
-  if (size === "large") return "md:col-span-6 xl:col-span-5";
-  if (size === "medium") return "md:col-span-6 xl:col-span-4";
-  return "md:col-span-6 xl:col-span-3";
+  if (size === "large") return "min-h-[540px]";
+  if (size === "medium") return "min-h-[420px]";
+  return "min-h-[320px]";
 }
 
 function getPricePill(priceBand) {
   if (priceBand === "high") return "bg-[#2f3b2d] text-white";
-  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
-  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
+  if (priceBand === "mid") return "bg-[#fff1e9] text-[#df7c59]";
   return "bg-[#f1f5ec] text-[#627f53]";
 }
 
@@ -769,11 +748,7 @@ function SortableHintTile({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`${getBoardSpanClass(hint.size)} touch-none`}
-    >
+    <div ref={setNodeRef} style={style} className="touch-none">
       <HintCard
         hint={hint}
         dragging={isDragging}
@@ -818,23 +793,6 @@ export default function HintsPage() {
   const visibleHints = hasRealHints ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
 
-  const numericPrices = useMemo(
-    () =>
-      hints
-        .map((hint) => hint.numericPrice)
-        .filter((value) => typeof value === "number" && Number.isFinite(value)),
-    [hints]
-  );
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
   useEffect(() => {
     const supabase = createClient();
 
@@ -872,9 +830,6 @@ export default function HintsPage() {
       }
 
       const rows = data || [];
-      const prices = rows
-        .map((row) => row.numeric_price)
-        .filter((value) => typeof value === "number" && Number.isFinite(value));
 
       setHints(
         rows.map((row, index) => ({
@@ -889,7 +844,7 @@ export default function HintsPage() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: row.size || getRelativePriceSize(row.numeric_price, prices),
+          size: getCardSize(row.numeric_price),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1058,11 +1013,6 @@ export default function HintsPage() {
         data.siteName || normaliseRetailer(trimmed)
       );
 
-      const nextPrices = [
-        ...numericPrices.filter((value) => value !== null),
-        ...(numericPrice != null ? [numericPrice] : []),
-      ];
-
       setHints((current) =>
         current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
@@ -1079,7 +1029,7 @@ export default function HintsPage() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: getRelativePriceSize(numericPrice, nextPrices),
+            size: getCardSize(numericPrice),
           };
         })
       );
@@ -1158,11 +1108,6 @@ export default function HintsPage() {
     setIsSavingDraft(true);
 
     try {
-      const incomingPriceSet = [
-        ...numericPrices,
-        ...(draftHint.numericPrice != null ? [draftHint.numericPrice] : []),
-      ];
-
       const newHint = {
         id: crypto.randomUUID(),
         title: shortenTitle(draftHint.title || "Saved hint", draftHint.retailer),
@@ -1175,7 +1120,7 @@ export default function HintsPage() {
         tags: [],
         starred: false,
         private: draftHint.private,
-        size: getRelativePriceSize(draftHint.numericPrice, incomingPriceSet),
+        size: getCardSize(draftHint.numericPrice),
         url: draftHint.url,
         position: 0,
       };
@@ -1246,7 +1191,7 @@ export default function HintsPage() {
   return (
     <main className="min-h-screen bg-[#fff8f4] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fff8f4]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
@@ -1287,7 +1232,7 @@ export default function HintsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8 md:py-12">
+      <div className="mx-auto max-w-[1380px] px-5 py-10 md:px-8">
         <section className="mx-auto max-w-[920px] text-center">
           <h1 className="text-[38px] font-extrabold tracking-[-0.07em] text-[#f19a78] sm:text-[48px] md:text-[58px]">
             Paste a link here...
@@ -1334,7 +1279,7 @@ export default function HintsPage() {
         </section>
 
         <section className="mt-14">
-          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6 md:p-7">
+          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6">
             <div
               className="pointer-events-none absolute inset-0 opacity-90"
               style={{
@@ -1350,16 +1295,12 @@ export default function HintsPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
 
             {isLoading ? (
-              <div className="relative grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-12">
-                {[1, 2, 3, 4].map((i) => (
+              <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                   <div
                     key={i}
                     className={`rounded-[32px] bg-[#f4eee8] ${
-                      i === 1
-                        ? "min-h-[520px] xl:col-span-5"
-                        : i === 2
-                        ? "min-h-[430px] xl:col-span-4"
-                        : "min-h-[340px] xl:col-span-3"
+                      i % 4 === 0 ? "min-h-[540px]" : i % 2 === 0 ? "min-h-[420px]" : "min-h-[320px]"
                     }`}
                   />
                 ))}
@@ -1375,7 +1316,7 @@ export default function HintsPage() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-12">
+                  <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1390,11 +1331,8 @@ export default function HintsPage() {
 
                 <DragOverlay>
                   {activeHint ? (
-                    <div className="w-[min(92vw,420px)]">
-                      <HintCard
-                        hint={activeHint}
-                        dragging
-                      />
+                    <div className="w-[min(92vw,320px)] md:w-full">
+                      <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
                 </DragOverlay>
