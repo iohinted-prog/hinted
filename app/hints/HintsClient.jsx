@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   closestCenter,
@@ -124,17 +124,16 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getPriceBand(price) {
-  if (price == null) return "small";
-  if (price > 1000) return "high";
-  if (price > 100) return "mid";
-  return "small";
-}
-
 function getCardSize(price) {
   if (price == null || price <= 100) return "small";
   if (price <= 1000) return "medium";
   return "large";
+}
+
+function getPriceBand(price) {
+  if (price == null || price <= 100) return "small";
+  if (price <= 1000) return "mid";
+  return "high";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -554,9 +553,7 @@ function EditHintModal({
 function HintCard({
   hint,
   dragging = false,
-  dragHandleRef,
-  dragHandleListeners,
-  dragHandleAttributes,
+  dragHandleProps,
   onEdit,
   onToggleStarred,
   onTogglePrivate,
@@ -603,10 +600,8 @@ function HintCard({
         <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <button
-              ref={dragHandleRef}
               type="button"
-              {...dragHandleAttributes}
-              {...dragHandleListeners}
+              {...dragHandleProps}
               className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
               aria-label="Drag to reorder"
             >
@@ -736,7 +731,6 @@ function SortableHintTile({
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -752,9 +746,7 @@ function SortableHintTile({
       <HintCard
         hint={hint}
         dragging={isDragging}
-        dragHandleRef={setActivatorNodeRef}
-        dragHandleListeners={listeners}
-        dragHandleAttributes={attributes}
+        dragHandleProps={{ ...attributes, ...listeners }}
         onEdit={onEdit}
         onToggleStarred={onToggleStarred}
         onTogglePrivate={onTogglePrivate}
@@ -792,6 +784,15 @@ export default function HintsPage() {
   const hasRealHints = hints.length > 0;
   const visibleHints = hasRealHints ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -1296,11 +1297,11 @@ export default function HintsPage() {
 
             {isLoading ? (
               <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
                     className={`rounded-[32px] bg-[#f4eee8] ${
-                      i % 4 === 0 ? "min-h-[540px]" : i % 2 === 0 ? "min-h-[420px]" : "min-h-[320px]"
+                      i === 1 ? "min-h-[320px]" : i === 2 ? "min-h-[420px]" : "min-h-[540px]"
                     }`}
                   />
                 ))}
