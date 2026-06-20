@@ -37,7 +37,7 @@ const demoHints = [
     tags: ["Travel", "Big gift"],
     starred: true,
     private: false,
-    size: "hero",
+    size: "tall",
     url: "https://www.airbnb.co.uk/",
     position: 1,
   },
@@ -54,7 +54,7 @@ const demoHints = [
     tags: ["Tech", "Birthday"],
     starred: true,
     private: false,
-    size: "hero",
+    size: "tall",
     url: "https://www.amazon.co.uk/",
     position: 2,
   },
@@ -71,7 +71,7 @@ const demoHints = [
     tags: ["Experience", "Couples"],
     starred: false,
     private: false,
-    size: "feature",
+    size: "portrait",
     url: "https://classbento.co.uk/",
     position: 3,
   },
@@ -88,7 +88,7 @@ const demoHints = [
     tags: ["Home", "Under £50"],
     starred: false,
     private: true,
-    size: "base",
+    size: "square",
     url: "https://www.johnlewis.com/",
     position: 4,
   },
@@ -128,20 +128,21 @@ function extractNumericPrice(value) {
 function getPriceBand(price) {
   if (price == null) return "small";
   if (price >= 180) return "high";
-  if (price >= 95) return "mid";
+  if (price >= 120) return "premium";
+  if (price >= 60) return "mid";
   return "small";
 }
 
 function getSizeFromPrice(price, allPrices) {
-  if (price == null || allPrices.length < 3) return "base";
+  if (price == null || allPrices.length < 3) return "portrait";
 
   const sorted = [...allPrices].sort((a, b) => a - b);
-  const middleCut = sorted[Math.floor(sorted.length * 0.6)];
-  const topCut = sorted[Math.floor(sorted.length * 0.85)];
+  const lowCut = sorted[Math.floor(sorted.length * 0.35)];
+  const highCut = sorted[Math.floor(sorted.length * 0.75)];
 
-  if (price >= topCut) return "hero";
-  if (price >= middleCut) return "feature";
-  return "base";
+  if (price >= highCut) return "tall";
+  if (price >= lowCut) return "portrait";
+  return "square";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -163,20 +164,15 @@ function buildFallbackGradient(index) {
 }
 
 function getTileClass(size) {
-  if (size === "hero") return "md:col-span-4 md:row-span-10";
-  if (size === "feature") return "md:col-span-4 md:row-span-8";
-  return "md:col-span-4 md:row-span-7";
-}
-
-function getImageFrameClass(size) {
-  if (size === "hero") return "min-h-[66%]";
-  if (size === "feature") return "min-h-[63%]";
-  return "min-h-[60%]";
+  if (size === "tall") return "md:col-span-3 md:row-span-9";
+  if (size === "portrait") return "md:col-span-3 md:row-span-7";
+  return "md:col-span-3 md:row-span-5";
 }
 
 function getPricePill(priceBand) {
   if (priceBand === "high") return "bg-[#2f3b2d] text-white";
-  if (priceBand === "mid") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
   return "bg-[#f1f5ec] text-[#627f53]";
 }
 
@@ -245,13 +241,6 @@ function shortenTitle(title = "", retailer = "") {
     "watch",
     "sofa",
     "blanket",
-    "coat",
-    "boots",
-    "sandals",
-    "lamp",
-    "vase",
-    "frame",
-    "cabin",
   ];
 
   let cleaned = source
@@ -283,138 +272,124 @@ function shortenTitle(title = "", retailer = "") {
   if (foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()) {
     finalWords = [brand, foundCategory];
   } else {
-    finalWords = words.slice(0, words.length >= 2 ? 2 : 1);
+    finalWords = words.slice(0, Math.min(4, Math.max(2, words.length >= 2 ? 2 : 1)));
   }
 
-  const compact = finalWords.join(" ").trim();
+  const compact = finalWords.slice(0, 4).join(" ").trim();
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
-function inferImageStyle(hint) {
-  const title = `${hint.title || ""} ${hint.retailer || ""}`.toLowerCase();
-  const productWords = [
-    "headphones",
-    "earbuds",
-    "speaker",
-    "watch",
-    "ring",
-    "necklace",
-    "bag",
-    "boots",
-    "sandals",
-    "pillowcase",
-    "pillowcases",
-    "lamp",
-    "vase",
-    "mug",
-    "candle",
-    "camera",
-    "trainer",
-    "trainers",
-    "jacket",
-    "dress",
-    "coat",
-    "kindle",
-    "lego",
-  ];
+function pickBestPreviewImage(data) {
+  if (typeof data?.selectedImage === "string" && data.selectedImage.startsWith("http")) {
+    return data.selectedImage;
+  }
 
-  return productWords.some((word) => title.includes(word)) ? "object-contain" : "object-cover";
+  if (typeof data?.image === "string" && data.image.startsWith("http")) {
+    return data.image;
+  }
+
+  if (Array.isArray(data?.images)) {
+    const found = data.images.find((value) => typeof value === "string" && value.startsWith("http"));
+    if (found) return found;
+  }
+
+  return "";
 }
 
 function ComposerPreview({
   preview,
-  titleDraft,
-  setTitleDraft,
-  visibility,
-  setVisibility,
+  draftTitle,
+  setDraftTitle,
+  draftPrivate,
+  setDraftPrivate,
   isAdding,
-  onAdd,
-  onClear,
+  onSubmit,
+  onCancel,
 }) {
+  const [previewImageFailed, setPreviewImageFailed] = useState(false);
+  const showImage = Boolean(preview.image) && !previewImageFailed;
+
   return (
-    <div className="mx-auto mt-4 w-full max-w-[980px] rounded-[30px] border border-[#efdfd6] bg-white/88 p-4 shadow-[0_18px_40px_rgba(176,118,86,0.08)] backdrop-blur-sm sm:p-5">
-      <div className="flex flex-col gap-4 md:flex-row">
-        <div className="relative flex h-[172px] w-full shrink-0 items-center justify-center overflow-hidden rounded-[24px] border border-[#f0e1d8] bg-[#fbf7f3] md:w-[220px]">
-          {preview.image ? (
+    <div className="mx-auto mt-4 w-full max-w-[980px] rounded-[30px] border border-[#efdfd6] bg-white p-4 shadow-[0_18px_40px_rgba(176,118,86,0.08)] sm:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-stretch">
+        <div className="relative h-[170px] w-full overflow-hidden rounded-[24px] border border-[#f0dfd6] bg-[#faf6f3] md:w-[220px] md:shrink-0">
+          {showImage ? (
             <>
-              <div className="absolute inset-[14px] rounded-[20px] bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.98),_rgba(247,239,233,0.95)_62%,_rgba(235,220,212,0.9))]" />
               <img
                 src={preview.image}
-                alt={titleDraft || preview.title || "Hint preview"}
-                className={`relative z-[1] h-[82%] w-[82%] ${inferImageStyle(preview)} drop-shadow-[0_16px_24px_rgba(92,62,46,0.18)]`}
+                alt={draftTitle || preview.title}
+                className="absolute inset-0 h-full w-full object-cover"
                 referrerPolicy="no-referrer"
+                onError={() => setPreviewImageFailed(true)}
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.26)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
             </>
           ) : (
             <div className={`absolute inset-0 bg-gradient-to-br ${preview.fallbackGradient}`} />
           )}
-
-          <div className="pointer-events-none absolute inset-x-5 bottom-4 h-6 rounded-full bg-[rgba(66,44,33,0.10)] blur-md" />
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
+                preview.priceBand
+              )}`}
+            >
+              {preview.priceLabel}
+            </span>
+
             <button
               type="button"
-              onClick={() => setVisibility("shared")}
-              className={`rounded-full px-4 py-2 text-[12px] font-semibold transition ${
-                visibility === "shared"
+              onClick={() => setDraftPrivate(false)}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+                !draftPrivate
                   ? "bg-[#2f3b2d] text-white"
-                  : "border border-[#ead9d0] bg-white text-slate-600 hover:bg-[#faf6f3]"
+                  : "border border-[#eadfd8] bg-white text-slate-600 hover:bg-[#faf7f4]"
               }`}
             >
               Shared
             </button>
+
             <button
               type="button"
-              onClick={() => setVisibility("private")}
-              className={`rounded-full px-4 py-2 text-[12px] font-semibold transition ${
-                visibility === "private"
-                  ? "bg-[#fff3ec] text-[#df7c59]"
-                  : "border border-[#ead9d0] bg-white text-slate-600 hover:bg-[#faf6f3]"
+              onClick={() => setDraftPrivate(true)}
+              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
+                draftPrivate
+                  ? "bg-[#fff2ea] text-[#df7c59]"
+                  : "border border-[#eadfd8] bg-white text-slate-600 hover:bg-[#faf7f4]"
               }`}
             >
               Private
             </button>
-
-            {preview.priceLabel ? (
-              <span
-                className={`rounded-full px-3 py-2 text-[12px] font-semibold ${getPricePill(
-                  preview.priceBand
-                )}`}
-              >
-                {preview.priceLabel}
-              </span>
-            ) : null}
           </div>
 
           <div className="mt-4">
             <input
               type="text"
-              value={titleDraft}
-              onChange={(e) => setTitleDraft(e.target.value)}
-              className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[18px] font-semibold tracking-[-0.03em] text-slate-900 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              value={draftTitle}
+              onChange={(e) => setDraftTitle(e.target.value)}
               placeholder="Name this hint"
+              className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[16px] font-semibold text-slate-800 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
             />
-            <p className="mt-2 truncate text-[13px] text-slate-500">
-              {preview.retailer}
-            </p>
+            <p className="mt-2 truncate text-[13px] text-slate-500">{preview.retailer}</p>
           </div>
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-auto flex flex-col gap-3 pt-4 sm:flex-row">
             <button
               type="button"
-              onClick={onAdd}
+              onClick={onSubmit}
               disabled={isAdding}
               className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
             >
               {isAdding ? "Adding..." : "Save hint"}
             </button>
+
             <button
               type="button"
-              onClick={onClear}
+              onClick={onCancel}
               disabled={isAdding}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-600 hover:bg-[#faf6f3] disabled:opacity-60"
+              className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-700 hover:bg-[#faf6f3] disabled:opacity-60"
             >
               Cancel
             </button>
@@ -466,37 +441,27 @@ function EditHintModal({
 
         <div className="mt-6 space-y-4">
           <div>
-            <label
-              htmlFor="edit-link"
-              className="mb-2 block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="edit-link" className="mb-2 block text-sm font-medium text-slate-700">
               Link
             </label>
             <input
               id="edit-link"
               type="url"
               value={editForm.url}
-              onChange={(e) =>
-                setEditForm((current) => ({ ...current, url: e.target.value }))
-              }
+              onChange={(e) => setEditForm((current) => ({ ...current, url: e.target.value }))}
               className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
             />
           </div>
 
           <div>
-            <label
-              htmlFor="edit-title"
-              className="mb-2 block text-sm font-medium text-slate-700"
-            >
+            <label htmlFor="edit-title" className="mb-2 block text-sm font-medium text-slate-700">
               Name
             </label>
             <input
               id="edit-title"
               type="text"
               value={editForm.title}
-              onChange={(e) =>
-                setEditForm((current) => ({ ...current, title: e.target.value }))
-              }
+              onChange={(e) => setEditForm((current) => ({ ...current, title: e.target.value }))}
               className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
             />
           </div>
@@ -576,51 +541,43 @@ function HintCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
-  const imageFit = inferImageStyle(hint);
 
   return (
     <article
-      className={`group relative flex h-full min-h-[360px] flex-col overflow-hidden rounded-[32px] border transition-[transform,box-shadow,opacity] duration-200 ${
+      className={`group relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border transition-[transform,box-shadow,opacity] duration-200 ${
         getTileClass(hint.size)
       } ${
         isDragging
-          ? "z-20 rotate-[1.2deg] shadow-[0_26px_60px_rgba(176,118,86,0.22)]"
+          ? "z-20 rotate-[1deg] shadow-[0_26px_60px_rgba(176,118,86,0.22)]"
           : "hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)]"
       } ${
         hint.private
-          ? "border-white/50 bg-white/60 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
+          ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
           : "border-[#f0dfd6] bg-white shadow-sm"
       }`}
     >
       <div className="relative flex h-full flex-col">
-        <div
-          className={`relative flex-1 overflow-hidden ${getImageFrameClass(
-            hint.size
-          )}`}
-        >
+        <div className="relative min-h-[62%] flex-1 overflow-hidden">
           {showImage ? (
             <>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,250,246,0.96),_rgba(245,236,229,0.92)_58%,_rgba(233,220,211,0.88))]" />
-              <div className="absolute inset-[18px] rounded-[26px] border border-white/70 bg-white/38 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-[2px]" />
               <img
                 src={hint.image}
                 alt={hint.title}
-                className={`absolute inset-[28px] h-[calc(100%-56px)] w-[calc(100%-56px)] ${imageFit} drop-shadow-[0_24px_30px_rgba(96,69,54,0.18)] ${hint.private ? "opacity-86" : ""}`}
+                className={`absolute inset-0 h-full w-full object-cover ${
+                  hint.private ? "opacity-80" : ""
+                }`}
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 onError={() => setImageFailed(true)}
               />
-              <div className="pointer-events-none absolute inset-x-10 bottom-7 h-7 rounded-full bg-[rgba(67,42,28,0.12)] blur-md" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.35)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
             </>
           ) : (
-            <>
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
-                  hint.private ? "opacity-80" : ""
-                }`}
-              />
-              <div className="absolute inset-[18px] rounded-[26px] border border-white/35 bg-white/18 backdrop-blur-[2px]" />
-            </>
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
+                hint.private ? "opacity-80" : ""
+              }`}
+            />
           )}
 
           <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
@@ -630,7 +587,7 @@ function HintCard({
                 ref={setDragActivatorNodeRef}
                 {...dragAttributes}
                 {...dragListeners}
-                className="flex cursor-grab touch-none items-center gap-1 rounded-full bg-white/82 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm active:cursor-grabbing"
+                className="flex cursor-grab touch-none items-center gap-1 rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm active:cursor-grabbing"
                 title="Drag to reorder"
                 aria-label={`Drag ${hint.title}`}
               >
@@ -644,7 +601,7 @@ function HintCard({
               )}
 
               {hint.private && (
-                <div className="rounded-full bg-white/76 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                <div className="rounded-full bg-white/74 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
                   Private
                 </div>
               )}
@@ -654,7 +611,7 @@ function HintCard({
               <button
                 type="button"
                 onClick={() => onEdit(hint)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/76 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
                 aria-label="Edit hint"
               >
                 ✎
@@ -662,10 +619,8 @@ function HintCard({
 
               <button
                 onClick={() => onToggleStarred(hint)}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/76 text-[16px] backdrop-blur-sm ${
-                  hint.starred
-                    ? "text-[#f36f64]"
-                    : "text-slate-400 hover:text-[#f36f64]"
+                className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[16px] backdrop-blur-sm ${
+                  hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
                 }`}
                 aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
                 type="button"
@@ -676,10 +631,10 @@ function HintCard({
           </div>
         </div>
 
-        <div className="relative -mt-8 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
+        <div className="relative -mt-6 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
           <div
-            className={`flex w-full flex-1 flex-col rounded-[26px] p-4 shadow-sm backdrop-blur-md ${
-              hint.private ? "bg-white/84" : "bg-white/92"
+            className={`flex w-full flex-1 flex-col rounded-[24px] p-4 shadow-sm backdrop-blur-md ${
+              hint.private ? "bg-white/82" : "bg-white/90"
             }`}
           >
             <div className="flex flex-wrap items-center gap-2">
@@ -702,7 +657,7 @@ function HintCard({
             </div>
 
             <h2
-              className="mt-3 min-w-0 overflow-hidden text-[21px] font-semibold tracking-[-0.04em] text-slate-900"
+              className="mt-3 min-w-0 overflow-hidden text-[20px] font-semibold tracking-[-0.04em] text-slate-900"
               style={{
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
@@ -713,9 +668,7 @@ function HintCard({
               {hint.title}
             </h2>
 
-            <p className="mt-1 truncate text-[13px] text-slate-500">
-              {hint.retailer}
-            </p>
+            <p className="mt-1 truncate text-[13px] text-slate-500">{hint.retailer}</p>
 
             <div className="mt-auto pt-4">
               <div className="flex items-center justify-end gap-2">
@@ -776,11 +729,11 @@ function SortableHintTile(props) {
 export default function HintsPage() {
   const [hints, setHints] = useState([]);
   const [link, setLink] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
   const [draftPreview, setDraftPreview] = useState(null);
   const [draftTitle, setDraftTitle] = useState("");
-  const [draftVisibility, setDraftVisibility] = useState("shared");
-  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
-  const [isAdding, setIsAdding] = useState(false);
+  const [draftPrivate, setDraftPrivate] = useState(false);
   const [error, setError] = useState("");
   const [editingHintId, setEditingHintId] = useState(null);
   const [editForm, setEditForm] = useState({ title: "", url: "" });
@@ -791,10 +744,7 @@ export default function HintsPage() {
   const [activeId, setActiveId] = useState(null);
 
   const numericPrices = useMemo(
-    () =>
-      hints
-        .map((hint) => hint.numericPrice)
-        .filter((value) => typeof value === "number"),
+    () => hints.map((hint) => hint.numericPrice).filter((value) => typeof value === "number"),
     [hints]
   );
 
@@ -850,27 +800,36 @@ export default function HintsPage() {
         return;
       }
 
-      const allLoadedPrices = (data || [])
+      const loadedRows = data || [];
+      const loadedPrices = loadedRows
         .map((item) => item.numeric_price)
         .filter((value) => typeof value === "number");
 
       setHints(
-        (data || []).map((row, index) => ({
-          id: row.id,
-          title: row.title || "Saved hint",
-          retailer: row.retailer || normaliseRetailer(row.url || ""),
-          priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
-          numericPrice: row.numeric_price,
-          priceBand: getPriceBand(row.numeric_price),
-          image: row.image_url || "",
-          fallbackGradient: buildFallbackGradient(index),
-          tags: [],
-          starred: Boolean(row.starred),
-          private: Boolean(row.is_private),
-          size: row.size || getSizeFromPrice(row.numeric_price, allLoadedPrices),
-          url: row.url || "",
-          position: row.position ?? index,
-        }))
+        loadedRows.map((row, index) => {
+          const derivedSize = getSizeFromPrice(row.numeric_price, loadedPrices);
+          return {
+            id: row.id,
+            title: row.title || "Saved hint",
+            retailer: row.retailer || normaliseRetailer(row.url || ""),
+            priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
+            numericPrice: row.numeric_price,
+            priceBand: getPriceBand(row.numeric_price),
+            image: row.image_url || "",
+            fallbackGradient: buildFallbackGradient(index),
+            tags: [],
+            starred: Boolean(row.starred),
+            private: Boolean(row.is_private),
+            size:
+              row.size && ["tall", "portrait", "square"].includes(row.size)
+                ? row.size
+                : derivedSize === "square"
+                ? "square"
+                : derivedSize,
+            url: row.url || "",
+            position: row.position ?? index,
+          };
+        })
       );
 
       setIsLoading(false);
@@ -891,12 +850,6 @@ export default function HintsPage() {
     );
   }
 
-  function resetComposer() {
-    setDraftPreview(null);
-    setDraftTitle("");
-    setDraftVisibility("shared");
-  }
-
   function openEditModal(hint) {
     setEditingHintId(hint.id);
     setEditForm({
@@ -910,6 +863,12 @@ export default function HintsPage() {
     setEditForm({ title: "", url: "" });
     setIsRefreshingEdit(false);
     setIsSavingEdit(false);
+  }
+
+  function clearDraftPreview() {
+    setDraftPreview(null);
+    setDraftTitle("");
+    setDraftPrivate(false);
   }
 
   async function saveEditChanges() {
@@ -1041,17 +1000,9 @@ export default function HintsPage() {
       const numericPrice = extractNumericPrice(data.priceText);
       const refreshedTitle =
         data.titleShort ||
-        shortenTitle(
-          data.title || editForm.title || "",
-          data.siteName || normaliseRetailer(trimmed)
-        );
+        shortenTitle(data.title || editForm.title || "", data.siteName || normaliseRetailer(trimmed));
 
-      const chosenImage =
-        typeof data.selectedImage === "string" && data.selectedImage.startsWith("http")
-          ? data.selectedImage
-          : typeof data.image === "string" && data.image.startsWith("http")
-          ? data.image
-          : "";
+      const chosenImage = pickBestPreviewImage(data);
 
       setHints((current) => {
         const pricePool = current
@@ -1061,6 +1012,8 @@ export default function HintsPage() {
         return current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
 
+          const nextSize = getSizeFromPrice(numericPrice, pricePool);
+
           return {
             ...hint,
             title: refreshedTitle,
@@ -1069,7 +1022,7 @@ export default function HintsPage() {
             numericPrice,
             priceBand: getPriceBand(numericPrice),
             image: chosenImage || hint.image,
-            size: getSizeFromPrice(numericPrice, pricePool),
+            size: nextSize,
             url: data.url || trimmed,
           };
         });
@@ -1132,17 +1085,10 @@ export default function HintsPage() {
       }
 
       const numericPrice = extractNumericPrice(data.priceText);
-      const allPrices = [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])];
+      const pricePool = [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])];
       const retailer = data.siteName || normaliseRetailer(trimmed);
       const shortTitle =
         data.titleShort || shortenTitle(data.title || "Saved hint", retailer);
-
-      const chosenImage =
-        typeof data.selectedImage === "string" && data.selectedImage.startsWith("http")
-          ? data.selectedImage
-          : typeof data.image === "string" && data.image.startsWith("http")
-          ? data.image
-          : "";
 
       const preview = {
         title: shortTitle,
@@ -1150,25 +1096,34 @@ export default function HintsPage() {
         priceLabel: formatPriceLabel(numericPrice, data.priceText),
         numericPrice,
         priceBand: getPriceBand(numericPrice),
-        image: chosenImage,
+        image: pickBestPreviewImage(data),
         fallbackGradient: buildFallbackGradient(hints.length),
+        private: false,
+        size: getSizeFromPrice(numericPrice, pricePool),
         url: data.url || trimmed,
-        size: getSizeFromPrice(numericPrice, allPrices),
       };
 
       setDraftPreview(preview);
       setDraftTitle(shortTitle);
-      setDraftVisibility("shared");
+      setDraftPrivate(false);
     } catch (err) {
       setError(err.message || "Could not extract this link.");
-      setDraftPreview(null);
+      clearDraftPreview();
     } finally {
       setIsFetchingPreview(false);
     }
   }
 
   async function handleAddHint() {
-    if (!currentUser || !draftPreview) return;
+    if (!currentUser) {
+      setError("You must be signed in to add hints.");
+      return;
+    }
+
+    if (!draftPreview) {
+      setError("Preview the link first.");
+      return;
+    }
 
     setIsAdding(true);
     setError("");
@@ -1185,7 +1140,7 @@ export default function HintsPage() {
         fallbackGradient: draftPreview.fallbackGradient,
         tags: ["Added from link"],
         starred: false,
-        private: draftVisibility === "private",
+        private: draftPrivate,
         size: draftPreview.size,
         url: draftPreview.url,
         position: 0,
@@ -1207,7 +1162,6 @@ export default function HintsPage() {
           is_private: newHint.private,
           position: 0,
           source: "user",
-          size: newHint.size,
         })
         .select("id")
         .single();
@@ -1225,8 +1179,8 @@ export default function HintsPage() {
 
       setHints(updatedHints);
       setLink("");
-      resetComposer();
-      persistHintOrder(updatedHints);
+      clearDraftPreview();
+      await persistHintOrder(updatedHints);
     } catch (err) {
       setError(err.message || "Could not save this hint.");
     } finally {
@@ -1251,7 +1205,7 @@ export default function HintsPage() {
     }));
 
     setHints(reordered);
-    persistHintOrder(reordered);
+    await persistHintOrder(reordered);
   }
 
   const hasRealHints = hints.length > 0;
@@ -1270,30 +1224,10 @@ export default function HintsPage() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link
-                href="/feed"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Feed
-              </Link>
-              <Link
-                href="/hints"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
-              >
-                Hints
-              </Link>
-              <Link
-                href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Circles
-              </Link>
-              <Link
-                href="/shop"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Shop
-              </Link>
+              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
+              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
+              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
+              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
             </nav>
 
             <AvatarMenu />
@@ -1329,33 +1263,29 @@ export default function HintsPage() {
                 disabled={isFetchingPreview || isLoading}
                 className="inline-flex h-[72px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-8 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[170px]"
               >
-                {isFetchingPreview
-                  ? "Fetching..."
-                  : isLoading
-                  ? "Loading..."
-                  : "Preview"}
+                {isFetchingPreview ? "Fetching..." : isLoading ? "Loading..." : "Preview"}
               </button>
             </div>
 
             {error ? (
               <p className="mt-3 text-sm font-medium text-[#c45c42]">{error}</p>
-            ) : draftPreview ? null : (
+            ) : !draftPreview ? (
               <p className="mt-3 text-sm text-slate-500">
                 Pull the image, tweak the name, choose who sees it.
               </p>
-            )}
+            ) : null}
           </div>
 
           {draftPreview ? (
             <ComposerPreview
               preview={draftPreview}
-              titleDraft={draftTitle}
-              setTitleDraft={setDraftTitle}
-              visibility={draftVisibility}
-              setVisibility={setDraftVisibility}
+              draftTitle={draftTitle}
+              setDraftTitle={setDraftTitle}
+              draftPrivate={draftPrivate}
+              setDraftPrivate={setDraftPrivate}
               isAdding={isAdding}
-              onAdd={handleAddHint}
-              onClear={resetComposer}
+              onSubmit={handleAddHint}
+              onCancel={clearDraftPreview}
             />
           ) : null}
         </section>
@@ -1363,31 +1293,27 @@ export default function HintsPage() {
         <section className="mt-12">
           <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
             <div
-              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-80"
+              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-75"
               style={{
                 backgroundImage: `
-                  linear-gradient(to right, rgba(214, 195, 184, 0.32) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(214, 195, 184, 0.32) 1px, transparent 1px)
+                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
                 `,
-                backgroundSize: "108px 108px",
+                backgroundSize: "112px 112px",
                 backgroundPosition: "center center",
               }}
             />
 
             {isLoading ? (
-              <div className="grid auto-rows-[54px] grid-cols-1 gap-7 md:grid-cols-12">
+              <div className="grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className={`relative flex h-full min-h-[360px] flex-col overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] md:col-span-4 ${
-                      i === 1
-                        ? "md:row-span-10"
-                        : i === 2
-                        ? "md:row-span-8"
-                        : "md:row-span-7"
+                    className={`relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] md:col-span-3 ${
+                      i === 1 ? "md:row-span-9" : i === 2 ? "md:row-span-7" : "md:row-span-5"
                     }`}
                   >
-                    <div className="relative flex-1 overflow-hidden">
+                    <div className="relative min-h-[62%] flex-1 overflow-hidden">
                       <div className="skeleton h-full w-full" />
                     </div>
                   </div>
@@ -1405,7 +1331,7 @@ export default function HintsPage() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid auto-rows-[54px] grid-cols-1 gap-7 md:grid-cols-12">
+                  <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1420,7 +1346,7 @@ export default function HintsPage() {
 
                 <DragOverlay>
                   {activeHint ? (
-                    <div className="w-full max-w-[420px]">
+                    <div className="w-full max-w-[320px]">
                       <HintCard
                         hint={activeHint}
                         isDragging
