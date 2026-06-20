@@ -19,6 +19,20 @@ const FORWARDED_HEADERS = {
 const PRICE_REGEX =
   /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?|\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/gi;
 
+const BLOCK_WORDS = [
+  "access denied",
+  "blocked",
+  "captcha",
+  "robot check",
+  "verify you are human",
+  "security check",
+  "service unavailable",
+  "unusual traffic",
+  "automated access",
+  "enable cookies",
+  "cloudflare",
+];
+
 const RETAILER_RULES = {
   amazon: {
     match: (h) => /(^|\.)amazon\./i.test(h),
@@ -31,11 +45,7 @@ const RETAILER_RULES = {
       "#price_inside_buybox",
       ".a-price .a-offscreen",
     ],
-    imageSelectors: [
-      "#landingImage",
-      "#imgBlkFront",
-      'meta[property="og:image"]',
-    ],
+    imageSelectors: ["#landingImage", "#imgBlkFront", 'meta[property="og:image"]'],
     cleanTitle: (t) =>
       t
         .replace(/\s*:\s*Amazon\.[A-Za-z.]+.*$/i, "")
@@ -47,16 +57,8 @@ const RETAILER_RULES = {
   currys: {
     match: (h) => /(^|\.)currys\.co\.uk$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
-    priceSelectors: [
-      '[data-testid*="price"]',
-      '[class*="price"]',
-      '[itemprop="price"]',
-    ],
-    imageSelectors: [
-      'meta[property="og:image"]',
-      'meta[name="twitter:image"]',
-      "img[src]",
-    ],
+    priceSelectors: ['[data-testid*="price"]', '[class*="price"]', '[itemprop="price"]'],
+    imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
   johnlewis: {
     match: (h) => /(^|\.)johnlewis\.com$/i.test(h),
@@ -67,11 +69,7 @@ const RETAILER_RULES = {
       '[class*="price"]',
       '[itemprop="price"]',
     ],
-    imageSelectors: [
-      'meta[property="og:image"]',
-      'meta[name="twitter:image"]',
-      "img[src]",
-    ],
+    imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
   argos: {
     match: (h) => /(^|\.)argos\.co\.uk$/i.test(h),
@@ -386,7 +384,6 @@ function pickBestPrice({ domPrice, jsonLdPrice, metaPrice }, preferredCurrency =
     (c) => detectCurrency(c.value) === preferredCurrency
   );
   const pool = preferred.length ? preferred : candidates;
-
   pool.sort((a, b) => b.priority - a.priority);
 
   const winner = pool[0];
@@ -519,9 +516,66 @@ function pickBestImage({ hostImage, jsonLdImages, $, base, isAmazon }) {
   );
 }
 
-async function fetchViaScrapingBee(inputUrl) {
+function includesBlockedText(value = "") {
+  const text = String(value).toLowerCase();
+  return BLOCK_WORDS.some((word) => text.includes(word));
+}
+
+function hasProductSignals({ title, priceText, image, jsonLdTitle, jsonLdPrice, bodyText }) {
+  const hasStrongPrice = Boolean(priceText || jsonLdPrice);
+  const hasStrongTitle = Boolean(title || jsonLdTitle);
+  const hasStrongImage = Boolean(image);
+
+  const body = String(bodyText).toLowerCase();
+  const bodyHints =
+    body.includes("add to basket") ||
+    body.includes("add to cart") ||
+    body.includes("buy now") ||
+    body.includes("in stock") ||
+    body.includes("out of stock");
+
+  return (hasStrongTitle && hasStrongPrice) || (hasStrongImage && hasStrongPrice) || bodyHints;
+}
+
+function detectBlockedPage({
+  status,
+  titleTag,
+  h1,
+  bodyText,
+  priceText,
+  image,
+  jsonLdTitle,
+  jsonLdPrice,
+}) {
+  const blockedByStatus = status === 403 || status === 503;
+  const blockedByText =
+    includesBlockedText(titleTag) ||
+    includesBlockedText(h1) ||
+    includesBlockedText(bodyText);
+
+  const productSignals = hasProductSignals({
+    title: titleTag,
+    priceText,
+    image,
+    jsonLdTitle,
+    jsonLdPrice,
+    bodyText,
+  });
+
+  if ((blockedByStatus || blockedByText) && !productSignals) {
+    return {
+      blocked: true,
+      blockReason: blockedByStatus ? `http-${status}` : "blocked-text",
+      blockMessage: "Retailer returned a blocked or challenge page.",
+    };
+  }
+
+  return { blocked: false, blockReason: null, blockMessage: "" };
+}
+
+async function fetchViaScrapingBee(inputUrl, options = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 20000);
+  const timer = setTimeout(() => controller.abort(), options.timeout || 20000);
 
   try {
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
@@ -530,9 +584,15 @@ async function fetchViaScrapingBee(inputUrl) {
     const apiUrl = new URL("https://app.scrapingbee.com/api/v1");
     apiUrl.searchParams.set("api_key", apiKey);
     apiUrl.searchParams.set("url", inputUrl);
-    apiUrl.searchParams.set("render_js", "false");
     apiUrl.searchParams.set("transparent_status_code", "true");
     apiUrl.searchParams.set("forward_headers", "true");
+    apiUrl.searchParams.set("render_js", options.renderJs ? "true" : "false");
+
+    if (options.renderJs) {
+      apiUrl.searchParams.set("block_resources", "false");
+      apiUrl.searchParams.set("wait_browser", "networkidle0");
+      apiUrl.searchParams.set("wait", "1800");
+    }
 
     const res = await fetch(apiUrl.toString(), {
       method: "GET",
@@ -560,6 +620,13 @@ async function fetchViaScrapingBee(inputUrl) {
       html: html || "",
       finalUrl: inputUrl,
       provider: "scrapingbee",
+      fetchProfile: {
+        render_js: Boolean(options.renderJs),
+        wait: options.renderJs ? 1800 : 0,
+        wait_browser: options.renderJs ? "networkidle0" : "",
+        block_resources: options.renderJs ? false : null,
+        forward_headers: true,
+      },
     };
   } catch (err) {
     clearTimeout(timer);
@@ -567,60 +634,7 @@ async function fetchViaScrapingBee(inputUrl) {
   }
 }
 
-function detectBlock(bodyText = "", titleTag = "", h1 = "", status = 200) {
-  const text = bodyText.toLowerCase();
-  const titleLower = titleTag.toLowerCase();
-  const h1Lower = h1.toLowerCase();
-
-  if (status === 503 || titleLower.includes("503") || text.includes("service unavailable")) {
-    return {
-      blocked: true,
-      blockReason: "service-unavailable",
-      blockMessage: "The retailer returned a service unavailable page.",
-    };
-  }
-
-  if (
-    (status === 403 || titleLower.includes("blocked") || h1Lower.includes("blocked")) &&
-    (text.includes("cloudflare") ||
-      text.includes("security service") ||
-      text.includes("you have been blocked"))
-  ) {
-    return {
-      blocked: true,
-      blockReason: "cloudflare-403",
-      blockMessage: "The retailer blocked the request.",
-    };
-  }
-
-  if (
-    text.includes("captcha") ||
-    text.includes("robot") ||
-    text.includes("access denied") ||
-    text.includes("verify you are human")
-  ) {
-    return {
-      blocked: true,
-      blockReason: "access-denied",
-      blockMessage: "The retailer challenged the request.",
-    };
-  }
-
-  return { blocked: false };
-}
-
-async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
-  const { html, finalUrl, status, contentType, ok, provider } =
-    await fetchViaScrapingBee(inputUrl);
-
-  if (!contentType.includes("text/html")) {
-    throw new Error("URL did not return an HTML page.");
-  }
-
-  if (!html.trim()) {
-    throw new Error("Empty response from page.");
-  }
-
+function parsePage({ html, finalUrl, status, provider, fetchProfile, preferredCurrency }) {
   const $ = cheerio.load(html);
 
   let canonicalUrl =
@@ -642,41 +656,6 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
   const titleTag = cleanText($("title").first().text());
   const h1 = cleanText($("h1").first().text());
 
-  const blockInfo = detectBlock(bodyText, titleTag, h1, status);
-  if (blockInfo.blocked) {
-    return {
-      url: canonicalUrl,
-      title: titleTag || h1 || host || "Needs review",
-      titleShort: titleTag || h1 || host || "Needs review",
-      description: blockInfo.blockMessage || "",
-      siteName: host,
-      image: "",
-      selectedImage: "",
-      imageCandidates: [],
-      priceText: "",
-      numericPrice: null,
-      detectedCurrency: null,
-      brand: "",
-      confidence: "low",
-      needsReview: true,
-      blocked: true,
-      blockReason: blockInfo.blockReason,
-      blockMessage: blockInfo.blockMessage,
-      source: provider || "scrapingbee",
-      debug: {
-        ok,
-        status,
-        finalUrl,
-        canonicalUrl,
-        hostname: host,
-        titleTag,
-        h1,
-        bodySnippet: bodyText.slice(0, 1200),
-        htmlLength: html.length,
-      },
-    };
-  }
-
   const jsonLd = extractJsonLd($, finalUrl);
 
   let title =
@@ -686,7 +665,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
     getText($, ["h1", "title"]) ||
     "";
 
-  if (isAmazon && rule.cleanTitle) {
+  if (isAmazon && title && rule.cleanTitle) {
     title = rule.cleanTitle(title);
   }
 
@@ -714,6 +693,17 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
       isAmazon,
     });
 
+  const blockInfo = detectBlockedPage({
+    status,
+    titleTag,
+    h1,
+    bodyText,
+    priceText,
+    image,
+    jsonLdTitle: jsonLd.title,
+    jsonLdPrice,
+  });
+
   const hasTitle = Boolean(title);
   const hasPrice = Boolean(priceText);
   const hasImage = Boolean(image);
@@ -727,25 +717,25 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
 
   return {
     url: canonicalUrl,
-    title: title || "Shared item",
-    titleShort: title || "Shared item",
-    description: "",
+    title: blockInfo.blocked ? "Needs review" : title || "Shared item",
+    titleShort: blockInfo.blocked ? "Needs review" : title || "Shared item",
+    description: blockInfo.blocked ? blockInfo.blockMessage : "",
     siteName: host,
-    image,
-    selectedImage: image,
-    imageCandidates: image ? [image] : [],
-    priceText,
-    numericPrice: extractNumericPrice(priceText),
-    detectedCurrency,
-    brand: jsonLd.brand || "",
-    confidence,
-    needsReview: confidence !== "high",
-    blocked: false,
-    blockReason: null,
-    blockMessage: "",
-    source: provider || "scrapingbee",
+    image: blockInfo.blocked ? "" : image,
+    selectedImage: blockInfo.blocked ? "" : image,
+    imageCandidates: !blockInfo.blocked && image ? [image] : [],
+    priceText: blockInfo.blocked ? "" : priceText,
+    numericPrice: blockInfo.blocked ? null : extractNumericPrice(priceText),
+    detectedCurrency: blockInfo.blocked ? null : detectedCurrency,
+    brand: blockInfo.blocked ? "" : jsonLd.brand || "",
+    confidence: blockInfo.blocked ? "low" : confidence,
+    needsReview: blockInfo.blocked ? true : confidence !== "high",
+    blocked: blockInfo.blocked,
+    blockReason: blockInfo.blockReason,
+    blockMessage: blockInfo.blockMessage,
+    source: provider,
     debug: {
-      ok,
+      fetchProfile,
       status,
       finalUrl,
       canonicalUrl,
@@ -756,15 +746,92 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
       bodySnippet: bodyText.slice(0, 1200),
       htmlLength: html.length,
       jsonLdTitle: jsonLd.title || "",
-      extractedTitle: title || "",
       jsonLdPrice,
       metaPrice,
       domPrice,
-      allPriceCandidates: [domPrice, jsonLdPrice, metaPrice].filter(Boolean),
+      extractedTitle: title || "",
       amazonPrimaryImage: amazonPrimary || null,
       topImageCandidate: image || null,
+      productSignals: {
+        hasTitle,
+        hasPrice,
+        hasImage,
+      },
+      blockSignals: {
+        titleBlocked: includesBlockedText(titleTag),
+        h1Blocked: includesBlockedText(h1),
+        bodyBlocked: includesBlockedText(bodyText),
+      },
     },
   };
+}
+
+function shouldRetryWithJs(result) {
+  if (result.blocked) return false;
+  if (result.confidence === "high") return false;
+
+  const hasAnyUsefulSignal =
+    result?.debug?.jsonLdTitle ||
+    result?.debug?.jsonLdPrice ||
+    result?.priceText ||
+    result?.image ||
+    result?.title;
+
+  return !hasAnyUsefulSignal || result.confidence === "low";
+}
+
+async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
+  const firstFetch = await fetchViaScrapingBee(inputUrl, { renderJs: false });
+
+  if (!firstFetch.contentType.includes("text/html")) {
+    throw new Error("URL did not return an HTML page.");
+  }
+
+  if (!firstFetch.html.trim()) {
+    throw new Error("Empty response from page.");
+  }
+
+  let firstPass = parsePage({
+    html: firstFetch.html,
+    finalUrl: firstFetch.finalUrl,
+    status: firstFetch.status,
+    provider: firstFetch.provider,
+    fetchProfile: firstFetch.fetchProfile,
+    preferredCurrency,
+  });
+
+  if (!shouldRetryWithJs(firstPass)) {
+    return firstPass;
+  }
+
+  const secondFetch = await fetchViaScrapingBee(inputUrl, { renderJs: true });
+
+  if (!secondFetch.contentType.includes("text/html") || !secondFetch.html.trim()) {
+    return firstPass;
+  }
+
+  const secondPass = parsePage({
+    html: secondFetch.html,
+    finalUrl: secondFetch.finalUrl,
+    status: secondFetch.status,
+    provider: secondFetch.provider,
+    fetchProfile: secondFetch.fetchProfile,
+    preferredCurrency,
+  });
+
+  const secondScore =
+    (secondPass.blocked ? 0 : 1) +
+    (secondPass.title ? 1 : 0) +
+    (secondPass.priceText ? 1 : 0) +
+    (secondPass.image ? 1 : 0);
+
+  const firstScore =
+    (firstPass.blocked ? 0 : 1) +
+    (firstPass.title ? 1 : 0) +
+    (firstPass.priceText ? 1 : 0) +
+    (firstPass.image ? 1 : 0);
+
+  return secondScore >= firstScore ? secondPass : firstPass;
 }
 
 export async function POST(request) {
@@ -779,8 +846,33 @@ export async function POST(request) {
 
     try {
       const result = await scrapeUrl(inputUrl, preferredCurrency);
+
+      console.log(
+        JSON.stringify({
+          type: "link-preview-debug",
+          inputUrl,
+          preferredCurrency,
+          source: result?.source,
+          blocked: result?.blocked,
+          blockReason: result?.blockReason,
+          title: result?.title,
+          priceText: result?.priceText,
+          image: result?.image,
+          debug: result?.debug,
+        })
+      );
+
       return NextResponse.json(result, { status: 200 });
     } catch (scrapeError) {
+      console.log(
+        JSON.stringify({
+          type: "link-preview-error",
+          inputUrl,
+          preferredCurrency,
+          error: scrapeError?.message || "Fetch error",
+        })
+      );
+
       const host = (() => {
         try {
           return new URL(inputUrl).hostname.replace(/^www\./i, "");
