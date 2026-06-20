@@ -5,21 +5,26 @@ import { createClient } from "../../../../lib/supabase/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+let stripeInstance = null;
+
 function getStripe() {
+  if (stripeInstance) return stripeInstance;
+
   const secretKey = process.env.STRIPE_SECRET_KEY;
 
-  if (!secretKey) {
+  if (!secretKey || typeof secretKey !== "string" || !secretKey.trim()) {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
 
-  return new Stripe(secretKey, {
+  stripeInstance = new Stripe(secretKey.trim(), {
     apiVersion: "2024-09-30.acacia",
   });
+
+  return stripeInstance;
 }
 
 export async function POST() {
   try {
-    const stripe = getStripe();
     const supabase = await createClient();
 
     const {
@@ -42,7 +47,7 @@ export async function POST() {
       .from("profiles")
       .select("full_name, stripe_customer_id")
       .eq("id", user.id)
-      .single();
+      .maybeSingle();
 
     if (profileError) {
       return NextResponse.json(
@@ -54,6 +59,8 @@ export async function POST() {
     if (profile?.stripe_customer_id) {
       return NextResponse.json({ customerId: profile.stripe_customer_id });
     }
+
+    const stripe = getStripe();
 
     const customer = await stripe.customers.create({
       email: user.email || undefined,
