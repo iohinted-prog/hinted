@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -60,7 +60,6 @@ const demoHints = [
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     starred: true,
     private: false,
-    size: "medium",
     url: "https://www.airbnb.co.uk/",
     position: 0,
     needsReview: false,
@@ -76,7 +75,6 @@ const demoHints = [
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     starred: false,
     private: false,
-    size: "medium",
     url: "https://www.amazon.co.uk/",
     position: 1,
     needsReview: false,
@@ -92,7 +90,6 @@ const demoHints = [
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
     starred: false,
     private: true,
-    size: "small",
     url: "https://www.johnlewis.com/",
     position: 2,
     needsReview: false,
@@ -108,7 +105,6 @@ const demoHints = [
     fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
     starred: true,
     private: false,
-    size: "large",
     url: "https://www.booking.com/",
     position: 3,
     needsReview: false,
@@ -133,7 +129,6 @@ function BusyOverlay({ open, title, message }) {
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff1e9]">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#f1c4b2] border-t-[#f36f64]" />
           </div>
-
           <div>
             <p className="text-[15px] font-semibold text-slate-900">{title}</p>
             <p className="mt-1 text-sm text-slate-500">{message}</p>
@@ -213,18 +208,6 @@ function extractNumericPrice(value) {
   if (!match) return null;
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function getSizeFromPrice(price) {
-  if (price == null || price <= 100) return "small";
-  if (price <= 1000) return "medium";
-  return "large";
-}
-
-function getAspectRatio(size) {
-  if (size === "large") return "1 / 1.7";
-  if (size === "medium") return "1 / 1.35";
-  return "1 / 1";
 }
 
 function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
@@ -390,31 +373,7 @@ async function fetchPreview(url) {
   return data;
 }
 
-function shouldContainImage(hint) {
-  const host = String(hint?.retailer || "").toLowerCase();
-  return [
-    "amazon",
-    "johnlewis",
-    "argos",
-    "currys",
-    "next",
-    "ebay",
-    "etsy",
-    "boots",
-    "very",
-    "ao.com",
-    "hm.com",
-    "zara",
-    "apple",
-  ].some((name) => host.includes(name));
-}
-
-function rgbToCss(rgb, alpha = 1) {
-  if (!rgb) return `rgba(255,255,255,${alpha})`;
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-}
-
-function extractAverageColor(src) {
+function loadImageAspectRatio(src) {
   return new Promise((resolve) => {
     if (!src) {
       resolve(null);
@@ -422,54 +381,29 @@ function extractAverageColor(src) {
     }
 
     const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.referrerPolicy = "no-referrer";
-
     img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        const size = 24;
-
-        canvas.width = size;
-        canvas.height = size;
-        ctx.drawImage(img, 0, 0, size, size);
-
-        const { data } = ctx.getImageData(0, 0, size, size);
-
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let count = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const alpha = data[i + 3];
-          if (alpha < 200) continue;
-
-          r += data[i];
-          g += data[i + 1];
-          b += data[i + 2];
-          count += 1;
-        }
-
-        if (!count) {
-          resolve(null);
-          return;
-        }
-
-        resolve({
-          r: Math.round(r / count),
-          g: Math.round(g / count),
-          b: Math.round(b / count),
-        });
-      } catch {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        resolve(img.naturalWidth / img.naturalHeight);
+      } else {
         resolve(null);
       }
     };
-
     img.onerror = () => resolve(null);
     img.src = src;
   });
+}
+
+function fallbackCardRatio(hint) {
+  if (hint?.image) return 0.82;
+  return 1;
+}
+
+function getCardAspectRatio(hint, imageRatios) {
+  const imageRatio = imageRatios[hint.id];
+  if (imageRatio && Number.isFinite(imageRatio)) {
+    return imageRatio;
+  }
+  return fallbackCardRatio(hint);
 }
 
 function HintFormFields({
@@ -554,7 +488,7 @@ function HintFormFields({
             <img
               src={previewImage}
               alt={form.title || "Selected hint image"}
-              className="h-40 w-full object-cover"
+              className="h-auto w-full object-cover"
             />
           </div>
         ) : (
@@ -731,6 +665,7 @@ function EditHintModal({
 
 function HintCard({
   hint,
+  imageRatios,
   onEdit,
   onToggleStarred,
   onTogglePrivate,
@@ -738,103 +673,33 @@ function HintCard({
   dragHandleListeners,
   dragHandleAttributes,
 }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const [accentRgb, setAccentRgb] = useState(null);
-
-  const showImage = Boolean(hint.image) && !imageFailed;
-  const useContain = shouldContainImage(hint);
-
-  useEffect(() => {
-    let active = true;
-
-    if (!showImage) {
-      setAccentRgb(null);
-      return;
-    }
-
-    extractAverageColor(hint.image).then((rgb) => {
-      if (active) setAccentRgb(rgb);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [hint.image, showImage]);
-
-  const shellBorder = accentRgb ? rgbToCss(accentRgb, 0.12) : "rgba(255,255,255,0.14)";
-  const glassStroke = accentRgb ? rgbToCss(accentRgb, 0.28) : "rgba(255,255,255,0.18)";
-  const glassWashTop = accentRgb ? rgbToCss(accentRgb, 0.18) : "rgba(255,255,255,0.20)";
-  const ringGlow = accentRgb ? rgbToCss(accentRgb, 0.10) : "rgba(255,255,255,0.08)";
+  const ratio = getCardAspectRatio(hint, imageRatios);
 
   return (
     <article
-      className={`group relative w-full overflow-hidden rounded-[30px] bg-[rgba(255,255,255,0.62)] transition-all duration-300 ${
-        isDragging
-          ? "scale-[1.02]"
-          : "hover:-translate-y-1"
+      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 ${
+        isDragging ? "scale-[1.02]" : "hover:-translate-y-1"
       }`}
       style={{
-        aspectRatio: getAspectRatio(hint.size),
-        border: `1px solid ${shellBorder}`,
+        aspectRatio: `${ratio}`,
         boxShadow: isDragging
           ? "0 26px 70px rgba(113,74,49,0.22), inset 0 1px 0 rgba(255,255,255,0.24)"
           : "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
       }}
     >
       <div className="absolute inset-0">
-        {showImage ? (
+        {hint.image ? (
           <>
-            <div className="absolute inset-0 bg-[#f4efe9]" />
-
             <img
               src={hint.image}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full scale-[1.16] object-cover blur-[34px] opacity-42 saturate-[1.12]"
+              alt={hint.title}
+              className={`h-full w-full object-cover transition-transform duration-500 ${
+                isDragging ? "scale-[1.01]" : "group-hover:scale-[1.03]"
+              } ${hint.private ? "opacity-84" : ""}`}
               loading="lazy"
               referrerPolicy="no-referrer"
             />
-
-            <div className="absolute inset-[10px] rounded-[24px]">
-              <div
-                className="absolute inset-0 rounded-[24px]"
-                style={{
-                  background: `linear-gradient(180deg, ${glassWashTop}, rgba(255,255,255,0.06))`,
-                  border: `1px solid ${glassStroke}`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.26), 0 0 0 1px ${ringGlow}`,
-                  backdropFilter: "blur(10px) saturate(140%)",
-                  WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                }}
-              />
-
-              <div
-                className="absolute inset-[1px] overflow-hidden rounded-[23px]"
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  boxShadow:
-                    "0 10px 24px rgba(38,24,17,0.10), inset 0 0 0 1px rgba(255,255,255,0.04)",
-                }}
-              >
-                {useContain ? (
-                  <div className="absolute inset-[1px] rounded-[22px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.22),rgba(255,255,255,0.03)_58%,rgba(255,255,255,0)_100%)]" />
-                ) : null}
-
-                <img
-                  src={hint.image}
-                  alt={hint.title}
-                  className={`h-full w-full transition-transform duration-500 ${
-                    useContain ? "object-contain p-5 sm:p-6" : "object-cover"
-                  } ${isDragging ? "scale-[1.01]" : "group-hover:scale-[1.03]"} ${
-                    hint.private ? "opacity-84" : ""
-                  }`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={() => setImageFailed(true)}
-                />
-              </div>
-            </div>
-
-            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.82)_0%,rgba(16,12,10,0.34)_28%,rgba(16,12,10,0.08)_48%,rgba(255,255,255,0)_68%)]" />
+            <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.42)_26%,rgba(16,12,10,0.10)_50%,rgba(255,255,255,0)_72%)]" />
           </>
         ) : (
           <>
@@ -903,15 +768,7 @@ function HintCard({
 
       <div className="absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-2">
-          <span
-            className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
-              hint.size === "large"
-                ? "border-[#445541] bg-[#2f3b2d] text-white"
-                : hint.size === "medium"
-                  ? "border-[#ffd8c9] bg-[#fff1e9] text-[#df7c59]"
-                  : "border-[#d7e4ce] bg-[#f1f5ec] text-[#627f53]"
-            }`}
-          >
+          <span className="rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
             {hint.priceLabel}
           </span>
         </div>
@@ -953,7 +810,7 @@ function HintCard({
   );
 }
 
-function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
+function SortableHintCard({ hint, imageRatios, onEdit, onToggleStarred, onTogglePrivate }) {
   const animateLayoutChanges = (args) => {
     if (args.isSorting || args.wasDragging) return defaultAnimateLayoutChanges(args);
     return true;
@@ -979,6 +836,7 @@ function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
     <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid">
       <HintCard
         hint={hint}
+        imageRatios={imageRatios}
         onEdit={onEdit}
         onToggleStarred={onToggleStarred}
         onTogglePrivate={onTogglePrivate}
@@ -1002,17 +860,13 @@ export default function HintsClient() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeId, setActiveId] = useState(null);
-
+  const [imageRatios, setImageRatios] = useState({});
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmittingNewHint, setIsSubmittingNewHint] = useState(false);
   const [pendingHint, setPendingHint] = useState(null);
   const [newHintForm, setNewHintForm] = useState(EMPTY_NEW_HINT_FORM);
-
-  const [busyState, setBusyState] = useState({
-    open: false,
-    title: "",
-    message: "",
-  });
+  const [busyState, setBusyState] = useState({ open: false, title: "", message: "" });
+  const busyLongTimerRef = useRef(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -1023,13 +877,62 @@ export default function HintsClient() {
     droppable: { strategy: MeasuringStrategy.Always },
   };
 
-  function openBusy(title, message) {
-    setBusyState({ open: true, title, message });
+  function clearBusyTimers() {
+    if (busyLongTimerRef.current) {
+      window.clearTimeout(busyLongTimerRef.current);
+      busyLongTimerRef.current = null;
+    }
   }
 
   function closeBusy() {
+    clearBusyTimers();
     setBusyState({ open: false, title: "", message: "" });
   }
+
+  function beginFetchBusy() {
+    clearBusyTimers();
+
+    setBusyState({
+      open: true,
+      title: "Fetching your item...",
+      message: "Pulling the title, image, and price from the link...",
+    });
+
+    busyLongTimerRef.current = window.setTimeout(() => {
+      setBusyState((current) =>
+        current.open
+          ? {
+              ...current,
+              title: "Still fetching...",
+              message:
+                "This is taking a little longer than expected. Some retailers are slower to respond.",
+            }
+          : current
+      );
+    }, 5000);
+  }
+
+  function beginSaveBusy() {
+    clearBusyTimers();
+    setBusyState({
+      open: true,
+      title: "Saving hint",
+      message: "Adding this card to your board...",
+    });
+  }
+
+  function beginEditSaveBusy() {
+    clearBusyTimers();
+    setBusyState({
+      open: true,
+      title: "Saving changes",
+      message: "Updating this hint...",
+    });
+  }
+
+  useEffect(() => {
+    return () => clearBusyTimers();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -1081,7 +984,6 @@ export default function HintsClient() {
           fallbackGradient: buildFallbackGradient(index),
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: getSizeFromPrice(row.numeric_price),
           url: row.url || "",
           position: row.position ?? index,
           needsReview: false,
@@ -1097,6 +999,38 @@ export default function HintsClient() {
   const visibleHints = hints.length > 0 ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
   const columns = useMemo(() => splitIntoColumns(visibleHints, 3), [visibleHints]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function measureRatios() {
+      const itemsWithImages = visibleHints.filter((hint) => hint.image && !imageRatios[hint.id]);
+      if (!itemsWithImages.length) return;
+
+      const nextEntries = await Promise.all(
+        itemsWithImages.map(async (hint) => {
+          const ratio = await loadImageAspectRatio(hint.image);
+          return [hint.id, ratio];
+        })
+      );
+
+      if (cancelled) return;
+
+      setImageRatios((current) => {
+        const next = { ...current };
+        for (const [id, ratio] of nextEntries) {
+          if (ratio && Number.isFinite(ratio)) next[id] = ratio;
+        }
+        return next;
+      });
+    }
+
+    measureRatios();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleHints, imageRatios]);
 
   async function persistOrder(nextHints) {
     if (!currentUser) return;
@@ -1149,50 +1083,61 @@ export default function HintsClient() {
 
     setIsSavingEdit(true);
     setError("");
-    openBusy("Saving changes", "Updating this hint...");
+    beginEditSaveBusy();
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("hints")
-      .update({
-        title: trimmedTitle,
-        url: trimmedUrl,
-        retailer: trimmedRetailer,
-        image_url: finalImage,
-        price_text: priceMeta.priceLabel,
-        numeric_price: priceMeta.numericPrice,
-        size: getSizeFromPrice(priceMeta.numericPrice),
-      })
-      .eq("id", editingHintId);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hints")
+        .update({
+          title: trimmedTitle,
+          url: trimmedUrl,
+          retailer: trimmedRetailer,
+          image_url: finalImage,
+          price_text: priceMeta.priceLabel,
+          numeric_price: priceMeta.numericPrice,
+        })
+        .eq("id", editingHintId);
 
-    if (error) {
-      setError(errorToMessage(error));
+      if (error) {
+        setError(errorToMessage(error));
+        setIsSavingEdit(false);
+        closeBusy();
+        return;
+      }
+
+      if (finalImage) {
+        const ratio = await loadImageAspectRatio(finalImage);
+        if (ratio) {
+          setImageRatios((current) => ({ ...current, [editingHintId]: ratio }));
+        }
+      }
+
+      setHints((current) =>
+        current.map((hint) =>
+          hint.id === editingHintId
+            ? {
+                ...hint,
+                title: trimmedTitle,
+                url: trimmedUrl || hint.url,
+                retailer: trimmedRetailer,
+                image: finalImage,
+                priceLabel: priceMeta.priceLabel,
+                numericPrice: priceMeta.numericPrice,
+                needsReview: false,
+              }
+            : hint
+        )
+      );
+
       setIsSavingEdit(false);
       closeBusy();
-      return;
+      closeEditModal();
+    } catch (err) {
+      setError(errorToMessage(err));
+      setIsSavingEdit(false);
+      closeBusy();
     }
-
-    setHints((current) =>
-      current.map((hint) =>
-        hint.id === editingHintId
-          ? {
-              ...hint,
-              title: trimmedTitle,
-              url: trimmedUrl || hint.url,
-              retailer: trimmedRetailer,
-              image: finalImage,
-              priceLabel: priceMeta.priceLabel,
-              numericPrice: priceMeta.numericPrice,
-              size: getSizeFromPrice(priceMeta.numericPrice),
-              needsReview: false,
-            }
-          : hint
-      )
-    );
-
-    setIsSavingEdit(false);
-    closeBusy();
-    closeEditModal();
   }
 
   async function deleteHint() {
@@ -1251,11 +1196,18 @@ export default function HintsClient() {
 
     setIsRefreshingEdit(true);
     setError("");
-    openBusy("Refreshing from link", "Checking the latest title, image, and price...");
+    beginFetchBusy();
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
       const draft = buildDraftFromPreview(data, trimmed);
+
+      if (draft.image) {
+        const ratio = await loadImageAspectRatio(draft.image);
+        if (ratio) {
+          setImageRatios((current) => ({ ...current, [editingHintId]: ratio }));
+        }
+      }
 
       setHints((current) =>
         current.map((hint) =>
@@ -1266,7 +1218,6 @@ export default function HintsClient() {
                 retailer: draft.retailer,
                 priceLabel: draft.priceLabel,
                 numericPrice: draft.numericPrice,
-                size: getSizeFromPrice(draft.numericPrice),
                 image: draft.image || hint.image,
                 url: draft.url,
                 needsReview: draft.needsReview,
@@ -1311,7 +1262,7 @@ export default function HintsClient() {
 
     setIsAdding(true);
     setError("");
-    openBusy("Fetching preview", "Pulling the title, image, and price from the link...");
+    beginFetchBusy();
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
@@ -1334,7 +1285,7 @@ export default function HintsClient() {
 
     setIsSubmittingNewHint(true);
     setError("");
-    openBusy("Saving hint", "Adding this card to your board...");
+    beginSaveBusy();
 
     try {
       const title = newHintForm.title.trim() || pendingHint.title || "Saved hint";
@@ -1342,7 +1293,6 @@ export default function HintsClient() {
       const retailer = newHintForm.retailer?.trim() || normaliseRetailer(url);
       const numericPrice = extractNumericPrice(newHintForm.priceInput);
       const priceMeta = sanitisePrice(newHintForm.priceInput, numericPrice);
-      const size = getSizeFromPrice(priceMeta.numericPrice);
       const image = newHintForm.uploadedImage || newHintForm.image || "";
 
       const newHint = {
@@ -1355,7 +1305,6 @@ export default function HintsClient() {
         fallbackGradient: buildFallbackGradient(hints.length),
         starred: Boolean(newHintForm.starred),
         private: Boolean(newHintForm.private),
-        size,
         url,
         position: 0,
         needsReview: false,
@@ -1374,11 +1323,17 @@ export default function HintsClient() {
         starred: newHint.starred,
         is_private: newHint.private,
         position: 0,
-        size: newHint.size,
         source: newHintForm.source || "user",
       });
 
       if (error) throw new Error(errorToMessage(error));
+
+      if (image) {
+        const ratio = await loadImageAspectRatio(image);
+        if (ratio) {
+          setImageRatios((current) => ({ ...current, [newHint.id]: ratio }));
+        }
+      }
 
       setHints((current) => [newHint, ...current].map((item, index) => ({ ...item, position: index })));
       closeAddModal();
@@ -1542,7 +1497,7 @@ export default function HintsClient() {
                   <div key={i} className="mb-6 break-inside-avoid">
                     <div
                       className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
-                      style={{ aspectRatio: i === 1 ? "1 / 1.35" : "1 / 1" }}
+                      style={{ aspectRatio: i === 1 ? "0.78" : "1" }}
                     >
                       <div className="skeleton h-full w-full" />
                     </div>
@@ -1570,6 +1525,7 @@ export default function HintsClient() {
                           <SortableHintCard
                             key={hint.id}
                             hint={hint}
+                            imageRatios={imageRatios}
                             onEdit={openEditModal}
                             onToggleStarred={toggleStarred}
                             onTogglePrivate={togglePrivate}
@@ -1585,6 +1541,7 @@ export default function HintsClient() {
                     <div className="w-full max-w-[420px]">
                       <HintCard
                         hint={activeHint}
+                        imageRatios={imageRatios}
                         onEdit={() => {}}
                         onToggleStarred={() => {}}
                         onTogglePrivate={() => {}}
@@ -1600,6 +1557,7 @@ export default function HintsClient() {
                   <div key={hint.id} className="mb-6 break-inside-avoid">
                     <HintCard
                       hint={hint}
+                      imageRatios={imageRatios}
                       onEdit={() => {}}
                       onToggleStarred={() => {}}
                       onTogglePrivate={() => {}}
