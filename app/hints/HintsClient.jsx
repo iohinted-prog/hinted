@@ -25,6 +25,8 @@ import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
 const ACTIVE_CURRENCY = "GBP";
+const PREVIEW_TIMEOUT_MS = 12000;
+const CARD_MAX_HEIGHT = "min(540px, 68vh)";
 
 const EMPTY_NEW_HINT_FORM = {
   title: "",
@@ -317,62 +319,6 @@ function fileToDataUrl(file) {
   });
 }
 
-function buildDraftFromPreview(data, rawUrl) {
-  const extractedNumericPrice =
-    typeof data?.numericPrice === "number" ? data.numericPrice : extractNumericPrice(data?.priceText);
-  const priceMeta = sanitisePrice(data?.priceText, extractedNumericPrice);
-  const retailer = data?.siteName || normaliseRetailer(rawUrl);
-  const title = shortenTitle(data?.title || "Saved hint", retailer);
-  const image = typeof data?.image === "string" && data.image.startsWith("http") ? data.image : "";
-  const finalUrl = data?.url || normaliseInputUrl(rawUrl);
-  const needsReview = Boolean(data?.needsReview) || !image || !title || !priceMeta.numericPrice;
-
-  return {
-    title,
-    retailer,
-    image,
-    uploadedImage: null,
-    url: finalUrl,
-    priceInput: priceMeta.numericPrice != null ? String(priceMeta.numericPrice) : "",
-    priceLabel: priceMeta.priceLabel,
-    numericPrice: priceMeta.numericPrice,
-    starred: false,
-    private: false,
-    needsReview,
-    source: data?.source || "preview",
-  };
-}
-
-async function fetchPreview(url) {
-  const response = await fetch("/api/link-preview", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ url, currency: ACTIVE_CURRENCY }),
-  });
-
-  const raw = await response.text();
-  let data = null;
-
-  try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch {
-    throw new Error(raw || "The preview service returned an invalid response.");
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        data?.message ||
-        (typeof data === "string" ? data : "Could not fetch this link preview.")
-    );
-  }
-
-  return data;
-}
-
 function loadImageAspectRatio(src) {
   return new Promise((resolve) => {
     if (!src) {
@@ -406,6 +352,146 @@ function getCardAspectRatio(hint, imageRatios) {
   return fallbackCardRatio(hint);
 }
 
+function buildDraftFromPreview(data, rawUrl) {
+  const extractedNumericPrice =
+    typeof data?.numericPrice === "number" ? data.numericPrice : extractNumericPrice(data?.priceText);
+  const priceMeta = sanitisePrice(data?.priceText, extractedNumericPrice);
+  const retailer = data?.siteName || normaliseRetailer(rawUrl);
+  const title = shortenTitle(data?.title || "Saved hint", retailer);
+  const image = typeof data?.image === "string" && data.image.startsWith("http") ? data.image : "";
+  const finalUrl = data?.url || normaliseInputUrl(rawUrl);
+  const needsReview = Boolean(data?.needsReview) || !image || !title || !priceMeta.numericPrice;
+
+  return {
+    title,
+    retailer,
+    image,
+    uploadedImage: null,
+    url: finalUrl,
+    priceInput: priceMeta.numericPrice != null ? String(priceMeta.numericPrice) : "",
+    priceLabel: priceMeta.priceLabel,
+    numericPrice: priceMeta.numericPrice,
+    starred: false,
+    private: false,
+    needsReview,
+    source: data?.source || "preview",
+  };
+}
+
+function buildManualDraft(rawUrl) {
+  const normalisedUrl = normaliseInputUrl(rawUrl);
+  const retailer = normaliseRetailer(normalisedUrl);
+
+  return {
+    title: "",
+    retailer,
+    image: "",
+    uploadedImage: null,
+    url: normalisedUrl,
+    priceInput: "",
+    priceLabel: "Price unavailable",
+    numericPrice: null,
+    starred: false,
+    private: false,
+    needsReview: true,
+    source: "manual-timeout",
+  };
+}
+
+function createPreviewTimeoutError() {
+  const error = new Error("PREVIEW_TIMEOUT");
+  error.code = "PREVIEW_TIMEOUT";
+  return error;
+}
+
+async function fetchPreviewWithTimeout(url, timeoutMs = PREVIEW_TIMEOUT_MS) {
+  const controller = new AbortController();
+
+  const timeoutId = window.setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    const response = await fetch("/api/link-preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ url, currency: ACTIVE_CURRENCY }),
+      signal: controller.signal,
+    });
+
+    const raw = await response.text();
+    let data = null;
+
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new Error(raw || "The preview service returned an invalid response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          data?.message ||
+          (typeof data === "string" ? data : "Could not fetch this link preview.")
+      );
+    }
+
+    return data;
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      throw createPreviewTimeoutError();
+    }
+    throw err;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
+function ModalShell({ isOpen, onClose, eyebrow, title, children, footer }) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(33,24,20,0.42)] px-4 py-4 backdrop-blur-sm sm:px-6 sm:py-6">
+      <div className="flex min-h-full items-start justify-center">
+        <div className="flex w-full max-w-[620px] flex-col overflow-hidden rounded-[30px] border border-[#efdcd2] bg-white shadow-[0_28px_80px_rgba(75,45,30,0.18)] max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]">
+          <div className="shrink-0 border-b border-[#f2e5de] bg-white px-6 py-5 sm:px-7">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
+                  {eyebrow}
+                </p>
+                <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+                  {title}
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]"
+                aria-label="Close modal"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-7">
+            {children}
+          </div>
+
+          <div className="shrink-0 border-t border-[#f2e5de] bg-white px-6 py-4 sm:px-7">
+            {footer}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HintFormFields({
   form,
   setForm,
@@ -420,8 +506,8 @@ function HintFormFields({
     <div className="space-y-4">
       {showReviewCopy && form.needsReview ? (
         <div className="rounded-[22px] border border-[#f4cdbd] bg-[#fff6f1] p-4 text-sm text-[#9b553d]">
-          We couldn’t fill everything automatically. You can still save this now, and image and
-          price are optional.
+          We couldn’t fetch this item in time. You can still save it now — adding a photo manually will
+          help curate your page, and price is optional.
         </div>
       ) : null}
 
@@ -488,7 +574,7 @@ function HintFormFields({
             <img
               src={previewImage}
               alt={form.title || "Selected hint image"}
-              className="h-auto w-full object-cover"
+              className="max-h-[320px] w-full object-cover"
             />
           </div>
         ) : (
@@ -499,7 +585,7 @@ function HintFormFields({
       </div>
 
       {showToggles ? (
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <button
             type="button"
             onClick={() => setForm((current) => ({ ...current, starred: !current.starred }))}
@@ -530,43 +616,14 @@ function HintFormFields({
 }
 
 function AddHintModal({ isOpen, form, setForm, onClose, onSubmit, isSaving }) {
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
-      <div className="w-full max-w-[620px] rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
-              New hint
-            </p>
-            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
-              Review before saving
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]"
-            aria-label="Close add modal"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mt-6">
-          <HintFormFields
-            form={form}
-            setForm={setForm}
-            prefix="new"
-            showReviewCopy
-            showToggles
-            imageHelpText="No image yet. Upload one only if you want to add a photo now."
-          />
-        </div>
-
-        <div className="mt-7 flex justify-end">
+    <ModalShell
+      isOpen={isOpen}
+      onClose={onClose}
+      eyebrow="New hint"
+      title="Review before saving"
+      footer={
+        <div className="flex justify-end">
           <button
             type="button"
             onClick={onSubmit}
@@ -576,8 +633,17 @@ function AddHintModal({ isOpen, form, setForm, onClose, onSubmit, isSaving }) {
             {isSaving ? "Saving..." : "Save hint"}
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <HintFormFields
+        form={form}
+        setForm={setForm}
+        prefix="new"
+        showReviewCopy
+        showToggles
+        imageHelpText="No image yet. Upload one only if you want to add a photo now."
+      />
+    </ModalShell>
   );
 }
 
@@ -593,43 +659,14 @@ function EditHintModal({
   isSaving,
   hint,
 }) {
-  if (!isOpen || !hint) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
-      <div className="w-full max-w-[620px] rounded-[30px] border border-[#efdcd2] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
-              Edit hint
-            </p>
-            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
-              Update this card
-            </h2>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]"
-            aria-label="Close edit modal"
-          >
-            ✕
-          </button>
-        </div>
-
-        <div className="mt-6">
-          <HintFormFields
-            form={editForm}
-            setForm={setEditForm}
-            prefix="edit"
-            showReviewCopy={false}
-            showToggles={false}
-            imageHelpText="No image yet. Add or replace a photo here if you want."
-          />
-        </div>
-
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-between">
+    <ModalShell
+      isOpen={isOpen && !!hint}
+      onClose={onClose}
+      eyebrow="Edit hint"
+      title="Update this card"
+      footer={
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <button
             type="button"
             onClick={onDelete}
@@ -658,8 +695,17 @@ function EditHintModal({
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <HintFormFields
+        form={editForm}
+        setForm={setEditForm}
+        prefix="edit"
+        showReviewCopy={false}
+        showToggles={false}
+        imageHelpText="No image yet. Add or replace a photo here if you want."
+      />
+    </ModalShell>
   );
 }
 
@@ -682,6 +728,7 @@ function HintCard({
       }`}
       style={{
         aspectRatio: `${ratio}`,
+        maxHeight: CARD_MAX_HEIGHT,
         boxShadow: isDragging
           ? "0 26px 70px rgba(113,74,49,0.22), inset 0 1px 0 rgba(255,255,255,0.24)"
           : "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
@@ -1199,7 +1246,7 @@ export default function HintsClient() {
     beginFetchBusy();
 
     try {
-      const data = await fetchPreview(normaliseInputUrl(trimmed));
+      const data = await fetchPreviewWithTimeout(normaliseInputUrl(trimmed), PREVIEW_TIMEOUT_MS);
       const draft = buildDraftFromPreview(data, trimmed);
 
       if (draft.image) {
@@ -1235,7 +1282,13 @@ export default function HintsClient() {
         priceInput: draft.priceInput,
       }));
     } catch (err) {
-      setError(errorToMessage(err));
+      if (err?.code === "PREVIEW_TIMEOUT" || err?.message === "PREVIEW_TIMEOUT") {
+        setError(
+          "We couldn’t fetch that item in time. You can still edit it here and add the photo manually."
+        );
+      } else {
+        setError(errorToMessage(err));
+      }
     } finally {
       setIsRefreshingEdit(false);
       closeBusy();
@@ -1265,7 +1318,8 @@ export default function HintsClient() {
     beginFetchBusy();
 
     try {
-      const data = await fetchPreview(normaliseInputUrl(trimmed));
+      const normalisedUrl = normaliseInputUrl(trimmed);
+      const data = await fetchPreviewWithTimeout(normalisedUrl, PREVIEW_TIMEOUT_MS);
       const draft = buildDraftFromPreview(data, trimmed);
 
       setPendingHint(draft);
@@ -1273,7 +1327,19 @@ export default function HintsClient() {
       setIsAddModalOpen(true);
       setLink("");
     } catch (err) {
-      setError(errorToMessage(err));
+      if (err?.code === "PREVIEW_TIMEOUT" || err?.message === "PREVIEW_TIMEOUT") {
+        const manualDraft = buildManualDraft(trimmed);
+
+        setPendingHint(manualDraft);
+        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
+        setIsAddModalOpen(true);
+        setLink("");
+        setError(
+          "We couldn’t fetch that item in time. You can still save it now — add the photo manually to help curate your page."
+        );
+      } else {
+        setError(errorToMessage(err));
+      }
     } finally {
       setIsAdding(false);
       closeBusy();
@@ -1497,7 +1563,7 @@ export default function HintsClient() {
                   <div key={i} className="mb-6 break-inside-avoid">
                     <div
                       className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
-                      style={{ aspectRatio: i === 1 ? "0.78" : "1" }}
+                      style={{ aspectRatio: i === 1 ? "0.78" : "1", maxHeight: CARD_MAX_HEIGHT }}
                     >
                       <div className="skeleton h-full w-full" />
                     </div>
