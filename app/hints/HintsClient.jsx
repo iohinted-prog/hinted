@@ -123,6 +123,27 @@ function LogoMark() {
   );
 }
 
+function BusyOverlay({ open, title, message }) {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(33,24,20,0.32)] px-4 backdrop-blur-sm">
+      <div className="w-full max-w-[420px] rounded-[28px] border border-[#efdcd2] bg-white px-6 py-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)]">
+        <div className="flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#fff1e9]">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#f1c4b2] border-t-[#f36f64]" />
+          </div>
+
+          <div>
+            <p className="text-[15px] font-semibold text-slate-900">{title}</p>
+            <p className="mt-1 text-sm text-slate-500">{message}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function errorToMessage(value) {
   if (!value) return "Something went wrong.";
   if (typeof value === "string") return value;
@@ -172,7 +193,8 @@ function detectCurrency(raw = "") {
   const text = String(raw || "").trim();
   if (!text) return null;
   if (text.includes("£")) return "GBP";
-  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) return "USD";
+  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$"))
+    return "USD";
   if (text.includes("€")) return "EUR";
   if (/\bR\s?\d/i.test(text) || /\bZAR\b/i.test(text)) return "ZAR";
   return null;
@@ -249,9 +271,28 @@ function shortenTitle(title = "", retailer = "") {
     .toLowerCase();
 
   const stopWords = new Set([
-    "the", "and", "with", "for", "from", "new", "latest", "edition", "model", "official",
-    "amazon", "uk", "black", "white", "silver", "blue", "green", "pink", "grey", "gray",
-    "wireless", "bluetooth",
+    "the",
+    "and",
+    "with",
+    "for",
+    "from",
+    "new",
+    "latest",
+    "edition",
+    "model",
+    "official",
+    "amazon",
+    "uk",
+    "black",
+    "white",
+    "silver",
+    "blue",
+    "green",
+    "pink",
+    "grey",
+    "gray",
+    "wireless",
+    "bluetooth",
   ]);
 
   let cleaned = source
@@ -363,7 +404,8 @@ function HintFormFields({
     <div className="space-y-4">
       {showReviewCopy && form.needsReview ? (
         <div className="rounded-[22px] border border-[#f4cdbd] bg-[#fff6f1] p-4 text-sm text-[#9b553d]">
-          We couldn’t fill everything automatically. You can still save this now, and image and price are optional.
+          We couldn’t fill everything automatically. You can still save this now, and image and
+          price are optional.
         </div>
       ) : null}
 
@@ -430,7 +472,7 @@ function HintFormFields({
             <img
               src={previewImage}
               alt={form.title || "Selected hint image"}
-              className="h-40 w-full object-contain p-3"
+              className="h-40 w-full object-cover"
             />
           </div>
         ) : (
@@ -615,9 +657,7 @@ function HintCard({
   dragHandleAttributes,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-
-  const showImage = Boolean(hint.image && !imageFailed);
-  const previewImage = hint.uploadedImage || hint.image;
+  const showImage = Boolean(hint.image) && !imageFailed;
 
   return (
     <article
@@ -628,18 +668,21 @@ function HintCard({
       }`}
       style={{ aspectRatio: getAspectRatio(hint.size) }}
     >
-      <div className="absolute inset-0 bg-[#f7f2ee]">
+      <div className="absolute inset-0">
         {showImage ? (
-          <img
-            src={previewImage}
-            alt={hint.title}
-            className={`h-full w-full object-contain p-4 ${
-              hint.private ? "opacity-80" : ""
-            }`}
-            loading="lazy"
-            referrerPolicy="no-referrer"
-            onError={() => setImageFailed(true)}
-          />
+          <>
+            <img
+              src={hint.image}
+              alt={hint.title}
+              className={`h-full w-full object-cover transition-transform duration-500 ${
+                isDragging ? "scale-[1.02]" : "group-hover:scale-[1.03]"
+              } ${hint.private ? "opacity-80" : ""}`}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImageFailed(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.20)] to-[rgba(255,255,255,0.02)]" />
+          </>
         ) : (
           <>
             <div
@@ -652,41 +695,34 @@ function HintCard({
         )}
       </div>
 
-      {showImage ? (
-        <>
-          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.78)] via-[rgba(22,18,16,0.22)] to-[rgba(255,255,255,0.04)]" />
-          <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.28)] to-transparent" />
-        </>
-      ) : null}
-
       <div className="absolute left-4 right-4 top-4 z-10 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="flex cursor-grab active:cursor-grabbing items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
+            className="flex cursor-grab items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm active:cursor-grabbing"
             {...dragHandleAttributes}
             {...dragHandleListeners}
           >
-            Drag
+            ⋮⋮ Drag
           </button>
 
-          {hint.starred ? (
+          {hint.starred && (
             <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
               Top pick
             </div>
-          ) : null}
+          )}
 
-          {hint.private ? (
+          {hint.private && (
             <div className="rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
               Private
             </div>
-          ) : null}
+          )}
 
-          {hint.needsReview ? (
+          {hint.needsReview && (
             <div className="rounded-full border border-[#f6d2c2] bg-[#fff6f1] px-3 py-1 text-[11px] font-semibold text-[#c46545]">
               Needs review
             </div>
-          ) : null}
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -700,12 +736,12 @@ function HintCard({
           </button>
 
           <button
-            type="button"
             onClick={() => onToggleStarred(hint)}
-            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/78 text-[16px] backdrop-blur-sm hover:text-[#f36f64] ${
-              hint.starred ? "text-[#f36f64]" : "text-slate-400"
+            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/78 text-[16px] backdrop-blur-sm ${
+              hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
             }`}
             aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
+            type="button"
           >
             ★
           </button>
@@ -747,7 +783,7 @@ function HintCard({
             onClick={() => onTogglePrivate(hint)}
             className="rounded-full border border-white/60 bg-white/85 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-sm hover:bg-white"
           >
-            {hint.private ? "Private" : "Public"}
+            {hint.private ? "🔒 Private" : "🔓 Public"}
           </button>
 
           <a
@@ -763,6 +799,7 @@ function HintCard({
     </article>
   );
 }
+
 function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
   const animateLayoutChanges = (args) => {
     if (args.isSorting || args.wasDragging) return defaultAnimateLayoutChanges(args);
@@ -818,6 +855,12 @@ export default function HintsClient() {
   const [pendingHint, setPendingHint] = useState(null);
   const [newHintForm, setNewHintForm] = useState(EMPTY_NEW_HINT_FORM);
 
+  const [busyState, setBusyState] = useState({
+    open: false,
+    title: "",
+    message: "",
+  });
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -827,11 +870,21 @@ export default function HintsClient() {
     droppable: { strategy: MeasuringStrategy.Always },
   };
 
+  function openBusy(title, message) {
+    setBusyState({ open: true, title, message });
+  }
+
+  function closeBusy() {
+    setBusyState({ open: false, title: "", message: "" });
+  }
+
   useEffect(() => {
     const supabase = createClient();
 
     async function loadSession() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setCurrentUser(user || null);
     }
 
@@ -895,6 +948,7 @@ export default function HintsClient() {
   async function persistOrder(nextHints) {
     if (!currentUser) return;
     const supabase = createClient();
+
     await Promise.all(
       nextHints.map((hint, index) => supabase.from("hints").update({ position: index }).eq("id", hint.id))
     );
@@ -941,6 +995,8 @@ export default function HintsClient() {
     const finalImage = editForm.uploadedImage || editForm.image || "";
 
     setIsSavingEdit(true);
+    setError("");
+    openBusy("Saving changes", "Updating this hint...");
 
     const supabase = createClient();
     const { error } = await supabase
@@ -959,6 +1015,7 @@ export default function HintsClient() {
     if (error) {
       setError(errorToMessage(error));
       setIsSavingEdit(false);
+      closeBusy();
       return;
     }
 
@@ -981,6 +1038,7 @@ export default function HintsClient() {
     );
 
     setIsSavingEdit(false);
+    closeBusy();
     closeEditModal();
   }
 
@@ -988,10 +1046,12 @@ export default function HintsClient() {
     if (!currentUser) return;
     const supabase = createClient();
     const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
+
     if (error) {
       setError(errorToMessage(error));
       return;
     }
+
     setHints((current) => current.filter((hint) => hint.id !== editingHintId));
     closeEditModal();
   }
@@ -1004,6 +1064,7 @@ export default function HintsClient() {
     setHints((current) => current.map((h) => (h.id === hint.id ? { ...h, starred: newStarred } : h)));
 
     const { error } = await supabase.from("hints").update({ starred: newStarred }).eq("id", hint.id);
+
     if (error) {
       setHints((current) => current.map((h) => (h.id === hint.id ? { ...h, starred: hint.starred } : h)));
       setError(errorToMessage(error));
@@ -1018,6 +1079,7 @@ export default function HintsClient() {
     setHints((current) => current.map((h) => (h.id === hint.id ? { ...h, private: newPrivate } : h)));
 
     const { error } = await supabase.from("hints").update({ is_private: newPrivate }).eq("id", hint.id);
+
     if (error) {
       setHints((current) => current.map((h) => (h.id === hint.id ? { ...h, private: hint.private } : h)));
       setError(errorToMessage(error));
@@ -1026,7 +1088,9 @@ export default function HintsClient() {
 
   async function refreshHintFromLink() {
     const trimmed = editForm.url.trim();
+
     if (!trimmed || editingHintId == null) return;
+
     if (!isValidHttpUrl(trimmed)) {
       setError("Please enter a valid URL.");
       return;
@@ -1034,6 +1098,7 @@ export default function HintsClient() {
 
     setIsRefreshingEdit(true);
     setError("");
+    openBusy("Refreshing from link", "Checking the latest title, image, and price...");
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
@@ -1069,6 +1134,7 @@ export default function HintsClient() {
       setError(errorToMessage(err));
     } finally {
       setIsRefreshingEdit(false);
+      closeBusy();
     }
   }
 
@@ -1079,10 +1145,12 @@ export default function HintsClient() {
     }
 
     const trimmed = link.trim();
+
     if (!trimmed) {
       setError("Paste a link first.");
       return;
     }
+
     if (!isValidHttpUrl(trimmed)) {
       setError("Please paste a valid product or experience URL.");
       return;
@@ -1090,6 +1158,7 @@ export default function HintsClient() {
 
     setIsAdding(true);
     setError("");
+    openBusy("Fetching preview", "Pulling the title, image, and price from the link...");
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
@@ -1103,6 +1172,7 @@ export default function HintsClient() {
       setError(errorToMessage(err));
     } finally {
       setIsAdding(false);
+      closeBusy();
     }
   }
 
@@ -1111,6 +1181,7 @@ export default function HintsClient() {
 
     setIsSubmittingNewHint(true);
     setError("");
+    openBusy("Saving hint", "Adding this card to your board...");
 
     try {
       const title = newHintForm.title.trim() || pendingHint.title || "Saved hint";
@@ -1161,7 +1232,12 @@ export default function HintsClient() {
     } catch (err) {
       setError(errorToMessage(err));
       setIsSubmittingNewHint(false);
+      closeBusy();
+      return;
     }
+
+    setIsSubmittingNewHint(false);
+    closeBusy();
   }
 
   function handleDragStart(event) {
@@ -1171,17 +1247,20 @@ export default function HintsClient() {
   async function handleDragEnd(event) {
     const { active, over } = event;
     setActiveId(null);
+
     if (!over || active.id === over.id || hints.length === 0) return;
 
     const nextColumns = splitIntoColumns(hints, 3);
     const fromColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === active.id));
     const toColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === over.id));
+
     if (fromColumnIndex === -1 || toColumnIndex === -1) return;
 
     const fromItems = [...nextColumns[fromColumnIndex]];
     const toItems = fromColumnIndex === toColumnIndex ? fromItems : [...nextColumns[toColumnIndex]];
     const oldIndex = fromItems.findIndex((item) => item.id === active.id);
     const newIndex = toItems.findIndex((item) => item.id === over.id);
+
     if (oldIndex === -1 || newIndex === -1) return;
 
     if (fromColumnIndex === toColumnIndex) {
@@ -1217,10 +1296,30 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
-              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full border border-[#3c4d39] bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
-              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
-              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#3c4d39] bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
             </nav>
             <AvatarMenu />
           </div>
@@ -1271,7 +1370,7 @@ export default function HintsClient() {
         </section>
 
         <section className="mt-12">
-          <div className="relative rounded-[36px] border border-[#efe0d7] bg-[#fffdfb] p-3 sm:p-5 shadow-[0_12px_32px_rgba(176,118,86,0.08)]">
+          <div className="relative rounded-[36px] border border-[#efe0d7] bg-[#fffdfb] p-3 shadow-[0_12px_32px_rgba(176,118,86,0.08)] sm:p-5">
             <div
               className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
               style={{
@@ -1288,7 +1387,10 @@ export default function HintsClient() {
               <div className="columns-1 gap-6 md:columns-3">
                 {[1, 2, 3].map((i) => (
                   <div key={i} className="mb-6 break-inside-avoid">
-                    <div className="w-full overflow-hidden rounded-[30px] border border-[#efe1d8] bg-[#f9f8f5]" style={{ aspectRatio: i === 1 ? "1 / 1.35" : "1 / 1" }}>
+                    <div
+                      className="w-full overflow-hidden rounded-[30px] border border-[#efe1d8] bg-[#f9f8f5]"
+                      style={{ aspectRatio: i === 1 ? "1 / 1.35" : "1 / 1" }}
+                    >
                       <div className="skeleton h-full w-full" />
                     </div>
                   </div>
@@ -1343,7 +1445,13 @@ export default function HintsClient() {
               <div className="columns-1 gap-6 md:columns-3">
                 {demoHints.map((hint) => (
                   <div key={hint.id} className="mb-6 break-inside-avoid">
-                    <HintCard hint={hint} onEdit={() => {}} onToggleStarred={() => {}} onTogglePrivate={() => {}} isDragging={false} />
+                    <HintCard
+                      hint={hint}
+                      onEdit={() => {}}
+                      onToggleStarred={() => {}}
+                      onTogglePrivate={() => {}}
+                      isDragging={false}
+                    />
                   </div>
                 ))}
               </div>
@@ -1373,6 +1481,8 @@ export default function HintsClient() {
         isSaving={isSavingEdit}
         hint={editingHint}
       />
+
+      <BusyOverlay open={busyState.open} title={busyState.title} message={busyState.message} />
     </main>
   );
 }
