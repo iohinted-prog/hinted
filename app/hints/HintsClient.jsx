@@ -36,7 +36,7 @@ const demoHints = [
     tags: ["Travel", "Big gift"],
     starred: true,
     private: false,
-    size: "hero",
+    size: "tall",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -53,7 +53,7 @@ const demoHints = [
     tags: ["Tech", "Birthday"],
     starred: true,
     private: false,
-    size: "feature",
+    size: "medium",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -70,7 +70,7 @@ const demoHints = [
     tags: ["Experience", "Couples"],
     starred: false,
     private: false,
-    size: "portrait",
+    size: "medium",
     url: "https://classbento.co.uk/",
     position: 2,
   },
@@ -255,22 +255,21 @@ function shortenTitle(title = "", retailer = "") {
 }
 
 function getBoardSize(price, index, allPrices = []) {
-  if (price == null) return index % 5 === 0 ? "portrait" : "square";
+  if (price == null) return index % 5 === 0 ? "medium" : "square";
 
   const sorted = [...allPrices].sort((a, b) => a - b);
   const highCut = sorted[Math.max(0, Math.floor(sorted.length * 0.75))] ?? price;
   const midCut = sorted[Math.max(0, Math.floor(sorted.length * 0.45))] ?? price;
 
-  if (price >= highCut && price >= 180) return index % 3 === 0 ? "hero" : "feature";
-  if (price >= midCut && price >= 75) return "portrait";
+  if (price >= highCut && price >= 180) return "tall";
+  if (price >= midCut && price >= 75) return "medium";
   return "square";
 }
 
-function getTileClass(size) {
-  if (size === "hero") return "md:col-span-6 md:row-span-12";
-  if (size === "feature") return "md:col-span-4 md:row-span-10";
-  if (size === "portrait") return "md:col-span-4 md:row-span-8";
-  return "md:col-span-4 md:row-span-6";
+function getTileHeightClass(size) {
+  if (size === "tall") return "min-h-[460px]";
+  if (size === "medium") return "min-h-[380px]";
+  return "min-h-[320px]";
 }
 
 function getPricePill(priceBand) {
@@ -560,148 +559,187 @@ function EditHintModal({
   );
 }
 
-function HintCard({ hint, dragging = false, onEdit, onToggleStarred }) {
+function HintCard({
+  hint,
+  dragging = false,
+  onEdit,
+  onToggleStarred,
+  onTogglePrivate,
+}) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
   return (
     <article
-      className={`group relative flex h-full min-h-[320px] flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
+      className={`group relative flex h-full flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
         dragging
-          ? "rotate-[1.5deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
+          ? "rotate-[1.2deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
           : hint.private
-          ? "border-white/50 bg-white/55 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
+          ? "border-white/50 bg-white/60 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
           : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
-      }`}
+      } ${getTileHeightClass(hint.size)}`}
     >
-      <div className="relative h-full min-h-[320px] overflow-hidden">
-        <a
-          href={hint.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${hint.title}`}
-          className="absolute inset-0 z-10 block"
-        />
+      <div className="relative flex h-full flex-col">
+        <div className="relative min-h-[68%] flex-1 overflow-hidden">
+          {showImage ? (
+            <>
+              <img
+                src={hint.image}
+                alt={hint.title}
+                className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+                  hint.private ? "opacity-80" : ""
+                }`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,22,18,0.44)] via-[rgba(28,22,18,0.08)] to-[rgba(255,255,255,0.02)]" />
+            </>
+          ) : (
+            <>
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
+                  hint.private ? "opacity-80" : ""
+                }`}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,22,18,0.34)] via-[rgba(28,22,18,0.08)] to-transparent" />
+            </>
+          )}
 
-        {showImage ? (
-          <>
-            <img
-              src={hint.image}
-              alt={hint.title}
-              className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
-                hint.private ? "opacity-84" : ""
-              }`}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              onError={() => setImageFailed(true)}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,16,14,0.76)] via-[rgba(20,16,14,0.24)] to-[rgba(255,255,255,0.02)]" />
-          </>
-        ) : (
-          <>
-            <div
-              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
-                hint.private ? "opacity-82" : ""
-              }`}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(20,16,14,0.58)] via-[rgba(20,16,14,0.14)] to-transparent" />
-          </>
-        )}
+          <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
+                ⋮⋮ Drag
+              </div>
 
-        <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
-              ⋮⋮ Drag
+              {hint.starred && (
+                <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+                  Top pick
+                </div>
+              )}
+
+              {hint.private && (
+                <div className="rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                  Private
+                </div>
+              )}
             </div>
 
-            {hint.starred && (
-              <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-                Top pick
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEdit(hint);
+                  }}
+                  className="relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
+                  aria-label="Edit hint"
+                >
+                  ✎
+                </button>
+              )}
 
-            {hint.private && (
-              <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
-                Private
-              </div>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2">
-            {onEdit && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onEdit(hint);
-                }}
-                className="relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
-                aria-label="Edit hint"
-              >
-                ✎
-              </button>
-            )}
-
-            {onToggleStarred && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onToggleStarred(hint);
-                }}
-                className={`relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[16px] backdrop-blur-sm ${
-                  hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
-                }`}
-                aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
-              >
-                ★
-              </button>
-            )}
+              {onToggleStarred && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onToggleStarred(hint);
+                  }}
+                  className={`relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[16px] backdrop-blur-sm ${
+                    hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
+                  }`}
+                  aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
+                >
+                  ★
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 z-20 p-5 sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
-                hint.priceBand
-              )}`}
-            >
-              {hint.priceLabel}
-            </span>
-
-            {hint.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-white/16 px-2.5 py-1 text-[11px] font-medium text-white/86 backdrop-blur-sm"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-
-          <h2
-            className="mt-3 min-w-0 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
-            style={{
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 2,
-              lineClamp: 2,
-            }}
+        <div className="relative -mt-7 z-20 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
+          <div
+            className={`flex w-full flex-1 flex-col rounded-[26px] p-5 shadow-sm backdrop-blur-md ${
+              hint.private ? "bg-white/84" : "bg-white/92"
+            }`}
           >
-            {hint.title}
-          </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
+                  hint.priceBand
+                )}`}
+              >
+                {hint.priceLabel}
+              </span>
 
-          <p className="mt-1 truncate text-[13px] text-white/78">{hint.retailer}</p>
+              {hint.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-[#f8f5f2] px-2.5 py-1 text-[11px] font-medium text-slate-500"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <h2
+              className="mt-3 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-slate-900"
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                lineClamp: 2,
+              }}
+            >
+              {hint.title}
+            </h2>
+
+            <p className="mt-1 truncate text-[13px] text-slate-500">{hint.retailer}</p>
+
+            <div className="mt-auto pt-5">
+              <div className="flex items-center justify-end gap-2">
+                {onTogglePrivate && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onTogglePrivate(hint);
+                    }}
+                    className="relative z-30 rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
+                  >
+                    {hint.private ? "🔒 Private" : "🔓 Public"}
+                  </button>
+                )}
+
+                <a
+                  href={hint.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="relative z-30 rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Open
+                </a>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </article>
   );
 }
 
-function SortableHintTile({ hint, onEdit, onToggleStarred }) {
+function SortableHintTile({
+  hint,
+  onEdit,
+  onToggleStarred,
+  onTogglePrivate,
+}) {
   const {
     attributes,
     listeners,
@@ -720,7 +758,7 @@ function SortableHintTile({ hint, onEdit, onToggleStarred }) {
     <div
       ref={setNodeRef}
       style={style}
-      className={`${getTileClass(hint.size)} touch-none`}
+      className="touch-none"
       {...attributes}
       {...listeners}
     >
@@ -729,6 +767,7 @@ function SortableHintTile({ hint, onEdit, onToggleStarred }) {
         dragging={isDragging}
         onEdit={onEdit}
         onToggleStarred={onToggleStarred}
+        onTogglePrivate={onTogglePrivate}
       />
     </div>
   );
@@ -757,11 +796,12 @@ export default function HintsClient() {
     numericPrice: null,
     private: false,
   });
+
   const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const hasRealHints = hints.length > 0;
   const visibleHints = hasRealHints ? hints : demoHints;
-  const activeHint = visibleHints.find((hint) => hint.id === activeId) ?? null;
+  const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
 
   const numericPrices = useMemo(
     () =>
@@ -846,6 +886,8 @@ export default function HintsClient() {
   }, [currentUser]);
 
   async function persistPositions(updatedHints) {
+    if (!currentUser) return;
+
     const supabase = createClient();
 
     await Promise.all(
@@ -975,7 +1017,6 @@ export default function HintsClient() {
 
   async function refreshHintFromLink() {
     const trimmed = editForm.url.trim();
-
     if (!trimmed || editingHintId == null) return;
 
     setIsRefreshingEdit(true);
@@ -1141,7 +1182,9 @@ export default function HintsClient() {
         source: "user",
       });
 
-      if (insertError) throw new Error(insertError.message || "Could not save this hint.");
+      if (insertError) {
+        throw new Error(insertError.message || "Could not save this hint.");
+      }
 
       setHints(reordered);
       setLink("");
@@ -1163,8 +1206,7 @@ export default function HintsClient() {
     const { active, over } = event;
     setActiveId(null);
 
-    if (!over || active.id === over.id) return;
-    if (!currentUser) return;
+    if (!over || active.id === over.id || !currentUser) return;
 
     const oldIndex = hints.findIndex((hint) => hint.id === active.id);
     const newIndex = hints.findIndex((hint) => hint.id === over.id);
@@ -1181,9 +1223,9 @@ export default function HintsClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fff8f4] text-slate-800">
-      <header className="border-b border-[#efe0d7] bg-[#fff8f4]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
+    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
@@ -1193,10 +1235,30 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
-              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
-              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
-              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
             </nav>
 
             <AvatarMenu />
@@ -1204,9 +1266,9 @@ export default function HintsClient() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8 md:py-12">
-        <section className="mx-auto max-w-[920px] text-center">
-          <h1 className="text-[38px] font-extrabold tracking-[-0.07em] text-[#f19a78] sm:text-[48px] md:text-[58px]">
+      <div className="mx-auto max-w-[1380px] px-5 py-10 md:px-8">
+        <section className="text-center">
+          <h1 className="text-[32px] font-extrabold tracking-[-0.06em] text-[#f19a78] sm:text-[44px] md:text-[56px]">
             Paste a link here...
           </h1>
 
@@ -1214,8 +1276,8 @@ export default function HintsClient() {
             Save things you’d genuinely love, keep some private, and we can even remind you when it goes on sale.
           </p>
 
-          <div className="mt-7">
-            <div className="mx-auto flex w-full max-w-[860px] flex-col gap-3 sm:flex-row">
+          <div className="mt-6">
+            <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
               <input
                 id="hint-link"
                 type="url"
@@ -1250,36 +1312,34 @@ export default function HintsClient() {
           </div>
         </section>
 
-        <section className="mt-14">
-          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6 md:p-7">
+        <section className="mt-12">
+          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
             <div
-              className="pointer-events-none absolute inset-0 opacity-90"
+              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-75"
               style={{
                 backgroundImage: `
-                  linear-gradient(to right, rgba(217, 196, 184, 0.45) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(217, 196, 184, 0.45) 1px, transparent 1px)
+                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
                 `,
-                backgroundSize: "88px 88px",
+                backgroundSize: "76px 76px",
                 backgroundPosition: "center center",
               }}
             />
 
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
-
             {isLoading ? (
-              <div className="relative grid auto-rows-[34px] grid-cols-1 gap-8 md:grid-cols-12">
-                {[1, 2, 3, 4].map((i) => (
+              <div className="relative grid grid-cols-1 gap-7 md:grid-cols-4">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                   <div
                     key={i}
-                    className={`overflow-hidden rounded-[32px] border border-[#efdfd6] bg-[#f9f8f5] ${
-                      i === 1
-                        ? "md:col-span-6 md:row-span-12"
-                        : i === 2
-                        ? "md:col-span-4 md:row-span-10"
-                        : "md:col-span-4 md:row-span-8"
+                    className={`overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] ${
+                      i % 3 === 0
+                        ? "min-h-[460px]"
+                        : i % 2 === 0
+                        ? "min-h-[380px]"
+                        : "min-h-[320px]"
                     }`}
                   >
-                    <div className="skeleton h-full min-h-[320px] w-full" />
+                    <div className="skeleton h-full w-full" />
                   </div>
                 ))}
               </div>
@@ -1294,13 +1354,14 @@ export default function HintsClient() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid auto-rows-[34px] grid-cols-1 gap-8 md:grid-cols-12">
+                  <div className="relative grid grid-cols-1 gap-7 md:grid-cols-4">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
                         hint={hint}
                         onEdit={openEditModal}
                         onToggleStarred={toggleStarred}
+                        onTogglePrivate={togglePrivate}
                       />
                     ))}
                   </div>
@@ -1313,7 +1374,7 @@ export default function HintsClient() {
                   }}
                 >
                   {activeHint ? (
-                    <div className={`${getTileClass(activeHint.size)} w-[min(92vw,420px)]`}>
+                    <div className="w-[min(92vw,320px)]">
                       <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
