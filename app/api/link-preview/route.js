@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import { preview, presets } from "linkpeek";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REQUEST_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (compatible; HintedLinkPreviewBot/2.0; +https://hinted.io)",
-  Accept: "text/html,application/xhtml+xml",
+  "User-Agent":
+    "Mozilla/5.0 (compatible; Twitterbot/1.0; +https://developer.x.com/en/docs/x-for-websites/cards/overview/summary)",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
   "Accept-Language": "en-GB,en;q=0.9",
 };
 
@@ -77,7 +80,7 @@ function stripAmazonParams(url = "") {
   }
 }
 
-function getMeta($, selectors = []) {
+function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
   for (const selector of selectors) {
     const value = $(selector).attr("content");
     const cleaned = cleanText(value || "");
@@ -86,7 +89,11 @@ function getMeta($, selectors = []) {
   return "";
 }
 
-function getAttr($, selectors = [], attr = "content") {
+function getAttr(
+  $: cheerio.CheerioAPI,
+  selectors: string[] = [],
+  attr = "content"
+) {
   for (const selector of selectors) {
     const value = $(selector).attr(attr);
     const cleaned = String(value || "").trim();
@@ -95,7 +102,7 @@ function getAttr($, selectors = [], attr = "content") {
   return "";
 }
 
-function getText($, selectors = []) {
+function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
   for (const selector of selectors) {
     const value = $(selector).first().text();
     const cleaned = cleanText(value || "");
@@ -104,7 +111,7 @@ function getText($, selectors = []) {
   return "";
 }
 
-function extractCanonical($, fallbackUrl) {
+function extractCanonical($: cheerio.CheerioAPI, fallbackUrl: string) {
   const canonical =
     getAttr($, ['link[rel="canonical"]'], "href") ||
     getMeta($, ['meta[property="og:url"]', 'meta[name="og:url"]']);
@@ -121,7 +128,7 @@ function cleanAmazonTitle(title = "") {
     .trim();
 }
 
-function extractTitle($, canonicalUrl) {
+function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let title =
@@ -142,7 +149,7 @@ function extractTitle($, canonicalUrl) {
   return title || hostname || "Shared item";
 }
 
-function extractDescription($, canonicalUrl) {
+function extractDescription($: cheerio.CheerioAPI, canonicalUrl: string) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let description =
@@ -152,7 +159,12 @@ function extractDescription($, canonicalUrl) {
       'meta[name="twitter:description"]',
       'meta[name="description"]',
     ]) ||
-    getText($, ["#feature-bullets", "#bookDescription_feature_div", "#productDescription", "main p"]) ||
+    getText($, [
+      "#feature-bullets",
+      "#bookDescription_feature_div",
+      "#productDescription",
+      "main p",
+    ]) ||
     "";
 
   if (hostname.includes("amazon.") && /^amazon$/i.test(description)) {
@@ -230,19 +242,66 @@ function shortenTitle(title = "", retailer = "") {
     .toLowerCase();
 
   const stopWords = new Set([
-    "the", "and", "with", "for", "from", "new", "latest",
-    "edition", "model", "official", "amazon", "uk",
-    "black", "white", "silver", "blue", "green", "pink", "grey", "gray",
-    "wireless", "bluetooth",
+    "the",
+    "and",
+    "with",
+    "for",
+    "from",
+    "new",
+    "latest",
+    "edition",
+    "model",
+    "official",
+    "amazon",
+    "uk",
+    "black",
+    "white",
+    "silver",
+    "blue",
+    "green",
+    "pink",
+    "grey",
+    "gray",
+    "wireless",
+    "bluetooth",
   ]);
 
   const categoryWords = [
-    "headphones", "earbuds", "speaker", "kindle", "book",
-    "pillowcase", "pillowcases", "dish", "pan", "mug", "print",
-    "necklace", "ring", "bag", "dress", "trainer", "trainers",
-    "jacket", "candle", "coffee", "set", "workshop", "experience",
-    "voucher", "lego", "camera", "watch", "sofa", "blanket",
-    "coat", "boots", "sandals", "lamp", "vase", "frame",
+    "headphones",
+    "earbuds",
+    "speaker",
+    "kindle",
+    "book",
+    "pillowcase",
+    "pillowcases",
+    "dish",
+    "pan",
+    "mug",
+    "print",
+    "necklace",
+    "ring",
+    "bag",
+    "dress",
+    "trainer",
+    "trainers",
+    "jacket",
+    "candle",
+    "coffee",
+    "set",
+    "workshop",
+    "experience",
+    "voucher",
+    "lego",
+    "camera",
+    "watch",
+    "sofa",
+    "blanket",
+    "coat",
+    "boots",
+    "sandals",
+    "lamp",
+    "vase",
+    "frame",
   ];
 
   let cleaned = source
@@ -266,7 +325,9 @@ function shortenTitle(title = "", retailer = "") {
   if (words.length === 0) return "Saved hint";
 
   const brand = words[0];
-  const foundCategory = words.find((word) => categoryWords.includes(word.toLowerCase()));
+  const foundCategory = words.find((word) =>
+    categoryWords.includes(word.toLowerCase())
+  );
 
   if (foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()) {
     return [brand, foundCategory]
@@ -282,7 +343,7 @@ function shortenTitle(title = "", retailer = "") {
     .replace(/^./, (m) => m.toUpperCase());
 }
 
-function extractPriceFromMeta($) {
+function extractPriceFromMeta($: cheerio.CheerioAPI) {
   const directPrice =
     getMeta($, [
       'meta[property="product:price:amount"]',
@@ -305,7 +366,7 @@ function extractPriceFromMeta($) {
   return formatPrice(directPrice, currency);
 }
 
-function pickPriceFromOffer(offer) {
+function pickPriceFromOffer(offer: any) {
   if (!offer || typeof offer !== "object") return "";
 
   if (offer.price) return formatPrice(offer.price, offer.priceCurrency);
@@ -320,7 +381,7 @@ function pickPriceFromOffer(offer) {
   return "";
 }
 
-function collectImages(value, baseUrl = "") {
+function collectImages(value: any, baseUrl = "") {
   if (!value) return [];
   const values = Array.isArray(value) ? value : [value];
   return values
@@ -332,15 +393,15 @@ function collectImages(value, baseUrl = "") {
     .filter(Boolean);
 }
 
-function findProductDataInJsonLd(node, baseUrl = "") {
+function findProductDataInJsonLd(node: any, baseUrl = "") {
   const result = {
     title: "",
     brand: "",
     priceText: "",
-    images: [],
+    images: [] as string[],
   };
 
-  function visit(value) {
+  function visit(value: any) {
     if (!value) return;
     if (Array.isArray(value)) {
       value.forEach(visit);
@@ -348,7 +409,9 @@ function findProductDataInJsonLd(node, baseUrl = "") {
     }
     if (typeof value !== "object") return;
 
-    const typeValue = Array.isArray(value["@type"]) ? value["@type"].join(" ") : String(value["@type"] || "");
+    const typeValue = Array.isArray(value["@type"])
+      ? value["@type"].join(" ")
+      : String(value["@type"] || "");
     const lowerType = typeValue.toLowerCase();
 
     if (!result.title && (lowerType.includes("product") || lowerType.includes("offer"))) {
@@ -395,9 +458,9 @@ function findProductDataInJsonLd(node, baseUrl = "") {
   };
 }
 
-function extractJsonLdProductData($, baseUrl = "") {
+function extractJsonLdProductData($: cheerio.CheerioAPI, baseUrl = "") {
   const scripts = $('script[type="application/ld+json"]');
-  let best = { title: "", brand: "", priceText: "", images: [] };
+  let best = { title: "", brand: "", priceText: "", images: [] as string[] };
 
   for (let i = 0; i < scripts.length; i += 1) {
     const raw = $(scripts[i]).contents().text();
@@ -417,7 +480,7 @@ function extractJsonLdProductData($, baseUrl = "") {
   return best;
 }
 
-function extractPriceFromText($) {
+function extractPriceFromText($: cheerio.CheerioAPI) {
   const textCandidates = [
     getText($, [".priceToPay .a-offscreen"]),
     getText($, [".a-price .a-offscreen"]),
@@ -449,15 +512,16 @@ function scoreImage(url = "", hostname = "", source = "") {
   if (hostname && lower.includes(hostname.replace(/^www\./, ""))) score += 6;
   if (source === "jsonld") score += 25;
   if (source === "og") score += 18;
+  if (source === "linkpeek") score += 24;
   if (source === "dom") score += 8;
   if (/1500|1200|1024|960|800/.test(lower)) score += 8;
 
   return score;
 }
 
-function dedupeCandidates(candidates = []) {
+function dedupeCandidates(candidates: Array<{ url: string; source: string; score: number }>) {
   const seen = new Set();
-  const output = [];
+  const output: Array<{ url: string; source: string; score: number }> = [];
 
   for (const candidate of candidates) {
     if (!candidate?.url) continue;
@@ -469,11 +533,17 @@ function dedupeCandidates(candidates = []) {
   return output;
 }
 
-function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
+function buildImageCandidates(
+  $: cheerio.CheerioAPI,
+  baseUrl: string,
+  canonicalUrl: string,
+  jsonLdImages: string[] = [],
+  preferredImages: string[] = []
+) {
   const hostname = getHostnameLabel(canonicalUrl);
-  const candidates = [];
+  const candidates: Array<{ url: string; source: string; score: number }> = [];
 
-  const addCandidate = (url, source) => {
+  const addCandidate = (url: string, source: string) => {
     const absolute = makeAbsoluteUrl(url, baseUrl);
     if (!absolute) return;
     const improved = hostname.includes("amazon.") ? improveAmazonImage(absolute) : absolute;
@@ -484,6 +554,7 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
     });
   };
 
+  preferredImages.forEach((url) => addCandidate(url, "linkpeek"));
   jsonLdImages.forEach((url) => addCandidate(url, "jsonld"));
 
   [
@@ -496,7 +567,9 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
       'meta[name="twitter:image:src"]',
     ]),
     getAttr($, ['link[rel="image_src"]'], "href"),
-  ].filter(Boolean).forEach((url) => addCandidate(url, "og"));
+  ]
+    .filter(Boolean)
+    .forEach((url) => addCandidate(url, "og"));
 
   $("img").each((_, element) => {
     const src =
@@ -504,6 +577,7 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
       $(element).attr("data-src") ||
       $(element).attr("data-old-hires") ||
       $(element).attr("data-a-dynamic-image");
+
     if (!src) return;
 
     if (src.startsWith("{")) {
@@ -522,7 +596,7 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
     .sort((a, b) => b.score - a.score);
 }
 
-function extractSiteName($, canonicalUrl) {
+function extractSiteName($: cheerio.CheerioAPI, canonicalUrl: string) {
   return (
     getMeta($, [
       'meta[property="og:site_name"]',
@@ -533,79 +607,85 @@ function extractSiteName($, canonicalUrl) {
   );
 }
 
-async function fetchViaMicrolink(inputUrl) {
-  const apiKey = process.env.MICROLINK_API_KEY;
-  const endpoint = apiKey ? "https://pro.microlink.io/" : "https://api.microlink.io/";
-  const url = new URL(endpoint);
-
-  url.searchParams.set("url", inputUrl);
-  url.searchParams.set("meta", "true");
-  url.searchParams.set("palette", "false");
-  url.searchParams.set("screenshot", "false");
-  url.searchParams.set("audio", "false");
-  url.searchParams.set("video", "false");
-
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: apiKey ? { "x-api-key": apiKey } : {},
-    cache: "no-store",
+async function fetchViaLinkpeek(inputUrl: string) {
+  const result = await preview(inputUrl, {
+    ...presets.quality,
+    timeout: 4500,
+    maxBytes: 120000,
+    includeBodyContent: true,
+    followMetaRefresh: true,
+    userAgent: REQUEST_HEADERS["User-Agent"],
+    headers: {
+      Accept: REQUEST_HEADERS.Accept,
+      "Accept-Language": REQUEST_HEADERS["Accept-Language"],
+    },
   });
 
-  const json = await response.json().catch(() => null);
-
-  if (!response.ok || !json || json.status === "fail") {
-    throw new Error(json?.message || "Microlink could not extract this URL.");
-  }
-
-  const data = json.data || {};
-  const meta = data.meta || {};
-  const canonicalUrl = stripAmazonParams(data.url || inputUrl);
-  const siteName =
-    cleanText(data.publisher) ||
-    cleanText(meta.publisher) ||
-    cleanText(meta["og:site_name"]) ||
-    getHostnameLabel(canonicalUrl);
-
-  const title =
-    cleanText(data.title) ||
-    cleanText(meta.title) ||
-    cleanText(meta["og:title"]) ||
-    cleanText(meta["twitter:title"]) ||
-    "Shared item";
-
-  const description =
-    cleanText(data.description) ||
-    cleanText(meta.description) ||
-    cleanText(meta["og:description"]) ||
-    cleanText(meta["twitter:description"]) ||
-    "";
+  const canonicalUrl = stripAmazonParams(result?.url || inputUrl);
+  const siteName = cleanText(result?.siteName || "") || getHostnameLabel(canonicalUrl);
+  const title = cleanText(result?.title || "") || "Shared item";
+  const description = cleanText(result?.description || "");
 
   const imageCandidates = dedupeCandidates(
     [
-      data.image?.url ? { url: data.image.url, source: "microlink", score: 42 } : null,
-      data.logo?.url ? { url: data.logo.url, source: "microlink-logo", score: 5 } : null,
-      meta.image ? { url: makeAbsoluteUrl(meta.image, canonicalUrl), source: "meta", score: 20 } : null,
-      meta["og:image"] ? { url: makeAbsoluteUrl(meta["og:image"], canonicalUrl), source: "og", score: 26 } : null,
-      meta["twitter:image"] ? { url: makeAbsoluteUrl(meta["twitter:image"], canonicalUrl), source: "twitter", score: 22 } : null,
+      result?.image
+        ? {
+            url: makeAbsoluteUrl(result.image, canonicalUrl),
+            source: "linkpeek",
+            score: 30,
+          }
+        : null,
+      result?.ogImage?.url
+        ? {
+            url: makeAbsoluteUrl(result.ogImage.url, canonicalUrl),
+            source: "linkpeek",
+            score: 28,
+          }
+        : null,
+      result?.twitterImage
+        ? {
+            url: makeAbsoluteUrl(result.twitterImage, canonicalUrl),
+            source: "linkpeek",
+            score: 26,
+          }
+        : null,
     ].filter(Boolean)
   ).sort((a, b) => b.score - a.score);
 
-  const rawPrice =
-    cleanText(meta["product:price:amount"]) ||
-    cleanText(meta["og:price:amount"]) ||
-    cleanText(meta.price) ||
-    "";
+  const rawPriceCandidates = [
+    result?.price,
+    result?.product?.price,
+    result?.offers?.price,
+    result?.jsonLd?.offers?.price,
+    description,
+    title,
+  ].filter(Boolean);
 
-  const rawCurrency =
-    cleanText(meta["product:price:currency"]) ||
-    cleanText(meta["og:price:currency"]) ||
-    "GBP";
+  let priceText = "";
+  for (const value of rawPriceCandidates) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      priceText = `£${Math.round(value)}`;
+      break;
+    }
 
-  const priceText = rawPrice ? formatPrice(rawPrice, rawCurrency) : "";
+    if (typeof value === "string") {
+      const cleaned = value.replace(/,/g, "");
+      const match =
+        cleaned.match(/(?:£|\$|€|A\$|NZ\$|C\$|R)\s?(\d+(?:\.\d{1,2})?)/) ||
+        cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+
+      if (match) {
+        const symbol = cleaned.match(/£|\$|€|A\$|NZ\$|C\$|R/)?.[0] || "£";
+        priceText = `${symbol}${match[1]}`;
+        break;
+      }
+    }
+  }
+
   const selectedImage = imageCandidates[0]?.url || "";
   const titleShort = shortenTitle(title, siteName);
   const confidence =
-    selectedImage && priceText ? "high" : selectedImage || title ? "medium" : "low";
+    selectedImage && title ? (priceText ? "high" : "medium") : "low";
 
   return {
     url: canonicalUrl,
@@ -619,12 +699,12 @@ async function fetchViaMicrolink(inputUrl) {
     priceText,
     numericPrice: extractNumericPrice(priceText),
     confidence,
-    needsReview: confidence !== "high",
-    source: "microlink",
+    needsReview: confidence === "low",
+    source: "linkpeek",
   };
 }
 
-async function fetchViaFallbackScraper(inputUrl) {
+async function fetchViaFallbackScraper(inputUrl: string) {
   const response = await fetch(inputUrl, {
     method: "GET",
     headers: REQUEST_HEADERS,
@@ -658,8 +738,17 @@ async function fetchViaFallbackScraper(inputUrl) {
   const title = jsonLd.title || extractTitle($, canonicalUrl);
   const description = extractDescription($, canonicalUrl);
   const siteName = extractSiteName($, canonicalUrl);
-  const priceText = jsonLd.priceText || extractPriceFromMeta($) || extractPriceFromText($) || "";
-  const imageCandidates = buildImageCandidates($, finalUrl, canonicalUrl, jsonLd.images);
+  const priceText =
+    jsonLd.priceText || extractPriceFromMeta($) || extractPriceFromText($) || "";
+
+  const imageCandidates = buildImageCandidates(
+    $,
+    finalUrl,
+    canonicalUrl,
+    jsonLd.images,
+    []
+  );
+
   const selectedImage = imageCandidates[0]?.url || "";
   const titleShort = shortenTitle(title, siteName);
   const confidence =
@@ -677,30 +766,33 @@ async function fetchViaFallbackScraper(inputUrl) {
     priceText: priceText || "",
     numericPrice: extractNumericPrice(priceText || ""),
     confidence,
-    needsReview: confidence !== "high",
+    needsReview: confidence === "low",
     source: "fallback",
     brand: jsonLd.brand || "",
   };
 }
 
-export async function POST(request) {
+export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
     const inputUrl = ensureHttpUrl(body?.url || "");
 
     if (!inputUrl) {
-      return NextResponse.json({ error: "Please provide a valid URL." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Please provide a valid URL." },
+        { status: 400 }
+      );
     }
 
     try {
-      const result = await fetchViaMicrolink(inputUrl);
+      const result = await fetchViaLinkpeek(inputUrl);
       return NextResponse.json(result);
-    } catch (microlinkError) {
-      console.warn("Microlink failed, using fallback scraper:", microlinkError);
+    } catch (linkpeekError) {
+      console.warn("Linkpeek failed, using fallback scraper:", linkpeekError);
       const result = await fetchViaFallbackScraper(inputUrl);
       return NextResponse.json(result);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("link-preview route error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to fetch preview." },
