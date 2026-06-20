@@ -8,6 +8,7 @@ import {
   PointerSensor,
   KeyboardSensor,
   closestCenter,
+  MeasuringStrategy,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -17,6 +18,7 @@ import {
   verticalListSortingStrategy,
   sortableKeyboardCoordinates,
   useSortable,
+  defaultAnimateLayoutChanges,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "../../lib/supabase/client";
@@ -232,6 +234,112 @@ function splitIntoColumns(items, columnCount = 3) {
     columns[index % columnCount].push(item);
   });
   return columns;
+}
+
+function AddHintModal({
+  isOpen,
+  form,
+  setForm,
+  onClose,
+  onSubmit,
+  isSaving,
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-[560px] rounded-[30px] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
+              New hint
+            </p>
+            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+              Review before saving
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-[#faf6f3]"
+            aria-label="Close add modal"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="new-link" className="mb-2 block text-sm font-medium text-slate-700">
+              Link
+            </label>
+            <input
+              id="new-link"
+              type="url"
+              value={form.url}
+              onChange={(e) => setForm((current) => ({ ...current, url: e.target.value }))}
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="new-title" className="mb-2 block text-sm font-medium text-slate-700">
+              Name
+            </label>
+            <input
+              id="new-title"
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                setForm((current) => ({ ...current, starred: !current.starred }))
+              }
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                form.starred
+                  ? "bg-[#fff2ea] text-[#e27956]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
+              }`}
+            >
+              {form.starred ? "★ Starred" : "★ Star"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setForm((current) => ({ ...current, private: !current.private }))
+              }
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                form.private
+                  ? "bg-[#fffaf7] text-[#e08a67]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
+              }`}
+            >
+              {form.private ? "🔒 Private" : "🔓 Public"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-7 flex justify-end">
+          <button
+            type="button"
+            onClick={onSubmit}
+            disabled={isSaving}
+            className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
+          >
+            {isSaving ? "Saving..." : "Save hint"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function EditHintModal({
@@ -514,6 +622,13 @@ function SortableHintCard({
   onToggleStarred,
   onTogglePrivate,
 }) {
+  const animateLayoutChanges = (args) => {
+    if (args.isSorting || args.wasDragging) {
+      return defaultAnimateLayoutChanges(args);
+    }
+    return true;
+  };
+
   const {
     attributes,
     listeners,
@@ -523,16 +638,18 @@ function SortableHintCard({
     isDragging,
   } = useSortable({
     id: hint.id,
+    animateLayoutChanges,
     transition: {
-      duration: 220,
-      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      duration: 240,
+      easing: "cubic-bezier(0.25, 1, 0.5, 1)",
     },
   });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    zIndex: isDragging ? 2 : 1,
+    zIndex: isDragging ? 20 : 1,
+    position: "relative",
   };
 
   return (
@@ -563,14 +680,34 @@ export default function HintsClient() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeId, setActiveId] = useState(null);
 
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isSubmittingNewHint, setIsSubmittingNewHint] = useState(false);
+  const [pendingHint, setPendingHint] = useState(null);
+  const [newHintForm, setNewHintForm] = useState({
+    title: "",
+    url: "",
+    retailer: "",
+    image: "",
+    priceLabel: "Price unavailable",
+    numericPrice: null,
+    private: false,
+    starred: false,
+  });
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
+      activationConstraint: { distance: 4 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  const measuring = {
+    droppable: {
+      strategy: MeasuringStrategy.Always,
+    },
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -673,6 +810,22 @@ export default function HintsClient() {
     setEditForm({ title: "", url: "" });
     setIsRefreshingEdit(false);
     setIsSavingEdit(false);
+  }
+
+  function closeAddModal() {
+    setIsAddModalOpen(false);
+    setPendingHint(null);
+    setIsSubmittingNewHint(false);
+    setNewHintForm({
+      title: "",
+      url: "",
+      retailer: "",
+      image: "",
+      priceLabel: "Price unavailable",
+      numericPrice: null,
+      private: false,
+      starred: false,
+    });
   }
 
   async function saveEditChanges() {
@@ -885,12 +1038,9 @@ export default function HintsClient() {
 
       const retailer = data.siteName || normaliseRetailer(trimmed);
       const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
+      const finalUrl = data.url || normaliseInputUrl(trimmed);
 
-      const newHint = {
-        id:
-          typeof crypto !== "undefined" && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `hint-${Date.now()}`,
+      const draft = {
         title: shortTitle,
         retailer,
         priceLabel: formatPriceLabel(numericPrice, data.priceText),
@@ -899,11 +1049,59 @@ export default function HintsClient() {
           typeof data.image === "string" && data.image.startsWith("http")
             ? data.image
             : "",
-        fallbackGradient: buildFallbackGradient(hints.length),
+        url: finalUrl,
         starred: false,
         private: false,
-        size: getSizeFromPrice(numericPrice),
-        url: data.url || normaliseInputUrl(trimmed),
+      };
+
+      setPendingHint(draft);
+      setNewHintForm({
+        title: draft.title,
+        url: draft.url,
+        retailer: draft.retailer,
+        image: draft.image,
+        priceLabel: draft.priceLabel,
+        numericPrice: draft.numericPrice,
+        private: false,
+        starred: false,
+      });
+      setIsAddModalOpen(true);
+      setLink("");
+    } catch (err) {
+      setError(err.message || "Could not extract this link.");
+    } finally {
+      setIsAdding(false);
+    }
+  }
+
+  async function submitNewHint() {
+    if (!currentUser || !pendingHint) return;
+
+    setIsSubmittingNewHint(true);
+    setError("");
+
+    try {
+      const title = newHintForm.title.trim() || pendingHint.title || "Saved hint";
+      const url = newHintForm.url.trim() || pendingHint.url;
+      const retailer = newHintForm.retailer || normaliseRetailer(url);
+      const numericPrice = newHintForm.numericPrice;
+      const size = getSizeFromPrice(numericPrice);
+
+      const newHint = {
+        id:
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `hint-${Date.now()}`,
+        title,
+        retailer,
+        priceLabel: newHintForm.priceLabel || "Price unavailable",
+        numericPrice,
+        image: newHintForm.image || "",
+        fallbackGradient: buildFallbackGradient(hints.length),
+        starred: Boolean(newHintForm.starred),
+        private: Boolean(newHintForm.private),
+        size,
+        url,
         position: 0,
       };
 
@@ -935,11 +1133,11 @@ export default function HintsClient() {
           position: index,
         }))
       );
-      setLink("");
+
+      closeAddModal();
     } catch (err) {
-      setError(err.message || "Could not extract this link.");
-    } finally {
-      setIsAdding(false);
+      setError(err.message || "Could not save this hint.");
+      setIsSubmittingNewHint(false);
     }
   }
 
@@ -1066,7 +1264,7 @@ export default function HintsClient() {
                 disabled={isAdding || isLoading}
                 className="inline-flex h-[72px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-8 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[170px]"
               >
-                {isAdding ? "Adding..." : isLoading ? "Loading..." : "Add hint"}
+                {isAdding ? "Checking..." : isLoading ? "Loading..." : "Add hint"}
               </button>
             </div>
 
@@ -1074,7 +1272,7 @@ export default function HintsClient() {
               <p className="mt-3 text-sm font-medium text-[#c45c42]">{error}</p>
             ) : (
               <p className="mt-3 text-sm text-slate-500">
-                We’ll pull the title, image, and price from the link, then you can edit it any time.
+                We’ll pull the title, image, and price, then let you confirm the name and privacy before saving.
               </p>
             )}
           </div>
@@ -1111,6 +1309,7 @@ export default function HintsClient() {
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
+                measuring={measuring}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
@@ -1139,12 +1338,12 @@ export default function HintsClient() {
 
                 <DragOverlay
                   dropAnimation={{
-                    duration: 220,
-                    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                    duration: 180,
+                    easing: "cubic-bezier(0.25, 1, 0.5, 1)",
                   }}
                 >
                   {activeHint ? (
-                    <div className="w-[min(92vw,420px)]">
+                    <div className="w-full max-w-[420px]">
                       <HintCard
                         hint={activeHint}
                         onEdit={() => {}}
@@ -1174,6 +1373,15 @@ export default function HintsClient() {
           </div>
         </section>
       </div>
+
+      <AddHintModal
+        isOpen={isAddModalOpen}
+        form={newHintForm}
+        setForm={setNewHintForm}
+        onClose={closeAddModal}
+        onSubmit={submitNewHint}
+        isSaving={isSubmittingNewHint}
+      />
 
       <EditHintModal
         isOpen={editingHintId !== null}
