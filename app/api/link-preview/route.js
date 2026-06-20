@@ -80,7 +80,7 @@ function stripAmazonParams(url = "") {
   }
 }
 
-function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
+function getMeta($, selectors = []) {
   for (const selector of selectors) {
     const value = $(selector).attr("content");
     const cleaned = cleanText(value || "");
@@ -89,11 +89,7 @@ function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
   return "";
 }
 
-function getAttr(
-  $: cheerio.CheerioAPI,
-  selectors: string[] = [],
-  attr = "content"
-) {
+function getAttr($, selectors = [], attr = "content") {
   for (const selector of selectors) {
     const value = $(selector).attr(attr);
     const cleaned = String(value || "").trim();
@@ -102,7 +98,7 @@ function getAttr(
   return "";
 }
 
-function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
+function getText($, selectors = []) {
   for (const selector of selectors) {
     const value = $(selector).first().text();
     const cleaned = cleanText(value || "");
@@ -111,7 +107,7 @@ function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
   return "";
 }
 
-function extractCanonical($: cheerio.CheerioAPI, fallbackUrl: string) {
+function extractCanonical($, fallbackUrl) {
   const canonical =
     getAttr($, ['link[rel="canonical"]'], "href") ||
     getMeta($, ['meta[property="og:url"]', 'meta[name="og:url"]']);
@@ -128,7 +124,7 @@ function cleanAmazonTitle(title = "") {
     .trim();
 }
 
-function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractTitle($, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let title =
@@ -149,7 +145,7 @@ function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
   return title || hostname || "Shared item";
 }
 
-function extractDescription($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractDescription($, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let description =
@@ -343,7 +339,7 @@ function shortenTitle(title = "", retailer = "") {
     .replace(/^./, (m) => m.toUpperCase());
 }
 
-function extractPriceFromMeta($: cheerio.CheerioAPI) {
+function extractPriceFromMeta($) {
   const directPrice =
     getMeta($, [
       'meta[property="product:price:amount"]',
@@ -366,7 +362,7 @@ function extractPriceFromMeta($: cheerio.CheerioAPI) {
   return formatPrice(directPrice, currency);
 }
 
-function pickPriceFromOffer(offer: any) {
+function pickPriceFromOffer(offer) {
   if (!offer || typeof offer !== "object") return "";
 
   if (offer.price) return formatPrice(offer.price, offer.priceCurrency);
@@ -381,7 +377,7 @@ function pickPriceFromOffer(offer: any) {
   return "";
 }
 
-function collectImages(value: any, baseUrl = "") {
+function collectImages(value, baseUrl = "") {
   if (!value) return [];
   const values = Array.isArray(value) ? value : [value];
   return values
@@ -393,15 +389,15 @@ function collectImages(value: any, baseUrl = "") {
     .filter(Boolean);
 }
 
-function findProductDataInJsonLd(node: any, baseUrl = "") {
+function findProductDataInJsonLd(node, baseUrl = "") {
   const result = {
     title: "",
     brand: "",
     priceText: "",
-    images: [] as string[],
+    images: [],
   };
 
-  function visit(value: any) {
+  function visit(value) {
     if (!value) return;
     if (Array.isArray(value)) {
       value.forEach(visit);
@@ -458,9 +454,9 @@ function findProductDataInJsonLd(node: any, baseUrl = "") {
   };
 }
 
-function extractJsonLdProductData($: cheerio.CheerioAPI, baseUrl = "") {
+function extractJsonLdProductData($, baseUrl = "") {
   const scripts = $('script[type="application/ld+json"]');
-  let best = { title: "", brand: "", priceText: "", images: [] as string[] };
+  let best = { title: "", brand: "", priceText: "", images: [] };
 
   for (let i = 0; i < scripts.length; i += 1) {
     const raw = $(scripts[i]).contents().text();
@@ -480,7 +476,7 @@ function extractJsonLdProductData($: cheerio.CheerioAPI, baseUrl = "") {
   return best;
 }
 
-function extractPriceFromText($: cheerio.CheerioAPI) {
+function extractPriceFromText($) {
   const textCandidates = [
     getText($, [".priceToPay .a-offscreen"]),
     getText($, [".a-price .a-offscreen"]),
@@ -519,9 +515,9 @@ function scoreImage(url = "", hostname = "", source = "") {
   return score;
 }
 
-function dedupeCandidates(candidates: Array<{ url: string; source: string; score: number }>) {
+function dedupeCandidates(candidates = []) {
   const seen = new Set();
-  const output: Array<{ url: string; source: string; score: number }> = [];
+  const output = [];
 
   for (const candidate of candidates) {
     if (!candidate?.url) continue;
@@ -534,16 +530,16 @@ function dedupeCandidates(candidates: Array<{ url: string; source: string; score
 }
 
 function buildImageCandidates(
-  $: cheerio.CheerioAPI,
-  baseUrl: string,
-  canonicalUrl: string,
-  jsonLdImages: string[] = [],
-  preferredImages: string[] = []
+  $,
+  baseUrl,
+  canonicalUrl,
+  jsonLdImages = [],
+  preferredImages = []
 ) {
   const hostname = getHostnameLabel(canonicalUrl);
-  const candidates: Array<{ url: string; source: string; score: number }> = [];
+  const candidates = [];
 
-  const addCandidate = (url: string, source: string) => {
+  const addCandidate = (url, source) => {
     const absolute = makeAbsoluteUrl(url, baseUrl);
     if (!absolute) return;
     const improved = hostname.includes("amazon.") ? improveAmazonImage(absolute) : absolute;
@@ -596,7 +592,7 @@ function buildImageCandidates(
     .sort((a, b) => b.score - a.score);
 }
 
-function extractSiteName($: cheerio.CheerioAPI, canonicalUrl: string) {
+function extractSiteName($, canonicalUrl) {
   return (
     getMeta($, [
       'meta[property="og:site_name"]',
@@ -607,7 +603,7 @@ function extractSiteName($: cheerio.CheerioAPI, canonicalUrl: string) {
   );
 }
 
-async function fetchViaLinkpeek(inputUrl: string) {
+async function fetchViaLinkpeek(inputUrl) {
   const result = await preview(inputUrl, {
     ...presets.quality,
     timeout: 4500,
@@ -704,7 +700,7 @@ async function fetchViaLinkpeek(inputUrl: string) {
   };
 }
 
-async function fetchViaFallbackScraper(inputUrl: string) {
+async function fetchViaFallbackScraper(inputUrl) {
   const response = await fetch(inputUrl, {
     method: "GET",
     headers: REQUEST_HEADERS,
@@ -772,7 +768,7 @@ async function fetchViaFallbackScraper(inputUrl: string) {
   };
 }
 
-export async function POST(request: Request) {
+export async function POST(request) {
   try {
     const body = await request.json().catch(() => null);
     const inputUrl = ensureHttpUrl(body?.url || "");
@@ -792,7 +788,7 @@ export async function POST(request: Request) {
       const result = await fetchViaFallbackScraper(inputUrl);
       return NextResponse.json(result);
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("link-preview route error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to fetch preview." },
