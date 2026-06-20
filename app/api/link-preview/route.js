@@ -382,7 +382,6 @@ function scoreImage(url = "", source = "") {
   if (source === "jsonld") score += 25;
   if (source === "og") score += 18;
   if (source === "dom") score += 5;
-
   return score;
 }
 
@@ -392,6 +391,53 @@ function improveAmazonImage(url = "") {
     .replace(/\._SL\d+_\./i, "._SL1500_.")
     .replace(/\._SX\d+_\./i, "._SL1500_.")
     .replace(/\._SY\d+_\./i, "._SL1500_.");
+}
+
+function extractAmazonDynamicImage(raw = "", base = "") {
+  const val = String(raw || "").trim();
+  if (!val) return "";
+
+  if (val.startsWith("{")) {
+    try {
+      const parsed = JSON.parse(val);
+      const first = Object.keys(parsed)[0];
+      if (first) return improveAmazonImage(makeAbsolute(first, base));
+    } catch {}
+  }
+
+  return improveAmazonImage(makeAbsolute(val, base));
+}
+
+function getAmazonPrimaryImage($, base = "") {
+  const landing = $("#landingImage").first();
+
+  if (landing.length) {
+    const direct =
+      landing.attr("data-old-hires") ||
+      landing.attr("data-a-dynamic-image") ||
+      landing.attr("src") ||
+      "";
+
+    const parsed = extractAmazonDynamicImage(direct, base);
+    if (parsed) return parsed;
+  }
+
+  const front = $("#imgBlkFront").first();
+  if (front.length) {
+    const direct =
+      front.attr("data-old-hires") ||
+      front.attr("data-a-dynamic-image") ||
+      front.attr("src") ||
+      "";
+
+    const parsed = extractAmazonDynamicImage(direct, base);
+    if (parsed) return parsed;
+  }
+
+  const og = $('meta[property="og:image"]').attr("content") || "";
+  if (og) return improveAmazonImage(makeAbsolute(og, base));
+
+  return "";
 }
 
 function pickBestImage({ hostImage, jsonLdImages, $, base, isAmazon }) {
@@ -426,9 +472,17 @@ function pickBestImage({ hostImage, jsonLdImages, $, base, isAmazon }) {
       $(el).attr("data-src"),
       $(el).attr("data-old-hires"),
       $(el).attr("data-lazy-src"),
+      $(el).attr("data-a-dynamic-image"),
     ].filter(Boolean);
 
-    attrs.forEach((u) => add(u, "dom"));
+    attrs.forEach((u) => {
+      if (isAmazon && String(u).trim().startsWith("{")) {
+        const parsed = extractAmazonDynamicImage(u, base);
+        if (parsed) add(parsed, "dom");
+      } else {
+        add(u, "dom");
+      }
+    });
   });
 
   return (
@@ -438,9 +492,9 @@ function pickBestImage({ hostImage, jsonLdImages, $, base, isAmazon }) {
   );
 }
 
-async function fetchViaScrapingBee(inputUrl, options = {}) {
+async function fetchViaScrapingBee(inputUrl) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeout ?? 25000);
+  const timer = setTimeout(() => controller.abort(), 20000);
 
   try {
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
@@ -451,17 +505,8 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
     const apiUrl = new URL("https://app.scrapingbee.com/api/v1");
     apiUrl.searchParams.set("api_key", apiKey);
     apiUrl.searchParams.set("url", inputUrl);
-    apiUrl.searchParams.set("render_js", String(options.renderJs ?? true));
-    apiUrl.searchParams.set("wait_browser", options.waitBrowser ?? "networkidle2");
+    apiUrl.searchParams.set("render_js", "false");
     apiUrl.searchParams.set("transparent_status_code", "true");
-
-    if (options.wait) {
-      apiUrl.searchParams.set("wait", String(options.wait));
-    }
-
-    if (options.waitFor) {
-      apiUrl.searchParams.set("wait_for", options.waitFor);
-    }
 
     const res = await fetch(apiUrl.toString(), {
       method: "GET",
@@ -481,39 +526,11 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
       html: html || "",
       finalUrl: inputUrl,
       provider: "scrapingbee",
-      requestUrl: apiUrl.toString(),
     };
   } catch (err) {
     clearTimeout(timer);
     throw err;
   }
-}
-
-async function fetchHtml(inputUrl) {
-  const attempts = [
-    { renderJs: true, waitBrowser: "networkidle2", wait: 1500 },
-    { renderJs: true, waitBrowser: "load", wait: 2500 },
-    { renderJs: false },
-  ];
-
-  let lastResult = null;
-  let lastError = null;
-
-  for (const attempt of attempts) {
-    try {
-      const result = await fetchViaScrapingBee(inputUrl, attempt);
-      lastResult = result;
-
-      if (result.html && result.html.trim()) {
-        return result;
-      }
-    } catch (err) {
-      lastError = err;
-    }
-  }
-
-  if (lastResult) return lastResult;
-  throw lastError || new Error("Failed to fetch page.");
 }
 
 function detectBlock(bodyText, titleTag, h1, status) {
@@ -559,7 +576,8 @@ function detectBlock(bodyText, titleTag, h1, status) {
 }
 
 async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
-  const { html, finalUrl, status, contentType, ok, provider } = await fetchHtml(inputUrl);
+  const { html, finalUrl, status, contentType, ok, provider } =
+    await fetchViaScrapingBee(inputUrl);
 
   if (!contentType.includes("text/html")) {
     throw new Error("URL did not return an HTML page.");
@@ -661,13 +679,16 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
 
   const hostImage = getImageAttr($, rule.imageSelectors, finalUrl);
 
-  const image = pickBestImage({
-    hostImage,
-    jsonLdImages: jsonLd.images,
-    $,
-    base: finalUrl,
-    isAmazon,
-  });
+  const amazonPrimary = isAmazon ? getAmazonPrimaryImage($, finalUrl) : "";
+  const image =
+    amazonPrimary ||
+    pickBestImage({
+      hostImage,
+      jsonLdImages: jsonLd.images,
+      $,
+      base: finalUrl,
+      isAmazon,
+    });
 
   const hasTitle = Boolean(title);
   const hasPrice = Boolean(priceText);
@@ -716,6 +737,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
       metaPrice,
       domPrice,
       allPriceCandidates: [domPrice, jsonLdPrice, metaPrice].filter(Boolean),
+      amazonPrimaryImage: amazonPrimary || null,
       topImageCandidate: image || null,
     },
   };
