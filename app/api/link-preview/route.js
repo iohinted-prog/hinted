@@ -1,8 +1,50 @@
 import { NextResponse } from "next/server";
+import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
+
+const HTML_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+};
+
+const PRICE_REGEX =
+  /(?:A\$|NZ\$|C\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
+
+const BLOCK_WORDS = [
+  "access denied",
+  "blocked",
+  "captcha",
+  "robot check",
+  "verify you are human",
+  "security check",
+  "service unavailable",
+  "unusual traffic",
+  "automated access",
+  "enable cookies",
+  "cloudflare",
+  "please enable js",
+];
+
+function cleanText(value = "") {
+  return String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function ensureHttpUrl(raw = "") {
   const trimmed = String(raw).trim();
@@ -28,6 +70,15 @@ function cleanCanonicalUrl(inputUrl = "") {
     return url.toString();
   } catch {
     return inputUrl;
+  }
+}
+
+function makeAbsolute(url = "", base = "") {
+  if (!url) return "";
+  try {
+    return new URL(url, base).toString();
+  } catch {
+    return "";
   }
 }
 
@@ -57,26 +108,93 @@ function extractNumericPrice(val = "") {
     cleaned.match(/(\d+(?:\.\d{1,2})?)/);
 
   if (!match) return null;
-
   const num = Number(match[1]);
   return Number.isFinite(num) ? num : null;
 }
 
-function normalisePriceText(raw = "") {
-  const value = String(raw || "").trim();
-  if (!value) return "";
-  return value;
+function includesBlockedText(value = "") {
+  const text = String(value).toLowerCase();
+  return BLOCK_WORDS.some((word) => text.includes(word));
 }
 
-function buildFallbackResponse(inputUrl = "", message = "Could not fetch page details.") {
+function getMeta($, selectors = []) {
+  for (const sel of selectors) {
+    const val = cleanText($(sel).attr("content") || "");
+    if (val) return val;
+  }
+  return "";
+}
+
+function getText($, selectors = []) {
+  for (const sel of selectors) {
+    const val = cleanText($(sel).first().text() || "");
+    if (val) return val;
+  }
+  return "";
+}
+
+function getAttrValue($, selectors = [], attr = "content") {
+  for (const sel of selectors) {
+    const val = String($(sel).first().attr(attr) || "").trim();
+    if (val) return val;
+  }
+  return "";
+}
+
+function getImage($, base = "") {
+  const candidates = [
+    getMeta($, ['meta[property="og:image"]', 'meta[name="twitter:image"]']),
+    getAttrValue($, ['link[rel="image_src"]'], "href"),
+    getAttrValue($, ["img[src]"], "src"),
+  ].filter(Boolean);
+
+  for (const candidate of candidates) {
+    const abs = makeAbsolute(candidate, base);
+    if (abs) return abs;
+  }
+
+  return "";
+}
+
+function extractDomPrice($) {
+  const selectors = [
+    '[itemprop="price"]',
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    '[data-testid*="price"]',
+    '[class*="price"]',
+    '[id*="price"]',
+  ];
+
+  for (const sel of selectors) {
+    const el = $(sel).first();
+    if (!el.length) continue;
+
+    const val =
+      cleanText(el.attr("content") || "") ||
+      cleanText(el.attr("value") || "") ||
+      cleanText(el.text() || "");
+
+    if (!val) continue;
+
+    const match = val.match(PRICE_REGEX);
+    if (match && match[0]) return cleanText(match[0]);
+  }
+
+  const bodyText = cleanText($("body").text() || "");
+  const bodyMatch = bodyText.match(PRICE_REGEX);
+  return bodyMatch && bodyMatch[0] ? cleanText(bodyMatch[0]) : "";
+}
+
+function buildManualReviewResponse(inputUrl = "", message = "") {
   const safeUrl = cleanCanonicalUrl(inputUrl);
   const host = hostname(safeUrl);
 
   return {
     url: safeUrl,
-    title: "Needs review",
-    titleShort: "Needs review",
-    description: message,
+    title: "",
+    titleShort: "",
+    description: message || "Please fill out this hint manually.",
     siteName: host,
     image: "",
     selectedImage: "",
@@ -88,13 +206,165 @@ function buildFallbackResponse(inputUrl = "", message = "Could not fetch page de
     confidence: "low",
     needsReview: true,
     blocked: false,
-    blockReason: null,
-    blockMessage: "",
-    source: "linkpreview",
+    blockReason: "manual-review",
+    blockMessage: message || "Manual review required.",
+    source: "fallback",
     debug: {
-      error: message,
+      hostname: host,
+      fallback: "manual-review",
+      error: message || "",
     },
   };
+}
+
+function isUsablePreview(result) {
+  if (!result || result.blocked) return false;
+
+  const hasTitle = Boolean(result.title && result.title !== "Shared item");
+  const hasImage = Boolean(result.image);
+  const hasPrice = Boolean(result.priceText);
+
+  return (hasTitle && hasImage) || (hasTitle && hasPrice);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 4500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseHtmlPreview({ html, finalUrl, status, preferredCurrency }) {
+  const $ = cheerio.load(html);
+
+  const canonicalUrl =
+    cleanCanonicalUrl(
+      makeAbsolute(getAttrValue($, ['link[rel="canonical"]'], "href") || "", finalUrl) || finalUrl
+    );
+
+  const bodyText = cleanText($("body").text() || "");
+  const titleTag = cleanText($("title").first().text() || "");
+  const h1 = cleanText($("h1").first().text() || "");
+
+  const title =
+    getMeta($, ['meta[property="og:title"]', 'meta[name="twitter:title"]']) ||
+    getText($, ["h1", "title"]) ||
+    "";
+
+  const description =
+    getMeta($, ['meta[property="og:description"]', 'meta[name="description"]', 'meta[name="twitter:description"]']) ||
+    "";
+
+  const siteName =
+    getMeta($, ['meta[property="og:site_name"]']) ||
+    hostname(canonicalUrl);
+
+  const image = getImage($, finalUrl);
+  const priceText = extractDomPrice($);
+
+  const detectedCurrency = detectCurrency(priceText);
+  const numericPrice =
+    detectedCurrency === preferredCurrency ? extractNumericPrice(priceText) : null;
+
+  const blocked =
+    status === 403 ||
+    status === 429 ||
+    status === 500 ||
+    status === 503 ||
+    includesBlockedText(titleTag) ||
+    includesBlockedText(h1) ||
+    includesBlockedText(bodyText);
+
+  const hasTitle = Boolean(title);
+  const hasImage = Boolean(image);
+  const hasPrice = Boolean(priceText);
+
+  const confidence =
+    hasTitle && hasImage && hasPrice
+      ? "high"
+      : hasTitle && (hasImage || hasPrice)
+        ? "medium"
+        : "low";
+
+  return {
+    url: canonicalUrl,
+    title: title || "Shared item",
+    titleShort: title || "Shared item",
+    description: blocked ? "Retailer returned a blocked or challenge page." : description,
+    siteName,
+    image: blocked ? "" : image,
+    selectedImage: blocked ? "" : image,
+    imageCandidates: !blocked && image ? [image] : [],
+    priceText:
+      !blocked && detectedCurrency === preferredCurrency ? priceText : "",
+    numericPrice,
+    detectedCurrency:
+      !blocked && detectedCurrency === preferredCurrency ? detectedCurrency : null,
+    brand: "",
+    confidence: blocked ? "low" : confidence,
+    needsReview: blocked ? true : !(hasTitle && hasImage),
+    blocked,
+    blockReason: blocked ? "html-blocked" : null,
+    blockMessage: blocked ? "Retailer returned a blocked or challenge page." : "",
+    source: "html",
+    debug: {
+      provider: "html",
+      status,
+      finalUrl,
+      canonicalUrl,
+      hostname: hostname(canonicalUrl),
+      titleTag,
+      h1,
+      bodySnippet: bodyText.slice(0, 1000),
+      extractedTitle: title,
+      extractedDescription: description,
+      extractedImage: image,
+      extractedPrice: priceText,
+      productSignals: {
+        hasTitle,
+        hasImage,
+        hasPrice,
+      },
+    },
+  };
+}
+
+async function tryHtmlPreview(inputUrl, preferredCurrency) {
+  const res = await fetchWithTimeout(
+    inputUrl,
+    {
+      method: "GET",
+      headers: HTML_HEADERS,
+      redirect: "follow",
+    },
+    4500
+  );
+
+  const contentType = res.headers.get("content-type") || "";
+  if (!contentType.includes("text/html")) {
+    throw new Error("URL did not return HTML.");
+  }
+
+  const html = await res.text();
+  if (!html.trim()) {
+    throw new Error("Empty HTML response.");
+  }
+
+  return parseHtmlPreview({
+    html,
+    finalUrl: res.url || inputUrl,
+    status: res.status,
+    preferredCurrency,
+  });
 }
 
 async function fetchLinkPreview(inputUrl) {
@@ -104,21 +374,24 @@ async function fetchLinkPreview(inputUrl) {
     throw new Error("Missing LINKPREVIEW_API_KEY");
   }
 
-  const apiUrl = new URL("https://api.linkpreview.net/preview");
-  apiUrl.searchParams.set("url", inputUrl);
-  apiUrl.searchParams.set("key", apiKey);
+  const apiUrl = new URL("https://api.linkpreview.net/");
+  apiUrl.searchParams.set("q", inputUrl);
 
-  const res = await fetch(apiUrl.toString(), {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      Accept: "application/json",
+  const res = await fetchWithTimeout(
+    apiUrl.toString(),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "X-Linkpreview-Api-Key": apiKey,
+      },
     },
-  });
+    2200
+  );
 
   const raw = await res.text();
-
   let data = null;
+
   try {
     data = raw ? JSON.parse(raw) : null;
   } catch {
@@ -129,36 +402,33 @@ async function fetchLinkPreview(inputUrl) {
     throw new Error(
       data?.error ||
         data?.message ||
+        data?.msg ||
         `LinkPreview request failed with status ${res.status}`
     );
   }
 
-  return {
-    status: res.status,
-    data,
-  };
+  return data;
 }
 
 function mapLinkPreviewResult(inputUrl, payload, preferredCurrency = "GBP") {
   const finalUrl = cleanCanonicalUrl(payload?.url || inputUrl);
-  const siteName = String(payload?.site_name || "").trim() || hostname(finalUrl);
-
-  const title = String(payload?.title || "").trim();
-  const description = String(payload?.description || "").trim();
+  const title = cleanText(payload?.title || "");
+  const description = cleanText(payload?.description || "");
   const image = String(payload?.image || "").trim();
+  const siteName = hostname(finalUrl);
 
   const rawPrice =
     String(payload?.price || "").trim() ||
-    String(payload?.amount || "").trim() ||
-    String(payload?.priceText || "").trim();
+    String(payload?.priceText || "").trim() ||
+    String(payload?.amount || "").trim();
 
-  const priceText = normalisePriceText(rawPrice);
-  const numericPrice = extractNumericPrice(priceText);
-  const detectedCurrency = detectCurrency(priceText);
+  const detectedCurrency = detectCurrency(rawPrice);
+  const numericPrice =
+    detectedCurrency === preferredCurrency ? extractNumericPrice(rawPrice) : null;
 
   const hasTitle = Boolean(title);
   const hasImage = Boolean(image);
-  const hasPrice = Boolean(priceText);
+  const hasPrice = Boolean(rawPrice);
 
   const confidence =
     hasTitle && hasImage
@@ -176,9 +446,11 @@ function mapLinkPreviewResult(inputUrl, payload, preferredCurrency = "GBP") {
     image,
     selectedImage: image,
     imageCandidates: image ? [image] : [],
-    priceText: detectedCurrency === preferredCurrency ? priceText : "",
-    numericPrice: detectedCurrency === preferredCurrency ? numericPrice : null,
-    detectedCurrency: detectedCurrency === preferredCurrency ? detectedCurrency : null,
+    priceText:
+      detectedCurrency === preferredCurrency ? rawPrice : "",
+    numericPrice,
+    detectedCurrency:
+      detectedCurrency === preferredCurrency ? detectedCurrency : null,
     brand: "",
     confidence,
     needsReview: !(hasTitle && hasImage),
@@ -213,45 +485,56 @@ export async function POST(request) {
       );
     }
 
+    let htmlResult = null;
+    let htmlError = null;
+
     try {
-      const preview = await fetchLinkPreview(inputUrl);
-      const result = mapLinkPreviewResult(
+      htmlResult = await tryHtmlPreview(inputUrl, preferredCurrency);
+
+      if (isUsablePreview(htmlResult)) {
+        return NextResponse.json(htmlResult, { status: 200 });
+      }
+    } catch (err) {
+      htmlError = err;
+    }
+
+    try {
+      const linkPreviewPayload = await fetchLinkPreview(inputUrl);
+      const linkPreviewResult = mapLinkPreviewResult(
         inputUrl,
-        preview.data,
+        linkPreviewPayload,
         preferredCurrency
       );
 
-      console.log(
-        JSON.stringify({
-          type: "link-preview-debug",
-          inputUrl,
-          preferredCurrency,
-          source: result.source,
-          title: result.title,
-          image: result.image,
-          priceText: result.priceText,
-          debug: result.debug,
-        })
+      if (isUsablePreview(linkPreviewResult)) {
+        linkPreviewResult.debug.htmlAttempt = htmlResult || null;
+        linkPreviewResult.debug.htmlError = htmlError?.message || null;
+        return NextResponse.json(linkPreviewResult, { status: 200 });
+      }
+
+      const manual = buildManualReviewResponse(
+        inputUrl,
+        "We couldn’t fill this automatically. Please review and save it manually."
       );
 
-      return NextResponse.json(result, { status: 200 });
-    } catch (previewError) {
-      console.log(
-        JSON.stringify({
-          type: "link-preview-error",
-          inputUrl,
-          preferredCurrency,
-          error: previewError?.message || "Fetch error",
-        })
+      manual.debug.htmlAttempt = htmlResult || null;
+      manual.debug.htmlError = htmlError?.message || null;
+      manual.debug.linkPreviewPayload = linkPreviewPayload || null;
+
+      return NextResponse.json(manual, { status: 200 });
+    } catch (linkPreviewError) {
+      const manual = buildManualReviewResponse(
+        inputUrl,
+        linkPreviewError?.message ||
+          htmlError?.message ||
+          "We couldn’t fill this automatically. Please review and save it manually."
       );
 
-      return NextResponse.json(
-        buildFallbackResponse(
-          inputUrl,
-          previewError?.message || "Could not fetch page details."
-        ),
-        { status: 200 }
-      );
+      manual.debug.htmlAttempt = htmlResult || null;
+      manual.debug.htmlError = htmlError?.message || null;
+      manual.debug.linkPreviewError = linkPreviewError?.message || null;
+
+      return NextResponse.json(manual, { status: 200 });
     }
   } catch (err) {
     return NextResponse.json(
