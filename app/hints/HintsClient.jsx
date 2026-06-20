@@ -3,14 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  closestCenter,
   DndContext,
   DragOverlay,
-  PointerSensor,
   KeyboardSensor,
-  TouchSensor,
-  closestCenter,
+  PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -37,9 +38,9 @@ const demoHints = [
     tags: ["Travel", "Big gift"],
     starred: true,
     private: false,
-    size: "tall",
+    size: "hero",
     url: "https://www.airbnb.co.uk/",
-    position: 1,
+    position: 0,
   },
   {
     id: "demo-2",
@@ -54,9 +55,9 @@ const demoHints = [
     tags: ["Tech", "Birthday"],
     starred: true,
     private: false,
-    size: "tall",
+    size: "feature",
     url: "https://www.amazon.co.uk/",
-    position: 2,
+    position: 1,
   },
   {
     id: "demo-3",
@@ -73,7 +74,7 @@ const demoHints = [
     private: false,
     size: "portrait",
     url: "https://classbento.co.uk/",
-    position: 3,
+    position: 2,
   },
   {
     id: "demo-4",
@@ -90,9 +91,26 @@ const demoHints = [
     private: true,
     size: "square",
     url: "https://www.johnlewis.com/",
-    position: 4,
+    position: 3,
   },
 ];
+
+type Hint = {
+  id: string;
+  title: string;
+  retailer: string;
+  priceLabel: string;
+  numericPrice: number | null;
+  priceBand: "small" | "mid" | "premium" | "high";
+  image: string;
+  fallbackGradient: string;
+  tags: string[];
+  starred: boolean;
+  private: boolean;
+  size: "square" | "portrait" | "feature" | "hero";
+  url: string;
+  position: number;
+};
 
 function LogoMark() {
   return (
@@ -102,7 +120,7 @@ function LogoMark() {
   );
 }
 
-function normaliseRetailer(url) {
+function normaliseRetailer(url: string) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -110,7 +128,7 @@ function normaliseRetailer(url) {
   }
 }
 
-function extractNumericPrice(value) {
+function extractNumericPrice(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value || typeof value !== "string") return null;
 
@@ -125,41 +143,21 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getPriceBand(price) {
+function getPriceBand(price: number | null): Hint["priceBand"] {
   if (price == null) return "small";
-  if (price >= 180) return "high";
+  if (price >= 220) return "high";
   if (price >= 120) return "premium";
   if (price >= 60) return "mid";
   return "small";
 }
 
-function getSizeFromPrice(price, allPrices, starred = false) {
-  if (price == null || allPrices.length < 3) {
-    return starred ? "portrait" : "square";
-  }
-
-  const sorted = [...allPrices].sort((a, b) => a - b);
-  const lowCut = sorted[Math.floor(sorted.length * 0.35)];
-  const highCut = sorted[Math.floor(sorted.length * 0.78)];
-
-  let size = "square";
-
-  if (price >= highCut) size = "tall";
-  else if (price >= lowCut) size = "portrait";
-
-  if (starred && size === "square") size = "portrait";
-  if (starred && size === "portrait" && price >= highCut * 0.9) size = "tall";
-
-  return size;
-}
-
-function formatPriceLabel(price, rawPrice) {
+function formatPriceLabel(price: number | null, rawPrice?: string | null) {
   if (rawPrice && typeof rawPrice === "string") return rawPrice;
   if (price == null) return "Price unavailable";
   return `About £${Math.round(price)}`;
 }
 
-function buildFallbackGradient(index) {
+function buildFallbackGradient(index: number) {
   const gradients = [
     "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
@@ -169,19 +167,6 @@ function buildFallbackGradient(index) {
     "from-[#d6e7eb] via-[#b5ced7] to-[#8fb3c5]",
   ];
   return gradients[index % gradients.length];
-}
-
-function getTileClass(size) {
-  if (size === "tall") return "md:col-span-3 md:row-span-9";
-  if (size === "portrait") return "md:col-span-3 md:row-span-7";
-  return "md:col-span-3 md:row-span-5";
-}
-
-function getPricePill(priceBand) {
-  if (priceBand === "high") return "bg-[#2f3b2d] text-white";
-  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
-  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
-  return "bg-[#f1f5ec] text-[#627f53]";
 }
 
 function shortenTitle(title = "", retailer = "") {
@@ -250,10 +235,6 @@ function shortenTitle(title = "", retailer = "") {
     "sofa",
     "blanket",
     "cabin",
-    "boots",
-    "coat",
-    "lamp",
-    "vase",
   ];
 
   let cleaned = source
@@ -281,134 +262,214 @@ function shortenTitle(title = "", retailer = "") {
     categoryWords.includes(word.toLowerCase())
   );
 
-  let finalWords;
+  let finalWords: string[];
   if (foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()) {
     finalWords = [brand, foundCategory];
   } else {
-    finalWords = words.slice(0, Math.min(3, Math.max(2, words.length)));
+    finalWords = words.slice(0, Math.min(2, words.length));
   }
 
   const compact = finalWords.join(" ").trim();
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
-function pickBestPreviewImage(data) {
-  if (typeof data?.selectedImage === "string" && data.selectedImage.startsWith("http")) {
-    return data.selectedImage;
-  }
+function getBoardSize(
+  price: number | null,
+  index: number,
+  allPrices: number[] = []
+): Hint["size"] {
+  if (price == null) return index % 5 === 0 ? "portrait" : "square";
+  const sorted = [...allPrices].sort((a, b) => a - b);
+  const highCut = sorted[Math.max(0, Math.floor(sorted.length * 0.75))] ?? price;
+  const midCut = sorted[Math.max(0, Math.floor(sorted.length * 0.45))] ?? price;
 
-  if (typeof data?.image === "string" && data.image.startsWith("http")) {
-    return data.image;
-  }
-
-  if (Array.isArray(data?.images)) {
-    const found = data.images.find(
-      (value) => typeof value === "string" && value.startsWith("http")
-    );
-    if (found) return found;
-  }
-
-  return "";
+  if (price >= highCut && price >= 180) return index % 3 === 0 ? "hero" : "feature";
+  if (price >= midCut && price >= 75) return "portrait";
+  return "square";
 }
 
-function ComposerPreview({
-  preview,
-  draftTitle,
-  setDraftTitle,
-  draftPrivate,
-  setDraftPrivate,
-  isAdding,
-  onSubmit,
-  onCancel,
+function getTileClass(size: Hint["size"]) {
+  if (size === "hero") {
+    return "md:col-span-6 md:row-span-12";
+  }
+  if (size === "feature") {
+    return "md:col-span-4 md:row-span-10";
+  }
+  if (size === "portrait") {
+    return "md:col-span-4 md:row-span-8";
+  }
+  return "md:col-span-4 md:row-span-6";
+}
+
+function getPricePill(priceBand: Hint["priceBand"]) {
+  if (priceBand === "high") return "bg-[#2f3b2d] text-white";
+  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
+  return "bg-[#f1f5ec] text-[#627f53]";
+}
+
+function HintComposerModal({
+  isOpen,
+  draft,
+  setDraft,
+  onClose,
+  onSave,
+  isSaving,
+}: {
+  isOpen: boolean;
+  draft: {
+    title: string;
+    url: string;
+    image: string;
+    retailer: string;
+    priceLabel: string;
+    numericPrice: number | null;
+    private: boolean;
+  };
+  setDraft: React.Dispatch<
+    React.SetStateAction<{
+      title: string;
+      url: string;
+      image: string;
+      retailer: string;
+      priceLabel: string;
+      numericPrice: number | null;
+      private: boolean;
+    }>
+  >;
+  onClose: () => void;
+  onSave: () => void;
+  isSaving: boolean;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const showImage = Boolean(preview.image) && !imageFailed;
+
+  if (!isOpen) return null;
 
   return (
-    <div className="mx-auto mt-4 w-full max-w-[980px] rounded-[30px] border border-[#efdfd6] bg-white p-4 shadow-[0_18px_40px_rgba(176,118,86,0.08)] sm:p-5">
-      <div className="flex flex-col gap-4 md:flex-row">
-        <div className="relative h-[170px] w-full overflow-hidden rounded-[24px] border border-[#f0dfd6] bg-[#faf6f3] md:w-[220px] md:shrink-0">
-          {showImage ? (
-            <>
-              <img
-                src={preview.image}
-                alt={draftTitle || preview.title}
-                className="absolute inset-0 h-full w-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={() => setImageFailed(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.26)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
-            </>
-          ) : (
-            <div className={`absolute inset-0 bg-gradient-to-br ${preview.fallbackGradient}`} />
-          )}
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-[640px] rounded-[32px] border border-[#ecdcd2] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
+              New hint
+            </p>
+            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+              Check it before saving
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#ead9d0] text-slate-500 hover:bg-[#faf6f3]"
+            aria-label="Close add hint modal"
+          >
+            ✕
+          </button>
         </div>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
-                preview.priceBand
-              )}`}
-            >
-              {preview.priceLabel}
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setDraftPrivate(false)}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
-                !draftPrivate
-                  ? "bg-[#2f3b2d] text-white"
-                  : "border border-[#eadfd8] bg-white text-slate-600 hover:bg-[#faf7f4]"
-              }`}
-            >
-              Shared
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setDraftPrivate(true)}
-              className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
-                draftPrivate
-                  ? "bg-[#fff2ea] text-[#df7c59]"
-                  : "border border-[#eadfd8] bg-white text-slate-600 hover:bg-[#faf7f4]"
-              }`}
-            >
-              Private
-            </button>
+        <div className="mt-6 grid gap-5 md:grid-cols-[220px_1fr]">
+          <div className="overflow-hidden rounded-[24px] border border-[#f0dfd6] bg-[#f8f3ef]">
+            {draft.image && !imageFailed ? (
+              <img
+                src={draft.image}
+                alt={draft.title || "Hint preview"}
+                className="aspect-[4/5] h-full w-full object-cover"
+                onError={() => setImageFailed(true)}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="flex aspect-[4/5] items-end bg-gradient-to-br from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f] p-4">
+                <p className="text-sm font-medium text-white/90">{draft.retailer || "Saved link"}</p>
+              </div>
+            )}
           </div>
 
-          <div className="mt-4">
-            <input
-              type="text"
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Name this hint"
-              className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[16px] font-semibold text-slate-800 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
-            />
-            <p className="mt-2 truncate text-[13px] text-slate-500">{preview.retailer}</p>
-          </div>
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="composer-link" className="mb-2 block text-sm font-medium text-slate-700">
+                Link
+              </label>
+              <input
+                id="composer-link"
+                type="url"
+                value={draft.url}
+                onChange={(e) =>
+                  setDraft((current) => ({ ...current, url: e.target.value }))
+                }
+                className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              />
+            </div>
 
-          <div className="mt-auto flex flex-col gap-3 pt-4 sm:flex-row">
-            <button
-              type="button"
-              onClick={onSubmit}
-              disabled={isAdding}
-              className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
-            >
-              {isAdding ? "Adding..." : "Save hint"}
-            </button>
+            <div>
+              <label htmlFor="composer-title" className="mb-2 block text-sm font-medium text-slate-700">
+                Name
+              </label>
+              <input
+                id="composer-title"
+                type="text"
+                value={draft.title}
+                onChange={(e) =>
+                  setDraft((current) => ({ ...current, title: e.target.value }))
+                }
+                className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              />
+            </div>
 
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isAdding}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-700 hover:bg-[#faf6f3] disabled:opacity-60"
-            >
-              Cancel
-            </button>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-[20px] border border-[#f0e0d7] bg-[#fffaf7] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Retailer
+                </p>
+                <p className="mt-1 text-sm text-slate-700">{draft.retailer || "Saved link"}</p>
+              </div>
+
+              <div className="rounded-[20px] border border-[#f0e0d7] bg-[#fffaf7] px-4 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                  Price
+                </p>
+                <p className="mt-1 text-sm text-slate-700">{draft.priceLabel}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setDraft((current) => ({ ...current, private: !current.private }))
+                }
+                className={`rounded-full border px-4 py-2 text-sm font-semibold ${
+                  draft.private
+                    ? "border-[#e08a67] bg-[#fff7f2] text-[#e08a67]"
+                    : "border-[#ead9d0] bg-white text-slate-700 hover:bg-[#faf6f3]"
+                }`}
+              >
+                {draft.private ? "🔒 Private" : "🔓 Public"}
+              </button>
+            </div>
+
+            <p className="text-sm text-slate-500">
+              We can even remind you when it goes on sale.
+            </p>
           </div>
+        </div>
+
+        <div className="mt-7 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-700 hover:bg-[#faf6f3]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving}
+            className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
+          >
+            {isSaving ? "Saving..." : "Save hint"}
+          </button>
         </div>
       </div>
     </div>
@@ -428,7 +489,7 @@ function EditHintModal({
   isRefreshing,
   isSaving,
   hint,
-}) {
+}: any) {
   if (!isOpen || !hint) return null;
 
   return (
@@ -463,7 +524,9 @@ function EditHintModal({
               id="edit-link"
               type="url"
               value={editForm.url}
-              onChange={(e) => setEditForm((current) => ({ ...current, url: e.target.value }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEditForm((current: any) => ({ ...current, url: e.target.value }))
+              }
               className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
             />
           </div>
@@ -476,12 +539,14 @@ function EditHintModal({
               id="edit-title"
               type="text"
               value={editForm.title}
-              onChange={(e) => setEditForm((current) => ({ ...current, title: e.target.value }))}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setEditForm((current: any) => ({ ...current, title: e.target.value }))
+              }
               className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
             />
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             <button
               type="button"
               onClick={onToggleStarred}
@@ -526,7 +591,7 @@ function EditHintModal({
               disabled={isRefreshing}
               className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-700 hover:bg-[#faf6f3] disabled:opacity-60"
             >
-              {isRefreshing ? "Refreshing..." : "Replace from link"}
+              {isRefreshing ? "Refreshing..." : "Refresh from link"}
             </button>
 
             <button
@@ -546,44 +611,45 @@ function EditHintModal({
 
 function HintCard({
   hint,
-  isDragging = false,
-  dragListeners,
-  dragAttributes,
-  setDragActivatorNodeRef,
+  dragging = false,
   onEdit,
   onToggleStarred,
   onTogglePrivate,
+}: {
+  hint: Hint;
+  dragging?: boolean;
+  onEdit?: (hint: Hint) => void;
+  onToggleStarred?: (hint: Hint) => void;
+  onTogglePrivate?: (hint: Hint) => void;
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
   return (
     <article
-      className={`group relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border transition-[transform,box-shadow,opacity] duration-200 ${
-        getTileClass(hint.size)
-      } ${
-        isDragging
-          ? "z-20 rotate-[1deg] shadow-[0_26px_60px_rgba(176,118,86,0.22)]"
-          : "hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)]"
-      } ${
-        hint.private
-          ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
-          : "border-[#f0dfd6] bg-white shadow-sm"
+      className={`group relative flex h-full min-h-[320px] flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
+        dragging
+          ? "rotate-[1.5deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
+          : hint.private
+          ? "border-white/50 bg-white/60 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
+          : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
       }`}
     >
       <div className="relative flex h-full flex-col">
-        <div className="relative min-h-[62%] flex-1 overflow-hidden">
+        <div className="relative min-h-[66%] flex-1 overflow-hidden">
           {showImage ? (
             <>
               <img
                 src={hint.image}
                 alt={hint.title}
-                className={`absolute inset-0 h-full w-full object-cover ${hint.private ? "opacity-80" : ""}`}
+                className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+                  hint.private ? "opacity-80" : ""
+                }`}
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 onError={() => setImageFailed(true)}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(31,24,20,0.35)] via-[rgba(31,24,20,0.05)] to-[rgba(255,255,255,0.02)]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,22,18,0.42)] via-[rgba(28,22,18,0.05)] to-[rgba(255,255,255,0.02)]" />
             </>
           ) : (
             <div
@@ -593,19 +659,11 @@ function HintCard({
             />
           )}
 
-          <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
+          <div className="absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                ref={setDragActivatorNodeRef}
-                {...dragAttributes}
-                {...dragListeners}
-                className="flex cursor-grab touch-none items-center gap-1 rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm active:cursor-grabbing"
-                title="Drag to reorder"
-                aria-label={`Drag ${hint.title}`}
-              >
+              <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
                 ⋮⋮ Drag
-              </button>
+              </div>
 
               {hint.starred && (
                 <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
@@ -614,48 +672,44 @@ function HintCard({
               )}
 
               {hint.private && (
-                <div className="rounded-full bg-white/74 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
                   Private
                 </div>
               )}
             </div>
 
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => onEdit(hint)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
-                aria-label="Edit hint"
-              >
-                ✎
-              </button>
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(hint)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
+                  aria-label="Edit hint"
+                >
+                  ✎
+                </button>
+              )}
 
-              <button
-                onClick={() => onToggleStarred(hint)}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[16px] backdrop-blur-sm ${
-                  hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
-                }`}
-                aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
-                type="button"
-              >
-                ★
-              </button>
+              {onToggleStarred && (
+                <button
+                  onClick={() => onToggleStarred(hint)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[16px] backdrop-blur-sm ${
+                    hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
+                  }`}
+                  aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
+                  type="button"
+                >
+                  ★
+                </button>
+              )}
             </div>
           </div>
         </div>
 
-        <div className="relative -mt-6 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
-          <div
-            className={`flex w-full flex-1 flex-col rounded-[24px] p-4 shadow-sm backdrop-blur-md ${
-              hint.private ? "bg-white/82" : "bg-white/90"
-            }`}
-          >
+        <div className="relative -mt-7 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
+          <div className={`flex w-full flex-1 flex-col rounded-[26px] p-5 shadow-sm backdrop-blur-md ${hint.private ? "bg-white/84" : "bg-white/92"}`}>
             <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
-                  hint.priceBand
-                )}`}
-              >
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(hint.priceBand)}`}>
                 {hint.priceLabel}
               </span>
 
@@ -670,7 +724,7 @@ function HintCard({
             </div>
 
             <h2
-              className="mt-3 min-w-0 overflow-hidden text-[20px] font-semibold tracking-[-0.04em] text-slate-900"
+              className="mt-3 min-w-0 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-slate-900"
               style={{
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
@@ -683,15 +737,17 @@ function HintCard({
 
             <p className="mt-1 truncate text-[13px] text-slate-500">{hint.retailer}</p>
 
-            <div className="mt-auto pt-4">
+            <div className="mt-auto pt-5">
               <div className="flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => onTogglePrivate(hint)}
-                  className="rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
-                >
-                  {hint.private ? "🔒 Private" : "🔓 Public"}
-                </button>
+                {onTogglePrivate && (
+                  <button
+                    type="button"
+                    onClick={() => onTogglePrivate(hint)}
+                    className="rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
+                  >
+                    {hint.private ? "🔒 Private" : "🔓 Public"}
+                  </button>
+                )}
                 <a
                   href={hint.url}
                   target="_blank"
@@ -709,69 +765,91 @@ function HintCard({
   );
 }
 
-function SortableHintTile(props) {
-  const { hint } = props;
+function SortableHintTile({
+  hint,
+  onEdit,
+  onToggleStarred,
+  onTogglePrivate,
+}: {
+  hint: Hint;
+  onEdit: (hint: Hint) => void;
+  onToggleStarred: (hint: Hint) => void;
+  onTogglePrivate: (hint: Hint) => void;
+}) {
   const {
     attributes,
     listeners,
     setNodeRef,
-    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
   } = useSortable({ id: hint.id });
 
   const style = {
-    transform: transform ? CSS.Translate.toString(transform) : undefined,
+    transform: CSS.Transform.toString(transform),
     transition,
   };
 
   return (
-    <div ref={setNodeRef} style={style} className={isDragging ? "z-20" : ""}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${getTileClass(hint.size)} touch-none`}
+      {...attributes}
+      {...listeners}
+    >
       <HintCard
-        {...props}
-        isDragging={isDragging}
-        dragListeners={listeners}
-        dragAttributes={attributes}
-        setDragActivatorNodeRef={setActivatorNodeRef}
+        hint={hint}
+        dragging={isDragging}
+        onEdit={onEdit}
+        onToggleStarred={onToggleStarred}
+        onTogglePrivate={onTogglePrivate}
       />
     </div>
   );
 }
 
 export default function HintsPage() {
-  const [hints, setHints] = useState([]);
+  const [hints, setHints] = useState<Hint[]>([]);
   const [link, setLink] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
-  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
-  const [draftPreview, setDraftPreview] = useState(null);
-  const [draftTitle, setDraftTitle] = useState("");
-  const [draftPrivate, setDraftPrivate] = useState(false);
+  const [isFetchingDraft, setIsFetchingDraft] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [error, setError] = useState("");
-  const [editingHintId, setEditingHintId] = useState(null);
+  const [editingHintId, setEditingHintId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ title: "", url: "" });
   const [isRefreshingEdit, setIsRefreshingEdit] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const [draftHint, setDraftHint] = useState({
+    title: "",
+    url: "",
+    image: "",
+    retailer: "",
+    priceLabel: "Price unavailable",
+    numericPrice: null as number | null,
+    private: false,
+  });
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
+
+  const hasRealHints = hints.length > 0;
+  const visibleHints = hasRealHints ? hints : demoHints;
+  const activeHint =
+    visibleHints.find((hint) => hint.id === activeId) ?? null;
 
   const numericPrices = useMemo(
-    () => hints.map((hint) => hint.numericPrice).filter((value) => typeof value === "number"),
+    () =>
+      hints
+        .map((hint) => hint.numericPrice)
+        .filter((value): value is number => typeof value === "number"),
     [hints]
-  );
-
-  const activeHint = useMemo(
-    () => hints.find((hint) => hint.id === activeId) || null,
-    [hints, activeId]
   );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 120, tolerance: 8 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -786,6 +864,7 @@ export default function HintsPage() {
         data: { user },
       } = await supabase.auth.getUser();
       setCurrentUser(user);
+      setIsLoading(false);
     }
 
     loadSession();
@@ -804,7 +883,7 @@ export default function HintsPage() {
         .select("*")
         .eq("user_id", currentUser.id)
         .order("position", { ascending: true })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: true });
 
       if (error) {
         setError(error.message);
@@ -813,39 +892,27 @@ export default function HintsPage() {
         return;
       }
 
-      const rows = data || [];
-      const loadedPrices = rows
-        .map((item) => item.numeric_price)
+      const prices = (data || [])
+        .map((row) => row.numeric_price)
         .filter((value) => typeof value === "number");
 
       setHints(
-        rows.map((row, index) => {
-          const derivedSize = getSizeFromPrice(
-            row.numeric_price,
-            loadedPrices,
-            Boolean(row.starred)
-          );
-
-          return {
-            id: row.id,
-            title: row.title || "Saved hint",
-            retailer: row.retailer || normaliseRetailer(row.url || ""),
-            priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
-            numericPrice: row.numeric_price,
-            priceBand: getPriceBand(row.numeric_price),
-            image: row.image_url || "",
-            fallbackGradient: buildFallbackGradient(index),
-            tags: [],
-            starred: Boolean(row.starred),
-            private: Boolean(row.is_private),
-            size:
-              row.size && ["tall", "portrait", "square"].includes(row.size)
-                ? row.size
-                : derivedSize,
-            url: row.url || "",
-            position: row.position ?? index,
-          };
-        })
+        (data || []).map((row, index) => ({
+          id: row.id,
+          title: row.title || "Saved hint",
+          retailer: row.retailer || normaliseRetailer(row.url || ""),
+          priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
+          numericPrice: row.numeric_price,
+          priceBand: getPriceBand(row.numeric_price),
+          image: row.image_url || "",
+          fallbackGradient: buildFallbackGradient(index),
+          tags: [],
+          starred: Boolean(row.starred),
+          private: Boolean(row.is_private),
+          size: row.size || getBoardSize(row.numeric_price, index, prices),
+          url: row.url || "",
+          position: row.position ?? index,
+        }))
       );
 
       setIsLoading(false);
@@ -854,19 +921,20 @@ export default function HintsPage() {
     loadHints();
   }, [currentUser]);
 
-  async function persistHintOrder(updatedHints) {
-    if (!currentUser) return;
-
+  async function persistPositions(updatedHints: Hint[]) {
     const supabase = createClient();
 
     await Promise.all(
-      updatedHints.map((hint, index) =>
-        supabase.from("hints").update({ position: index }).eq("id", hint.id)
+      updatedHints.map((hint, idx) =>
+        supabase
+          .from("hints")
+          .update({ position: idx })
+          .eq("id", hint.id)
       )
     );
   }
 
-  function openEditModal(hint) {
+  function openEditModal(hint: Hint) {
     setEditingHintId(hint.id);
     setEditForm({
       title: hint.title || "",
@@ -881,14 +949,8 @@ export default function HintsPage() {
     setIsSavingEdit(false);
   }
 
-  function clearDraftPreview() {
-    setDraftPreview(null);
-    setDraftTitle("");
-    setDraftPrivate(false);
-  }
-
   async function saveEditChanges() {
-    if (!currentUser) return;
+    if (!currentUser || !editingHintId) return;
 
     const trimmedTitle = editForm.title.trim();
     const trimmedUrl = editForm.url.trim();
@@ -930,14 +992,11 @@ export default function HintsPage() {
   }
 
   async function deleteHint() {
-    if (!currentUser) return;
+    if (!currentUser || !editingHintId) return;
 
     const supabase = createClient();
 
-    const { error } = await supabase
-      .from("hints")
-      .delete()
-      .eq("id", editingHintId);
+    const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
 
     if (error) {
       setError(error.message);
@@ -948,22 +1007,14 @@ export default function HintsPage() {
     closeEditModal();
   }
 
-  async function toggleStarred(hint) {
+  async function toggleStarred(hint: Hint) {
     if (!currentUser) return;
 
     const supabase = createClient();
     const newStarred = !hint.starred;
 
     setHints((current) =>
-      current.map((h) =>
-        h.id === hint.id
-          ? {
-              ...h,
-              starred: newStarred,
-              size: getSizeFromPrice(h.numericPrice, numericPrices, newStarred),
-            }
-          : h
-      )
+      current.map((h) => (h.id === hint.id ? { ...h, starred: newStarred } : h))
     );
 
     const { error } = await supabase
@@ -979,7 +1030,7 @@ export default function HintsPage() {
     }
   }
 
-  async function togglePrivate(hint) {
+  async function togglePrivate(hint: Hint) {
     if (!currentUser) return;
 
     const supabase = createClient();
@@ -1025,21 +1076,13 @@ export default function HintsPage() {
       }
 
       const numericPrice = extractNumericPrice(data.priceText);
-      const refreshedTitle =
-        data.titleShort ||
-        shortenTitle(
-          data.title || editForm.title || "",
-          data.siteName || normaliseRetailer(trimmed)
-        );
+      const refreshedTitle = shortenTitle(
+        data.title || editForm.title || "",
+        data.siteName || normaliseRetailer(trimmed)
+      );
 
-      const chosenImage = pickBestPreviewImage(data);
-
-      setHints((current) => {
-        const pricePool = current
-          .map((hint) => (hint.id === editingHintId ? numericPrice : hint.numericPrice))
-          .filter((value) => typeof value === "number");
-
-        return current.map((hint) => {
+      setHints((current) =>
+        current.map((hint, index) => {
           if (hint.id !== editingHintId) return hint;
 
           return {
@@ -1049,39 +1092,29 @@ export default function HintsPage() {
             priceLabel: formatPriceLabel(numericPrice, data.priceText),
             numericPrice,
             priceBand: getPriceBand(numericPrice),
-            image: chosenImage || hint.image,
-            size: getSizeFromPrice(numericPrice, pricePool, hint.starred),
+            image:
+              typeof data.image === "string" && data.image.startsWith("http")
+                ? data.image
+                : hint.image,
             url: data.url || trimmed,
+            size: getBoardSize(numericPrice, index, numericPrices),
           };
-        });
-      });
+        })
+      );
 
       setEditForm((current) => ({
         ...current,
         title: refreshedTitle,
         url: data.url || trimmed,
       }));
-
-      const supabase = createClient();
-      await supabase
-        .from("hints")
-        .update({
-          title: refreshedTitle,
-          url: data.url || trimmed,
-          image_url: chosenImage || null,
-          retailer: data.siteName || normaliseRetailer(trimmed),
-          price_text: formatPriceLabel(numericPrice, data.priceText),
-          numeric_price: numericPrice,
-        })
-        .eq("id", editingHintId);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message || "Could not refresh this link.");
     } finally {
       setIsRefreshingEdit(false);
     }
   }
 
-  async function handleFetchPreview() {
+  async function handleFetchDraft() {
     if (!currentUser) {
       setError("You must be signed in to add hints.");
       return;
@@ -1094,7 +1127,7 @@ export default function HintsPage() {
       return;
     }
 
-    setIsFetchingPreview(true);
+    setIsFetchingDraft(true);
     setError("");
 
     try {
@@ -1113,119 +1146,110 @@ export default function HintsPage() {
       }
 
       const numericPrice = extractNumericPrice(data.priceText);
-      const pricePool = [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])];
       const retailer = data.siteName || normaliseRetailer(trimmed);
-      const shortTitle =
-        data.titleShort || shortenTitle(data.title || "Saved hint", retailer);
+      const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
 
-      const preview = {
+      setDraftHint({
         title: shortTitle,
+        url: data.url || trimmed,
+        image:
+          typeof data.image === "string" && data.image.startsWith("http")
+            ? data.image
+            : "",
         retailer,
         priceLabel: formatPriceLabel(numericPrice, data.priceText),
         numericPrice,
-        priceBand: getPriceBand(numericPrice),
-        image: pickBestPreviewImage(data),
-        fallbackGradient: buildFallbackGradient(hints.length),
         private: false,
-        size: getSizeFromPrice(numericPrice, pricePool, false),
-        url: data.url || trimmed,
-      };
+      });
 
-      setDraftPreview(preview);
-      setDraftTitle(shortTitle);
-      setDraftPrivate(false);
-    } catch (err) {
+      setIsComposerOpen(true);
+    } catch (err: any) {
       setError(err.message || "Could not extract this link.");
-      clearDraftPreview();
     } finally {
-      setIsFetchingPreview(false);
+      setIsFetchingDraft(false);
     }
   }
 
-  async function handleAddHint() {
-    if (!currentUser) {
-      setError("You must be signed in to add hints.");
-      return;
-    }
+  async function handleSaveDraft() {
+    if (!currentUser) return;
 
-    if (!draftPreview) {
-      setError("Preview the link first.");
-      return;
-    }
-
-    setIsAdding(true);
-    setError("");
+    setIsSavingDraft(true);
 
     try {
-      const newHint = {
+      const incomingPriceSet = [
+        ...numericPrices,
+        ...(draftHint.numericPrice != null ? [draftHint.numericPrice] : []),
+      ];
+
+      const newHint: Hint = {
         id: crypto.randomUUID(),
-        title: draftTitle.trim() || draftPreview.title || "Saved hint",
-        retailer: draftPreview.retailer,
-        priceLabel: draftPreview.priceLabel,
-        numericPrice: draftPreview.numericPrice,
-        priceBand: draftPreview.priceBand,
-        image: draftPreview.image,
-        fallbackGradient: draftPreview.fallbackGradient,
-        tags: ["Added from link"],
+        title: shortenTitle(draftHint.title || "Saved hint", draftHint.retailer),
+        retailer: draftHint.retailer || normaliseRetailer(draftHint.url),
+        priceLabel: draftHint.priceLabel,
+        numericPrice: draftHint.numericPrice,
+        priceBand: getPriceBand(draftHint.numericPrice),
+        image: draftHint.image || "",
+        fallbackGradient: buildFallbackGradient(hints.length),
+        tags: [],
         starred: false,
-        private: draftPrivate,
-        size: draftPreview.size,
-        url: draftPreview.url,
+        private: draftHint.private,
+        size: getBoardSize(draftHint.numericPrice, hints.length, incomingPriceSet),
+        url: draftHint.url,
         position: 0,
       };
 
-      const supabase = createClient();
-
-      const { data: insertedHint, error } = await supabase
-        .from("hints")
-        .insert({
-          user_id: currentUser.id,
-          title: newHint.title,
-          url: newHint.url,
-          image_url: newHint.image,
-          retailer: newHint.retailer,
-          price_text: newHint.priceLabel,
-          numeric_price: newHint.numericPrice,
-          starred: newHint.starred,
-          is_private: newHint.private,
-          position: 0,
-          source: "user",
-        })
-        .select("id")
-        .single();
-
-      if (error) {
-        throw new Error(error.message || "Could not save this hint.");
-      }
-
-      newHint.id = insertedHint.id;
-
-      const updatedHints = [newHint, ...hints].map((hint, index) => ({
+      const reordered = [newHint, ...hints].map((hint, index) => ({
         ...hint,
         position: index,
       }));
 
-      setHints(updatedHints);
+      const supabase = createClient();
+
+      const { error: insertError } = await supabase.from("hints").insert({
+        id: newHint.id,
+        user_id: currentUser.id,
+        title: newHint.title,
+        url: newHint.url,
+        image_url: newHint.image,
+        retailer: newHint.retailer,
+        price_text: newHint.priceLabel,
+        numeric_price: newHint.numericPrice,
+        starred: newHint.starred,
+        is_private: newHint.private,
+        position: 0,
+        size: newHint.size,
+        source: "user",
+      });
+
+      if (insertError) throw new Error(insertError.message || "Could not save this hint.");
+
+      setHints(reordered);
       setLink("");
-      clearDraftPreview();
-      await persistHintOrder(updatedHints);
-    } catch (err) {
+      setIsComposerOpen(false);
+
+      await persistPositions(reordered);
+    } catch (err: any) {
       setError(err.message || "Could not save this hint.");
     } finally {
-      setIsAdding(false);
+      setIsSavingDraft(false);
     }
   }
 
-  async function handleDragEnd(event) {
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(String(event.active.id));
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
 
     if (!over || active.id === over.id) return;
+    if (!currentUser) return;
 
     const oldIndex = hints.findIndex((hint) => hint.id === active.id);
     const newIndex = hints.findIndex((hint) => hint.id === over.id);
 
-    if (oldIndex === -1 || newIndex === -1) return;
+    if (oldIndex < 0 || newIndex < 0) return;
 
     const reordered = arrayMove(hints, oldIndex, newIndex).map((hint, index) => ({
       ...hint,
@@ -1233,16 +1257,13 @@ export default function HintsPage() {
     }));
 
     setHints(reordered);
-    await persistHintOrder(reordered);
+    await persistPositions(reordered);
   }
 
-  const hasRealHints = hints.length > 0;
-  const visibleHints = hasRealHints ? hints : demoHints;
-
   return (
-    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+    <main className="min-h-screen bg-[#fff8f4] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fff8f4]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
@@ -1263,14 +1284,18 @@ export default function HintsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1380px] px-5 py-10 md:px-8">
-        <section className="text-center">
-          <h1 className="text-[32px] font-extrabold tracking-[-0.06em] text-[#f19a78] sm:text-[44px] md:text-[56px]">
+      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8 md:py-12">
+        <section className="mx-auto max-w-[920px] text-center">
+          <h1 className="text-[38px] font-extrabold tracking-[-0.07em] text-[#f19a78] sm:text-[48px] md:text-[58px]">
             Paste a link here...
           </h1>
 
-          <div className="mt-6">
-            <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
+          <p className="mx-auto mt-4 max-w-[640px] text-[15px] leading-6 text-slate-500 sm:text-[16px]">
+            Save things you’d genuinely love, keep some private, and we can even remind you when it goes on sale.
+          </p>
+
+          <div className="mt-7">
+            <div className="mx-auto flex w-full max-w-[860px] flex-col gap-3 sm:flex-row">
               <input
                 id="hint-link"
                 type="url"
@@ -1279,71 +1304,62 @@ export default function HintsPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
-                    handleFetchPreview();
+                    handleFetchDraft();
                   }
                 }}
-                placeholder="Paste any product, wishlist, or experience link"
+                placeholder="Paste a link here..."
                 className="h-[72px] w-full rounded-full border border-[#eadcd3] bg-white px-8 text-[16px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
               />
               <button
                 type="button"
-                onClick={handleFetchPreview}
-                disabled={isFetchingPreview || isLoading}
+                onClick={handleFetchDraft}
+                disabled={isFetchingDraft || isLoading}
                 className="inline-flex h-[72px] shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-8 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[170px]"
               >
-                {isFetchingPreview ? "Fetching..." : isLoading ? "Loading..." : "Preview"}
+                {isFetchingDraft ? "Fetching..." : isLoading ? "Loading..." : "Add hint"}
               </button>
             </div>
 
             {error ? (
               <p className="mt-3 text-sm font-medium text-[#c45c42]">{error}</p>
-            ) : !draftPreview ? (
+            ) : (
               <p className="mt-3 text-sm text-slate-500">
-                Pull the image, tweak the name, choose who sees it.
+                We’ll pull the image, title, and price first, then you can name it and choose privacy before saving.
               </p>
-            ) : null}
+            )}
           </div>
-
-          {draftPreview ? (
-            <ComposerPreview
-              preview={draftPreview}
-              draftTitle={draftTitle}
-              setDraftTitle={setDraftTitle}
-              draftPrivate={draftPrivate}
-              setDraftPrivate={setDraftPrivate}
-              isAdding={isAdding}
-              onSubmit={handleAddHint}
-              onCancel={clearDraftPreview}
-            />
-          ) : null}
         </section>
 
-        <section className="mt-12">
-          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
+        <section className="mt-14">
+          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6 md:p-7">
             <div
-              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-75"
+              className="pointer-events-none absolute inset-0 opacity-90"
               style={{
                 backgroundImage: `
-                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
+                  linear-gradient(to right, rgba(217, 196, 184, 0.45) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(217, 196, 184, 0.45) 1px, transparent 1px)
                 `,
-                backgroundSize: "104px 104px",
+                backgroundSize: "88px 88px",
                 backgroundPosition: "center center",
               }}
             />
 
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
+
             {isLoading ? (
-              <div className="grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
-                {[1, 2, 3].map((i) => (
+              <div className="relative grid auto-rows-[34px] grid-cols-1 gap-8 md:grid-cols-12">
+                {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] md:col-span-3 ${
-                      i === 1 ? "md:row-span-9" : i === 2 ? "md:row-span-7" : "md:row-span-5"
+                    className={`overflow-hidden rounded-[32px] border border-[#efdfd6] bg-[#f9f8f5] ${
+                      i === 1
+                        ? "md:col-span-6 md:row-span-12"
+                        : i === 2
+                        ? "md:col-span-4 md:row-span-10"
+                        : "md:col-span-4 md:row-span-8"
                     }`}
                   >
-                    <div className="relative min-h-[62%] flex-1 overflow-hidden">
-                      <div className="skeleton h-full w-full" />
-                    </div>
+                    <div className="skeleton h-full min-h-[320px] w-full" />
                   </div>
                 ))}
               </div>
@@ -1351,15 +1367,14 @@ export default function HintsPage() {
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
-                onDragStart={(event) => setActiveId(event.active.id)}
+                onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
-                onDragCancel={() => setActiveId(null)}
               >
                 <SortableContext
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
+                  <div className="relative grid auto-rows-[34px] grid-cols-1 gap-8 md:grid-cols-12">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1372,16 +1387,10 @@ export default function HintsPage() {
                   </div>
                 </SortableContext>
 
-                <DragOverlay adjustScale={false}>
+                <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
                   {activeHint ? (
-                    <div className="w-full max-w-[320px]">
-                      <HintCard
-                        hint={activeHint}
-                        isDragging
-                        onEdit={() => {}}
-                        onToggleStarred={() => {}}
-                        onTogglePrivate={() => {}}
-                      />
+                    <div className={`${getTileClass(activeHint.size)} w-[min(92vw,420px)]`}>
+                      <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
                 </DragOverlay>
@@ -1390,6 +1399,15 @@ export default function HintsPage() {
           </div>
         </section>
       </div>
+
+      <HintComposerModal
+        isOpen={isComposerOpen}
+        draft={draftHint}
+        setDraft={setDraftHint}
+        onClose={() => setIsComposerOpen(false)}
+        onSave={handleSaveDraft}
+        isSaving={isSavingDraft}
+      />
 
       <EditHintModal
         isOpen={editingHintId !== null}
