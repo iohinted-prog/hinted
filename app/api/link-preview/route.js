@@ -10,14 +10,14 @@ const FORWARDED_HEADERS = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9",
   "Cache-Control": "no-cache",
   Pragma: "no-cache",
   DNT: "1",
 };
 
 const PRICE_REGEX =
-  /(?:A\$|NZ\$|C\$|US\$|CA\$|AU\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
+  /(?:A\$|NZ\$|C\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
 
 const BLOCK_WORDS = [
   "access denied",
@@ -34,9 +34,6 @@ const BLOCK_WORDS = [
   "amazon captcha",
   "disable any ad blocker",
   "please enable js",
-  "you don't have permission",
-  "errors.edgesuite.net",
-  "geo.captcha-delivery.com",
 ];
 
 const PRIORITY_RETAILER_PATTERNS = [
@@ -48,7 +45,6 @@ const PRIORITY_RETAILER_PATTERNS = [
   /(^|\.)boohoo\./i,
   /(^|\.)prettylittlething\./i,
   /(^|\.)laredoute\./i,
-
   /(^|\.)johnlewis\.com$/i,
   /(^|\.)currys\.co\.uk$/i,
   /(^|\.)argos\.co\.uk$/i,
@@ -87,118 +83,6 @@ const PRIORITY_RETAILER_PATTERNS = [
   /(^|\.)lush\.com$/i,
   /(^|\.)hmv\.com$/i,
   /(^|\.)game\.co\.uk$/i,
-
-  /(^|\.)hm\.com$/i,
-  /(^|\.)zara\.com$/i,
-  /(^|\.)uniqlo\.com$/i,
-  /(^|\.)nike\.com$/i,
-  /(^|\.)adidas\./i,
-  /(^|\.)puma\.com$/i,
-  /(^|\.)decathlon\./i,
-  /(^|\.)gymshark\.com$/i,
-  /(^|\.)superdry\.com$/i,
-  /(^|\.)missguided\./i,
-  /(^|\.)boohooman\.com$/i,
-  /(^|\.)nastygal\.com$/i,
-  /(^|\.)net-a-porter\.com$/i,
-  /(^|\.)mrporter\.com$/i,
-  /(^|\.)farfetch\.com$/i,
-  /(^|\.)ssense\.com$/i,
-  /(^|\.)revolve\.com$/i,
-  /(^|\.)fashionnova\.com$/i,
-  /(^|\.)princesspolly\.com$/i,
-  /(^|\.)whitefoxboutique\.com$/i,
-  /(^|\.)lulus\.com$/i,
-  /(^|\.)abercrombie\.com$/i,
-  /(^|\.)hollisterco\.com$/i,
-  /(^|\.)urbanoutfitters\.com$/i,
-  /(^|\.)anthropologie\.com$/i,
-  /(^|\.)freepeople\.com$/i,
-  /(^|\.)gap\.com$/i,
-  /(^|\.)oldnavy\.gap\.com$/i,
-  /(^|\.)bananarepublic\.gap\.com$/i,
-  /(^|\.)ae\.com$/i,
-  /(^|\.)aerie\.com$/i,
-
-  /(^|\.)apple\.com$/i,
-  /(^|\.)samsung\.com$/i,
-  /(^|\.)dyson\./i,
-  /(^|\.)bestbuy\./i,
-  /(^|\.)newegg\.com$/i,
-  /(^|\.)jbhifi\./i,
-  /(^|\.)officeworks\.com\.au$/i,
-  /(^|\.)kogan\.com$/i,
-
-  /(^|\.)walmart\.com$/i,
-  /(^|\.)target\.com$/i,
-  /(^|\.)costco\./i,
-  /(^|\.)homedepot\.com$/i,
-  /(^|\.)lowes\.com$/i,
-  /(^|\.)macys\.com$/i,
-  /(^|\.)nordstrom\.com$/i,
-  /(^|\.)kohls\.com$/i,
-  /(^|\.)jcpenney\.com$/i,
-  /(^|\.)walgreens\.com$/i,
-  /(^|\.)cvs\.com$/i,
-  /(^|\.)riteaid\.com$/i,
-  /(^|\.)sears\.com$/i,
-  /(^|\.)bj\.com$/i,
-  /(^|\.)saksfifthavenue\.com$/i,
-  /(^|\.)bloomingdales\.com$/i,
-  /(^|\.)neimanmarcus\.com$/i,
-  /(^|\.)ulta\.com$/i,
-  /(^|\.)sephora\./i,
-  /(^|\.)chewy\.com$/i,
-  /(^|\.)crateandbarrel\.com$/i,
-  /(^|\.)bedbathandbeyond\./i,
-  /(^|\.)wayfair\./i,
-  /(^|\.)ikea\./i,
-  /(^|\.)overstock\.com$/i,
-
-  /(^|\.)canadiantire\.ca$/i,
-  /(^|\.)sportchek\.ca$/i,
-  /(^|\.)staples\.ca$/i,
-  /(^|\.)indigo\.ca$/i,
-  /(^|\.)londondrugs\.com$/i,
-  /(^|\.)mec\.ca$/i,
-  /(^|\.)thebay\.com$/i,
-  /(^|\.)simons\.ca$/i,
-
-  /(^|\.)harveynorman\./i,
-  /(^|\.)myer\.com\.au$/i,
-  /(^|\.)davidjones\.com$/i,
-  /(^|\.)kmart\.com\.au$/i,
-  /(^|\.)bunnings\.com\.au$/i,
-  /(^|\.)woolworths\.com\.au$/i,
-  /(^|\.)coles\.com\.au$/i,
-  /(^|\.)chemistwarehouse\./i,
-  /(^|\.)bigw\.com\.au$/i,
-  /(^|\.)theiconic\.com\.au$/i,
-  /(^|\.)mydeal\.com\.au$/i,
-  /(^|\.)adorebeauty\.com\.au$/i,
-  /(^|\.)mecca\.com\.au$/i,
-
-  /(^|\.)thewarehouse\.co\.nz$/i,
-  /(^|\.)mightyape\.co\.nz$/i,
-  /(^|\.)noelleeming\.co\.nz$/i,
-  /(^|\.)fishpond\./i,
-  /(^|\.)trademe\.co\.nz$/i,
-
-  /(^|\.)rakuten\./i,
-  /(^|\.)zalando\./i,
-  /(^|\.)otto\./i,
-  /(^|\.)allegro\./i,
-  /(^|\.)alibaba\.com$/i,
-  /(^|\.)aliexpress\.com$/i,
-  /(^|\.)temu\.com$/i,
-  /(^|\.)shein\./i,
-  /(^|\.)jd\./i,
-  /(^|\.)flipkart\.com$/i,
-  /(^|\.)mercadolibre\./i,
-  /(^|\.)shopee\./i,
-  /(^|\.)lazada\./i,
-  /(^|\.)coupang\.com$/i,
-  /(^|\.)tiktok\.com$/i,
 ];
 
 const RETAILER_RULES = {
@@ -222,46 +106,12 @@ const RETAILER_RULES = {
         .replace(/\s{2,}/g, " ")
         .trim(),
   },
-
-  etsy: {
-    match: (h) => /(^|\.)etsy\.com$/i.test(h),
-    titleSelectors: ['meta[property="og:title"]', "h1"],
-    priceSelectors: [
-      '[data-selector="price-only"]',
-      '[data-buy-box-region="price"]',
-      '[itemprop="price"]',
-      'meta[property="product:price:amount"]',
-      'meta[property="og:price:amount"]',
-      'meta[name="twitter:data1"]',
-    ],
-    imageSelectors: [
-      'meta[property="og:image"]',
-      'meta[name="twitter:image"]',
-      "img[data-src]",
-      "img[src]",
-    ],
-  },
-
-  next: {
-    match: (h) => /(^|\.)next\./i.test(h),
-    titleSelectors: ['meta[property="og:title"]', "h1", "title"],
-    priceSelectors: [
-      '[itemprop="price"]',
-      '[data-testid*="price"]',
-      '[class*="price"]',
-      'meta[property="product:price:amount"]',
-      'meta[property="og:price:amount"]',
-    ],
-    imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
-  },
-
   currys: {
     match: (h) => /(^|\.)currys\.co\.uk$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
     priceSelectors: ['[data-testid*="price"]', '[class*="price"]', '[itemprop="price"]'],
     imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
-
   johnlewis: {
     match: (h) => /(^|\.)johnlewis\.com$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
@@ -273,7 +123,6 @@ const RETAILER_RULES = {
     ],
     imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
-
   argos: {
     match: (h) => /(^|\.)argos\.co\.uk$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
@@ -284,7 +133,6 @@ const RETAILER_RULES = {
     ],
     imageSelectors: ['meta[property="og:image"]', "img[src]"],
   },
-
   ebay: {
     match: (h) => /(^|\.)ebay\./i.test(h),
     titleSelectors: [
@@ -303,7 +151,31 @@ const RETAILER_RULES = {
       'meta[property="og:image"]',
     ],
   },
-
+  etsy: {
+    match: (h) => /(^|\.)etsy\.com$/i.test(h),
+    titleSelectors: ['meta[property="og:title"]', "h1"],
+    priceSelectors: [
+      '[data-selector="price-only"]',
+      '[data-buy-box-region="price"]',
+      '[itemprop="price"]',
+      'meta[property="product:price:amount"]',
+      'meta[property="og:price:amount"]',
+      'meta[name="twitter:data1"]',
+    ],
+    imageSelectors: ['meta[property="og:image"]', "img[data-src]", "img[src]"],
+  },
+  next: {
+    match: (h) => /(^|\.)next\./i.test(h),
+    titleSelectors: ['meta[property="og:title"]', "h1", "title"],
+    priceSelectors: [
+      '[itemprop="price"]',
+      '[data-testid*="price"]',
+      '[class*="price"]',
+      'meta[property="product:price:amount"]',
+      'meta[property="og:price:amount"]',
+    ],
+    imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
+  },
   generic: {
     match: () => true,
     titleSelectors: [
@@ -390,6 +262,10 @@ function hostname(url = "") {
   }
 }
 
+function isPriorityRetailerHost(host = "") {
+  return PRIORITY_RETAILER_PATTERNS.some((pattern) => pattern.test(host));
+}
+
 function getCountryCodeForHost(host = "") {
   const h = String(host).toLowerCase();
   if (h.endsWith(".co.uk")) return "gb";
@@ -414,10 +290,6 @@ function getRule(host = "") {
     if (rule.match(host)) return { key, rule };
   }
   return { key: "generic", rule: RETAILER_RULES.generic };
-}
-
-function isPriorityRetailerHost(host = "") {
-  return PRIORITY_RETAILER_PATTERNS.some((pattern) => pattern.test(host));
 }
 
 function getMeta($, selectors = []) {
@@ -468,10 +340,9 @@ function getImageAttr($, selectors = [], base = "") {
 function detectCurrency(val = "") {
   if (!val) return null;
   if (val.includes("£")) return "GBP";
-  if (val.includes("A$") || val.includes("AU$")) return "AUD";
+  if (val.includes("A$")) return "AUD";
   if (val.includes("NZ$")) return "NZD";
-  if (val.includes("C$") || val.includes("CA$")) return "CAD";
-  if (val.includes("US$")) return "USD";
+  if (val.includes("C$")) return "CAD";
   if (val.includes("$")) return "USD";
   if (val.includes("€")) return "EUR";
   return null;
@@ -500,9 +371,8 @@ function formatPrice(amount = "", currency = "") {
 function extractNumericPrice(val = "") {
   const cleaned = String(val).replace(/,/g, "");
   const match =
-    cleaned.match(/(?:A\$|NZ\$|C\$|US\$|CA\$|AU\$|£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
+    cleaned.match(/(?:A\$|NZ\$|C\$|£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
     cleaned.match(/(\d+(?:\.\d{1,2})?)/);
-
   if (!match) return null;
   const num = Number(match[1]);
   return Number.isFinite(num) ? num : null;
@@ -520,7 +390,6 @@ function extractJsonLd($, base = "") {
 
   function walk(node) {
     if (!node || typeof node !== "object") return;
-
     if (Array.isArray(node)) {
       node.forEach(walk);
       return;
@@ -557,7 +426,6 @@ function extractJsonLd($, base = "") {
         .concat(node.image)
         .map((img) => makeAbsolute(typeof img === "string" ? img : img.url || "", base))
         .filter(Boolean);
-
       result.images.push(...images);
     }
 
@@ -578,12 +446,10 @@ function extractMetaPrice($) {
     'meta[property="og:price:amount"]',
     'meta[name="twitter:data1"]',
   ]);
-
   const currency = getMeta($, [
     'meta[property="product:price:currency"]',
     'meta[property="og:price:currency"]',
   ]);
-
   if (!amount) return "";
   return formatPrice(amount, currency || detectCurrency(amount) || "");
 }
@@ -608,31 +474,24 @@ function extractDomPrice($, selectors = []) {
 
 function pickBestPrice({ domPrice, jsonLdPrice, metaPrice }, preferredCurrency = "GBP") {
   const candidates = [
-    { value: domPrice, priority: 3 },
-    { value: jsonLdPrice, priority: 2 },
-    { value: metaPrice, priority: 1 },
+    { value: domPrice, source: "dom", priority: 3 },
+    { value: jsonLdPrice, source: "jsonld", priority: 2 },
+    { value: metaPrice, source: "meta", priority: 1 },
   ].filter((c) => c.value);
 
   if (!candidates.length) return { priceText: "", currency: null };
 
-  const exactCurrency = candidates.filter(
+  const currencyMatches = candidates.filter(
     (c) => detectCurrency(c.value) === preferredCurrency
   );
 
-  const explicitCurrency = candidates.filter((c) => detectCurrency(c.value));
-  const pool = exactCurrency.length
-    ? exactCurrency
-    : explicitCurrency.length
-      ? explicitCurrency
-      : candidates;
+  const pool = currencyMatches.length ? currencyMatches : candidates.filter((c) => detectCurrency(c.value));
+  const finalPool = pool.length ? pool : candidates;
 
-  pool.sort((a, b) => b.priority - a.priority);
+  finalPool.sort((a, b) => b.priority - a.priority);
+  const winner = finalPool[0];
 
-  const winner = pool[0];
-  return {
-    priceText: winner.value,
-    currency: detectCurrency(winner.value),
-  };
+  return { priceText: winner.value, currency: detectCurrency(winner.value) };
 }
 
 const BAD_IMAGE_PATTERN =
@@ -793,7 +652,6 @@ function detectBlockedPage({
   jsonLdPrice,
 }) {
   const blockedByStatus = status === 403 || status === 429 || status === 500 || status === 503;
-
   const blockedByText =
     includesBlockedText(titleTag) ||
     includesBlockedText(h1) ||
@@ -847,11 +705,104 @@ function shouldRetryWithJs(result) {
   return !(hasTitle && hasPrice && hasImage);
 }
 
-async function fetchViaScrapingBee(inputUrl, options = {}) {
+function buildFallbackResult(inputUrl, description = "Could not fetch page details.") {
+  const host = (() => {
+    try {
+      return new URL(inputUrl).hostname.replace(/^www\./i, "");
+    } catch {
+      return "";
+    }
+  })();
+
+  return {
+    url: inputUrl,
+    title: "Needs review",
+    titleShort: "Needs review",
+    description,
+    siteName: host,
+    image: "",
+    selectedImage: "",
+    imageCandidates: [],
+    priceText: "",
+    numericPrice: null,
+    detectedCurrency: null,
+    brand: "",
+    confidence: "low",
+    needsReview: true,
+    blocked: false,
+    blockReason: null,
+    blockMessage: "",
+    source: "fallback",
+    debug: {
+      error: description,
+    },
+  };
+}
+
+function throwIfAborted(signal) {
+  if (signal?.aborted) {
+    const err = new Error("Request aborted");
+    err.name = "AbortError";
+    throw err;
+  }
+}
+
+async function fetchDirectHtml(inputUrl, options = {}, upstreamSignal) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeout || 25000);
+  const timer = setTimeout(() => controller.abort(), options.timeout || 4500);
+  const abortFromUpstream = () => controller.abort();
 
   try {
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) controller.abort();
+      else upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+    }
+
+    const res = await fetch(inputUrl, {
+      method: "GET",
+      redirect: "follow",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: FORWARDED_HEADERS,
+    });
+
+    const contentType = res.headers.get("content-type") || "text/html";
+    const html = await res.text();
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      contentType,
+      html: html || "",
+      finalUrl: res.url || inputUrl,
+      provider: "direct",
+      fetchProfile: {
+        provider: "direct",
+        render_js: false,
+        premium_proxy: false,
+        stealth_proxy: false,
+        country_code: null,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+    if (upstreamSignal) {
+      upstreamSignal.removeEventListener("abort", abortFromUpstream);
+    }
+  }
+}
+
+async function fetchViaScrapingBee(inputUrl, options = {}, upstreamSignal) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeout || 25000);
+  const abortFromUpstream = () => controller.abort();
+
+  try {
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) controller.abort();
+      else upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+    }
+
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
     if (!apiKey) throw new Error("Missing SCRAPINGBEE_API_KEY");
 
@@ -898,8 +849,6 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
     const contentType = res.headers.get("content-type") || "text/html";
     const html = await res.text();
 
-    clearTimeout(timer);
-
     return {
       ok: res.ok,
       status: res.status,
@@ -917,13 +866,16 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
           options.renderJs || options.stealthProxy
             ? options.waitBrowser || "networkidle0"
             : "",
-        block_resources: options.renderJs || options.stealthProxy ? false : null,
+        block_resources:
+          options.renderJs || options.stealthProxy ? false : null,
         forward_headers: true,
       },
     };
-  } catch (err) {
+  } finally {
     clearTimeout(timer);
-    throw err;
+    if (upstreamSignal) {
+      upstreamSignal.removeEventListener("abort", abortFromUpstream);
+    }
   }
 }
 
@@ -1068,8 +1020,15 @@ function parsePage({
   };
 }
 
-async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
-  const fetched = await fetchViaScrapingBee(inputUrl, options);
+async function tryFetchAndParse(inputUrl, preferredCurrency, attempt, upstreamSignal) {
+  throwIfAborted(upstreamSignal);
+
+  const fetched =
+    attempt.provider === "direct"
+      ? await fetchDirectHtml(inputUrl, attempt.options || {}, upstreamSignal)
+      : await fetchViaScrapingBee(inputUrl, attempt.options || {}, upstreamSignal);
+
+  throwIfAborted(upstreamSignal);
 
   if (!fetched.contentType.includes("text/html")) {
     return {
@@ -1099,60 +1058,92 @@ async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
   return { fatal: false, result, fetched };
 }
 
-async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
+async function scrapeUrl(
+  inputUrl,
+  preferredCurrency = "GBP",
+  config = {}
+) {
+  const { signal, phase = "auto" } = config;
+
+  throwIfAborted(signal);
+
   const host = hostname(inputUrl);
   const countryCode = getCountryCodeForHost(host);
   const isPriorityRetailer = isPriorityRetailerHost(host);
 
-  const attempts = [
+  const localOnlyAttempts = [
     {
-      name: "standard",
+      name: "direct-html",
+      provider: "direct",
       options: {
-        renderJs: false,
-        countryCode: "",
+        timeout: 4500,
       },
     },
+  ];
+
+  const fallbackAttempts = [
     {
       name: "premium",
+      provider: "scrapingbee",
       options: {
         renderJs: false,
         premiumProxy: true,
         countryCode,
+        timeout: 6000,
       },
     },
     {
       name: "js-premium",
+      provider: "scrapingbee",
       options: {
         renderJs: true,
         premiumProxy: true,
         countryCode,
-        wait: 2500,
+        wait: 2000,
         waitBrowser: "networkidle0",
+        timeout: 7000,
       },
     },
   ];
 
   if (isPriorityRetailer) {
-    attempts.push({
+    fallbackAttempts.push({
       name: "stealth",
+      provider: "scrapingbee",
       options: {
         stealthProxy: true,
         countryCode: countryCode || "us",
-        wait: 3000,
+        wait: 2500,
         waitBrowser: "networkidle0",
+        timeout: 7500,
       },
     });
   }
+
+  const attempts =
+    phase === "local-only"
+      ? localOnlyAttempts
+      : phase === "fallback"
+        ? fallbackAttempts
+        : [...localOnlyAttempts, ...fallbackAttempts];
 
   let bestResult = null;
   const attemptsDebug = [];
 
   for (const attempt of attempts) {
-    const outcome = await tryFetchAndParse(inputUrl, preferredCurrency, attempt.options);
+    throwIfAborted(signal);
+
+    const outcome = await tryFetchAndParse(
+      inputUrl,
+      preferredCurrency,
+      attempt,
+      signal
+    );
 
     if (outcome.fatal) {
       attemptsDebug.push({
         name: attempt.name,
+        provider: attempt.provider,
         fatal: true,
         error: outcome.error,
         fetchProfile: outcome.fetched?.fetchProfile || null,
@@ -1165,6 +1156,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
 
     attemptsDebug.push({
       name: attempt.name,
+      provider: attempt.provider,
       fatal: false,
       blocked: result.blocked,
       confidence: result.confidence,
@@ -1180,11 +1172,15 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
       bestResult = result;
     }
 
+    if (phase === "local-only") {
+      break;
+    }
+
     if (result.blocked) {
       continue;
     }
 
-    if (attempt.name === "standard" && shouldRetryWithJs(result)) {
+    if (attempt.name === "premium" && shouldRetryWithJs(result)) {
       continue;
     }
 
@@ -1198,6 +1194,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
   }
 
   bestResult.debug.attempts = attemptsDebug;
+  bestResult.debug.phase = phase;
   bestResult.debug.priorityRetailer = isPriorityRetailer;
   return bestResult;
 }
@@ -1207,19 +1204,24 @@ export async function POST(request) {
     const body = await request.json().catch(() => null);
     const inputUrl = ensureHttpUrl(body?.url || "");
     const preferredCurrency = String(body?.currency || "GBP").toUpperCase();
+    const phase = String(body?.phase || "auto");
 
     if (!inputUrl) {
       return NextResponse.json({ error: "Please provide a valid URL." }, { status: 400 });
     }
 
     try {
-      const result = await scrapeUrl(inputUrl, preferredCurrency);
+      const result = await scrapeUrl(inputUrl, preferredCurrency, {
+        signal: request.signal,
+        phase,
+      });
 
       console.log(
         JSON.stringify({
           type: "link-preview-debug",
           inputUrl,
           preferredCurrency,
+          phase,
           source: result?.source,
           blocked: result?.blocked,
           blockReason: result?.blockReason,
@@ -1232,47 +1234,25 @@ export async function POST(request) {
 
       return NextResponse.json(result, { status: 200 });
     } catch (scrapeError) {
+      if (scrapeError?.name === "AbortError") {
+        return new NextResponse(null, { status: 499 });
+      }
+
       console.log(
         JSON.stringify({
           type: "link-preview-error",
           inputUrl,
           preferredCurrency,
+          phase,
           error: scrapeError?.message || "Fetch error",
         })
       );
 
-      const host = (() => {
-        try {
-          return new URL(inputUrl).hostname.replace(/^www\./i, "");
-        } catch {
-          return "";
-        }
-      })();
-
       return NextResponse.json(
-        {
-          url: inputUrl,
-          title: "Needs review",
-          titleShort: "Needs review",
-          description: scrapeError?.message || "Could not fetch page details.",
-          siteName: host,
-          image: "",
-          selectedImage: "",
-          imageCandidates: [],
-          priceText: "",
-          numericPrice: null,
-          detectedCurrency: null,
-          brand: "",
-          confidence: "low",
-          needsReview: true,
-          blocked: false,
-          blockReason: null,
-          blockMessage: "",
-          source: "fallback",
-          debug: {
-            error: scrapeError?.message || "Fetch error",
-          },
-        },
+        buildFallbackResult(
+          inputUrl,
+          scrapeError?.message || "Could not fetch page details."
+        ),
         { status: 200 }
       );
     }
