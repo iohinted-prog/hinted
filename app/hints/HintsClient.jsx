@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -95,22 +95,6 @@ const demoHints = [
     size: "small",
     url: "https://www.johnlewis.com/",
     position: 2,
-    needsReview: false,
-  },
-  {
-    id: "demo-4",
-    title: "Hotel voucher",
-    retailer: "booking.com",
-    priceLabel: "From £1290",
-    numericPrice: 1290,
-    image:
-      "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
-    starred: true,
-    private: false,
-    size: "large",
-    url: "https://www.booking.com/",
-    position: 3,
     needsReview: false,
   },
 ];
@@ -390,88 +374,6 @@ async function fetchPreview(url) {
   return data;
 }
 
-function shouldContainImage(hint) {
-  const host = String(hint?.retailer || "").toLowerCase();
-  return [
-    "amazon",
-    "johnlewis",
-    "argos",
-    "currys",
-    "next",
-    "ebay",
-    "etsy",
-    "boots",
-    "very",
-    "ao.com",
-    "hm.com",
-    "zara",
-    "apple",
-  ].some((name) => host.includes(name));
-}
-
-function rgbToCss(rgb, alpha = 1) {
-  if (!rgb) return `rgba(255,255,255,${alpha})`;
-  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
-}
-
-function extractAverageColor(src) {
-  return new Promise((resolve) => {
-    if (!src) {
-      resolve(null);
-      return;
-    }
-
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.referrerPolicy = "no-referrer";
-
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        const size = 24;
-
-        canvas.width = size;
-        canvas.height = size;
-        ctx.drawImage(img, 0, 0, size, size);
-
-        const { data } = ctx.getImageData(0, 0, size, size);
-
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let count = 0;
-
-        for (let i = 0; i < data.length; i += 4) {
-          const alpha = data[i + 3];
-          if (alpha < 200) continue;
-
-          r += data[i];
-          g += data[i + 1];
-          b += data[i + 2];
-          count += 1;
-        }
-
-        if (!count) {
-          resolve(null);
-          return;
-        }
-
-        resolve({
-          r: Math.round(r / count),
-          g: Math.round(g / count),
-          b: Math.round(b / count),
-        });
-      } catch {
-        resolve(null);
-      }
-    };
-
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 function HintFormFields({
   form,
   setForm,
@@ -738,102 +640,30 @@ function HintCard({
   dragHandleListeners,
   dragHandleAttributes,
 }) {
-  const [imageFailed, setImageFailed] = useState(false);
-  const [accentRgb, setAccentRgb] = useState(null);
-
-  const showImage = Boolean(hint.image) && !imageFailed;
-  const useContain = shouldContainImage(hint);
-
-  useEffect(() => {
-    let active = true;
-
-    if (!showImage) {
-      setAccentRgb(null);
-      return;
-    }
-
-    extractAverageColor(hint.image).then((rgb) => {
-      if (active) setAccentRgb(rgb);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [hint.image, showImage]);
-
-  const shellBorder = accentRgb ? rgbToCss(accentRgb, 0.12) : "rgba(255,255,255,0.14)";
-  const glassStroke = accentRgb ? rgbToCss(accentRgb, 0.28) : "rgba(255,255,255,0.18)";
-  const glassWashTop = accentRgb ? rgbToCss(accentRgb, 0.18) : "rgba(255,255,255,0.20)";
-  const ringGlow = accentRgb ? rgbToCss(accentRgb, 0.10) : "rgba(255,255,255,0.08)";
-
   return (
     <article
-      className={`group relative w-full overflow-hidden rounded-[30px] bg-[rgba(255,255,255,0.62)] transition-all duration-300 ${
-        isDragging
-          ? "scale-[1.02]"
-          : "hover:-translate-y-1"
+      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 ${
+        isDragging ? "scale-[1.02]" : "hover:-translate-y-1"
       }`}
       style={{
         aspectRatio: getAspectRatio(hint.size),
-        border: `1px solid ${shellBorder}`,
         boxShadow: isDragging
           ? "0 26px 70px rgba(113,74,49,0.22), inset 0 1px 0 rgba(255,255,255,0.24)"
           : "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
       }}
     >
       <div className="absolute inset-0">
-        {showImage ? (
+        {hint.image ? (
           <>
-            <div className="absolute inset-0 bg-[#f4efe9]" />
-
             <img
               src={hint.image}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 h-full w-full scale-[1.16] object-cover blur-[34px] opacity-42 saturate-[1.12]"
+              alt={hint.title}
+              className={`h-full w-full object-cover transition-transform duration-500 ${
+                isDragging ? "scale-[1.01]" : "group-hover:scale-[1.03]"
+              } ${hint.private ? "opacity-84" : ""}`}
               loading="lazy"
               referrerPolicy="no-referrer"
             />
-
-            <div className="absolute inset-[10px] rounded-[24px]">
-              <div
-                className="absolute inset-0 rounded-[24px]"
-                style={{
-                  background: `linear-gradient(180deg, ${glassWashTop}, rgba(255,255,255,0.06))`,
-                  border: `1px solid ${glassStroke}`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.26), 0 0 0 1px ${ringGlow}`,
-                  backdropFilter: "blur(10px) saturate(140%)",
-                  WebkitBackdropFilter: "blur(10px) saturate(140%)",
-                }}
-              />
-
-              <div
-                className="absolute inset-[1px] overflow-hidden rounded-[23px]"
-                style={{
-                  background: "rgba(255,255,255,0.02)",
-                  boxShadow:
-                    "0 10px 24px rgba(38,24,17,0.10), inset 0 0 0 1px rgba(255,255,255,0.04)",
-                }}
-              >
-                {useContain ? (
-                  <div className="absolute inset-[1px] rounded-[22px] bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.22),rgba(255,255,255,0.03)_58%,rgba(255,255,255,0)_100%)]" />
-                ) : null}
-
-                <img
-                  src={hint.image}
-                  alt={hint.title}
-                  className={`h-full w-full transition-transform duration-500 ${
-                    useContain ? "object-contain p-5 sm:p-6" : "object-cover"
-                  } ${isDragging ? "scale-[1.01]" : "group-hover:scale-[1.03]"} ${
-                    hint.private ? "opacity-84" : ""
-                  }`}
-                  loading="lazy"
-                  referrerPolicy="no-referrer"
-                  onError={() => setImageFailed(true)}
-                />
-              </div>
-            </div>
-
             <div className="absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.82)_0%,rgba(16,12,10,0.34)_28%,rgba(16,12,10,0.08)_48%,rgba(255,255,255,0)_68%)]" />
           </>
         ) : (
@@ -1014,6 +844,8 @@ export default function HintsClient() {
     message: "",
   });
 
+  const busyLongTimerRef = useRef(null);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
@@ -1023,13 +855,68 @@ export default function HintsClient() {
     droppable: { strategy: MeasuringStrategy.Always },
   };
 
+  function clearBusyTimers() {
+    if (busyLongTimerRef.current) {
+      window.clearTimeout(busyLongTimerRef.current);
+      busyLongTimerRef.current = null;
+    }
+  }
+
   function openBusy(title, message) {
     setBusyState({ open: true, title, message });
   }
 
   function closeBusy() {
+    clearBusyTimers();
     setBusyState({ open: false, title: "", message: "" });
   }
+
+  function beginFetchBusy() {
+    clearBusyTimers();
+
+    setBusyState({
+      open: true,
+      title: "Fetching your item...",
+      message: "Pulling the title, image, and price from the link...",
+    });
+
+    busyLongTimerRef.current = window.setTimeout(() => {
+      setBusyState((current) =>
+        current.open
+          ? {
+              ...current,
+              title: "Still fetching...",
+              message:
+                "This is taking a little longer than expected. Some retailers are slower to respond.",
+            }
+          : current
+      );
+    }, 5000);
+  }
+
+  function beginSaveBusy() {
+    clearBusyTimers();
+
+    setBusyState({
+      open: true,
+      title: "Saving hint",
+      message: "Adding this card to your board...",
+    });
+  }
+
+  function beginEditSaveBusy() {
+    clearBusyTimers();
+
+    setBusyState({
+      open: true,
+      title: "Saving changes",
+      message: "Updating this hint...",
+    });
+  }
+
+  useEffect(() => {
+    return () => clearBusyTimers();
+  }, []);
 
   useEffect(() => {
     const supabase = createClient();
@@ -1149,50 +1036,56 @@ export default function HintsClient() {
 
     setIsSavingEdit(true);
     setError("");
-    openBusy("Saving changes", "Updating this hint...");
+    beginEditSaveBusy();
 
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("hints")
-      .update({
-        title: trimmedTitle,
-        url: trimmedUrl,
-        retailer: trimmedRetailer,
-        image_url: finalImage,
-        price_text: priceMeta.priceLabel,
-        numeric_price: priceMeta.numericPrice,
-        size: getSizeFromPrice(priceMeta.numericPrice),
-      })
-      .eq("id", editingHintId);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hints")
+        .update({
+          title: trimmedTitle,
+          url: trimmedUrl,
+          retailer: trimmedRetailer,
+          image_url: finalImage,
+          price_text: priceMeta.priceLabel,
+          numeric_price: priceMeta.numericPrice,
+          size: getSizeFromPrice(priceMeta.numericPrice),
+        })
+        .eq("id", editingHintId);
 
-    if (error) {
-      setError(errorToMessage(error));
+      if (error) {
+        setError(errorToMessage(error));
+        setIsSavingEdit(false);
+        closeBusy();
+        return;
+      }
+
+      setHints((current) =>
+        current.map((hint) =>
+          hint.id === editingHintId
+            ? {
+                ...hint,
+                title: trimmedTitle,
+                url: trimmedUrl || hint.url,
+                retailer: trimmedRetailer,
+                image: finalImage,
+                priceLabel: priceMeta.priceLabel,
+                numericPrice: priceMeta.numericPrice,
+                size: getSizeFromPrice(priceMeta.numericPrice),
+                needsReview: false,
+              }
+            : hint
+        )
+      );
+
       setIsSavingEdit(false);
       closeBusy();
-      return;
+      closeEditModal();
+    } catch (err) {
+      setError(errorToMessage(err));
+      setIsSavingEdit(false);
+      closeBusy();
     }
-
-    setHints((current) =>
-      current.map((hint) =>
-        hint.id === editingHintId
-          ? {
-              ...hint,
-              title: trimmedTitle,
-              url: trimmedUrl || hint.url,
-              retailer: trimmedRetailer,
-              image: finalImage,
-              priceLabel: priceMeta.priceLabel,
-              numericPrice: priceMeta.numericPrice,
-              size: getSizeFromPrice(priceMeta.numericPrice),
-              needsReview: false,
-            }
-          : hint
-      )
-    );
-
-    setIsSavingEdit(false);
-    closeBusy();
-    closeEditModal();
   }
 
   async function deleteHint() {
@@ -1251,7 +1144,7 @@ export default function HintsClient() {
 
     setIsRefreshingEdit(true);
     setError("");
-    openBusy("Refreshing from link", "Checking the latest title, image, and price...");
+    beginFetchBusy();
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
@@ -1311,7 +1204,7 @@ export default function HintsClient() {
 
     setIsAdding(true);
     setError("");
-    openBusy("Fetching preview", "Pulling the title, image, and price from the link...");
+    beginFetchBusy();
 
     try {
       const data = await fetchPreview(normaliseInputUrl(trimmed));
@@ -1334,7 +1227,7 @@ export default function HintsClient() {
 
     setIsSubmittingNewHint(true);
     setError("");
-    openBusy("Saving hint", "Adding this card to your board...");
+    beginSaveBusy();
 
     try {
       const title = newHintForm.title.trim() || pendingHint.title || "Saved hint";
