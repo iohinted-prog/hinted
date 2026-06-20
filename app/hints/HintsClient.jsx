@@ -29,7 +29,6 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    priceBand: "medium",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
@@ -45,7 +44,6 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    priceBand: "medium",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
@@ -61,7 +59,6 @@ const demoHints = [
     retailer: "johnlewis.com",
     priceLabel: "About £45",
     numericPrice: 45,
-    priceBand: "small",
     image:
       "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
@@ -77,7 +74,6 @@ const demoHints = [
     retailer: "booking.com",
     priceLabel: "From £1290",
     numericPrice: 1290,
-    priceBand: "large",
     image:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
@@ -238,6 +234,133 @@ function splitIntoColumns(items, columnCount = 3) {
   return columns;
 }
 
+function EditHintModal({
+  isOpen,
+  editForm,
+  setEditForm,
+  onClose,
+  onSave,
+  onRefreshFromLink,
+  onDelete,
+  onTogglePrivate,
+  onToggleStarred,
+  isRefreshing,
+  isSaving,
+  hint,
+}) {
+  if (!isOpen || !hint) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-[560px] rounded-[30px] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
+              Edit hint
+            </p>
+            <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+              Update this card
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-[#faf6f3]"
+            aria-label="Close edit modal"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="mt-6 space-y-4">
+          <div>
+            <label htmlFor="edit-link" className="mb-2 block text-sm font-medium text-slate-700">
+              Link
+            </label>
+            <input
+              id="edit-link"
+              type="url"
+              value={editForm.url}
+              onChange={(e) => setEditForm((current) => ({ ...current, url: e.target.value }))}
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="edit-title" className="mb-2 block text-sm font-medium text-slate-700">
+              Name
+            </label>
+            <input
+              id="edit-title"
+              type="text"
+              value={editForm.title}
+              onChange={(e) => setEditForm((current) => ({ ...current, title: e.target.value }))}
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={onToggleStarred}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                hint.starred
+                  ? "bg-[#fff2ea] text-[#e27956]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
+              }`}
+            >
+              {hint.starred ? "★ Starred" : "★ Star"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onTogglePrivate}
+              className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                hint.private
+                  ? "bg-[#fffaf7] text-[#e08a67]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
+              }`}
+            >
+              {hint.private ? "🔒 Private" : "🔓 Public"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-between">
+          <button
+            type="button"
+            onClick={onDelete}
+            className="inline-flex h-12 items-center justify-center rounded-full bg-[#fff4ef] px-5 text-sm font-semibold text-[#d56949] hover:bg-[#ffe9df]"
+          >
+            Delete hint
+          </button>
+
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={onRefreshFromLink}
+              disabled={isRefreshing}
+              className="inline-flex h-12 items-center justify-center rounded-full bg-[#f7f2ee] px-5 text-sm font-semibold text-slate-700 hover:bg-[#f1ebe6] disabled:opacity-60"
+            >
+              {isRefreshing ? "Refreshing..." : "Refresh from link"}
+            </button>
+
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving}
+              className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
+            >
+              {isSaving ? "Saving..." : "Save changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function HintCard({
   hint,
   onEdit,
@@ -276,7 +399,11 @@ function HintCard({
           </>
         ) : (
           <>
-            <div className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${hint.private ? "opacity-80" : ""}`} />
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
+                hint.private ? "opacity-80" : ""
+              }`}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.70)] via-[rgba(22,18,16,0.16)] to-transparent" />
           </>
         )}
@@ -366,6 +493,7 @@ function HintCard({
           >
             {hint.private ? "🔒 Private" : "🔓 Public"}
           </button>
+
           <a
             href={hint.url}
             target="_blank"
@@ -408,11 +536,7 @@ function SortableHintCard({
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="mb-6 break-inside-avoid"
-    >
+    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid">
       <HintCard
         hint={hint}
         onEdit={onEdit}
@@ -519,6 +643,7 @@ export default function HintsClient() {
 
   async function persistOrder(nextHints) {
     if (!currentUser) return;
+
     const supabase = createClient();
 
     await Promise.all(
@@ -529,11 +654,10 @@ export default function HintsClient() {
   }
 
   function rebuildFromColumns(nextColumns) {
-    const flat = nextColumns.flat().map((hint, index) => ({
+    return nextColumns.flat().map((hint, index) => ({
       ...hint,
       position: index,
     }));
-    return flat;
   }
 
   function openEditModal(hint) {
@@ -556,7 +680,6 @@ export default function HintsClient() {
 
     const trimmedTitle = editForm.title.trim();
     const trimmedUrl = editForm.url.trim();
-
     setIsSavingEdit(true);
 
     const supabase = createClient();
@@ -595,8 +718,8 @@ export default function HintsClient() {
 
   async function deleteHint() {
     if (!currentUser) return;
-    const supabase = createClient();
 
+    const supabase = createClient();
     const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
 
     if (error) {
@@ -610,6 +733,7 @@ export default function HintsClient() {
 
   async function toggleStarred(hint) {
     if (!currentUser) return;
+
     const supabase = createClient();
     const newStarred = !hint.starred;
 
@@ -632,6 +756,7 @@ export default function HintsClient() {
 
   async function togglePrivate(hint) {
     if (!currentUser) return;
+
     const supabase = createClient();
     const newPrivate = !hint.private;
 
@@ -654,6 +779,7 @@ export default function HintsClient() {
 
   async function refreshHintFromLink() {
     const trimmed = editForm.url.trim();
+
     if (!trimmed || editingHintId == null) return;
     if (!isValidHttpUrl(trimmed)) {
       setError("Please enter a valid URL.");
@@ -725,6 +851,7 @@ export default function HintsClient() {
     }
 
     const trimmed = link.trim();
+
     if (!trimmed) {
       setError("Paste a link first.");
       return;
@@ -760,7 +887,10 @@ export default function HintsClient() {
       const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
 
       const newHint = {
-        id: crypto.randomUUID(),
+        id:
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `hint-${Date.now()}`,
         title: shortTitle,
         retailer,
         priceLabel: formatPriceLabel(numericPrice, data.priceText),
@@ -799,7 +929,12 @@ export default function HintsClient() {
         throw new Error(error.message || "Could not save this hint.");
       }
 
-      setHints((current) => [newHint, ...current].map((item, index) => ({ ...item, position: index })));
+      setHints((current) =>
+        [newHint, ...current].map((item, index) => ({
+          ...item,
+          position: index,
+        }))
+      );
       setLink("");
     } catch (err) {
       setError(err.message || "Could not extract this link.");
@@ -819,13 +954,20 @@ export default function HintsClient() {
     if (!over || active.id === over.id || hints.length === 0) return;
 
     const nextColumns = splitIntoColumns(hints, 3);
-    const fromColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === active.id));
-    const toColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === over.id));
+    const fromColumnIndex = nextColumns.findIndex((col) =>
+      col.some((item) => item.id === active.id)
+    );
+    const toColumnIndex = nextColumns.findIndex((col) =>
+      col.some((item) => item.id === over.id)
+    );
 
     if (fromColumnIndex === -1 || toColumnIndex === -1) return;
 
     const fromItems = [...nextColumns[fromColumnIndex]];
-    const toItems = fromColumnIndex === toColumnIndex ? fromItems : [...nextColumns[toColumnIndex]];
+    const toItems =
+      fromColumnIndex === toColumnIndex
+        ? fromItems
+        : [...nextColumns[toColumnIndex]];
 
     const oldIndex = fromItems.findIndex((item) => item.id === active.id);
     const newIndex = toItems.findIndex((item) => item.id === over.id);
@@ -846,7 +988,11 @@ export default function HintsClient() {
     await persistOrder(nextHints);
   }
 
-  const editingHint = visibleHints.find((h) => h.id === editingHintId) || null;
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
+  const editingHint = visibleHints.find((hint) => hint.id === editingHintId) || null;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -861,10 +1007,30 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
-              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
-              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
-              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
             </nav>
 
             <AvatarMenu />
@@ -929,10 +1095,13 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="columns-1 gap-6 md:columns-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-6">
-                    <div className="w-full overflow-hidden rounded-[30px] bg-[#f9f8f5] aspect-square">
+                  <div key={i} className="mb-6 break-inside-avoid">
+                    <div
+                      className="w-full overflow-hidden rounded-[30px] bg-[#f9f8f5]"
+                      style={{ aspectRatio: i === 1 ? "1 / 1.35" : "1 / 1" }}
+                    >
                       <div className="skeleton h-full w-full" />
                     </div>
                   </div>
@@ -944,15 +1113,16 @@ export default function HintsClient() {
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
               >
-                <div className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
                       items={columnHints.map((hint) => hint.id)}
                       strategy={verticalListSortingStrategy}
                     >
-                      <div className="space-y-6">
+                      <div className="space-y-0">
                         {columnHints.map((hint) => (
                           <SortableHintCard
                             key={hint.id}
@@ -987,20 +1157,16 @@ export default function HintsClient() {
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="relative grid grid-cols-1 gap-6 md:grid-cols-3">
-                {splitIntoColumns(demoHints, 3).map((columnHints, columnIndex) => (
-                  <div key={`demo-col-${columnIndex}`} className="space-y-6">
-                    {columnHints.map((hint) => (
-                      <div key={hint.id} className="break-inside-avoid">
-                        <HintCard
-                          hint={hint}
-                          onEdit={() => {}}
-                          onToggleStarred={() => {}}
-                          onTogglePrivate={() => {}}
-                          isDragging={false}
-                        />
-                      </div>
-                    ))}
+              <div className="columns-1 gap-6 md:columns-3">
+                {demoHints.map((hint) => (
+                  <div key={hint.id} className="mb-6 break-inside-avoid">
+                    <HintCard
+                      hint={hint}
+                      onEdit={() => {}}
+                      onToggleStarred={() => {}}
+                      onTogglePrivate={() => {}}
+                      isDragging={false}
+                    />
                   </div>
                 ))}
               </div>
