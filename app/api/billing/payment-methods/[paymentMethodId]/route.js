@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "../../../../../lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -43,17 +43,18 @@ async function getAuthedCustomer() {
   return { stripeCustomerId: profile.stripe_customer_id };
 }
 
-export async function PATCH(request, context) {
+export async function PATCH(request, { params }) {
   try {
     const stripe = getStripe();
-    const { paymentMethodId } = await context.params;
     const auth = await getAuthedCustomer();
 
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const { makeDefault } = await request.json().catch(() => ({}));
+    const { paymentMethodId } = await params;
+    const body = await request.json().catch(() => ({}));
+    const { makeDefault } = body;
 
     if (!makeDefault) {
       return NextResponse.json(
@@ -68,7 +69,10 @@ export async function PATCH(request, context) {
       },
     });
 
-    return NextResponse.json({ success: true, defaultPaymentMethodId: paymentMethodId });
+    return NextResponse.json({
+      success: true,
+      defaultPaymentMethodId: paymentMethodId,
+    });
   } catch (error) {
     return NextResponse.json(
       { error: error.message || "Failed to update payment method." },
@@ -77,15 +81,16 @@ export async function PATCH(request, context) {
   }
 }
 
-export async function DELETE(_request, context) {
+export async function DELETE(_request, { params }) {
   try {
     const stripe = getStripe();
-    const { paymentMethodId } = await context.params;
     const auth = await getAuthedCustomer();
 
     if (auth.error) {
       return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
+
+    const { paymentMethodId } = await params;
 
     const customer = await stripe.customers.retrieve(auth.stripeCustomerId);
     const defaultPaymentMethodId =
