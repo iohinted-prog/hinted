@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 20;
+export const maxDuration = 30;
 
 const PRIMARY_HEADERS = {
   "User-Agent":
@@ -303,6 +303,7 @@ function shortenTitle(title = "", retailer = "") {
     "lamp",
     "vase",
     "frame",
+    "tv",
   ];
 
   let cleaned = source
@@ -323,7 +324,7 @@ function shortenTitle(title = "", retailer = "") {
     return true;
   });
 
-  if (words.length === 0) return "Saved hint";
+  if (!words.length) return "Saved hint";
 
   const brand = words[0];
   const foundCategory = words.find((word) =>
@@ -507,8 +508,7 @@ function extractAmazonPrice($) {
   const whole = cleanText($(".a-price .a-price-whole").first().text());
   const fraction = cleanText($(".a-price .a-price-fraction").first().text());
   if (whole) {
-    const reconstructed = `£${whole}${fraction ? `.${fraction}` : ""}`.replace(/\.00$/, "");
-    return reconstructed;
+    return `£${whole}${fraction ? `.${fraction}` : ""}`.replace(/\.00$/, "");
   }
 
   return "";
@@ -517,7 +517,9 @@ function extractAmazonPrice($) {
 function extractGenericTextPrice($) {
   const textCandidates = [
     getText($, ["[data-testid='price']"]),
+    getText($, ["[itemprop='price']"]),
     getText($, [".price"]),
+    getText($, [".product-price"]),
     getText($, ["main"]),
     getText($, ["body"]),
   ].filter(Boolean);
@@ -537,8 +539,334 @@ function extractGenericTextPrice($) {
   return "";
 }
 
-function choosePrice({ preferredCurrency, amazonPrice, jsonLdPrice, metaPrice, textPrice }) {
-  const candidates = [amazonPrice, jsonLdPrice, metaPrice, textPrice].filter(Boolean);
+async function fetchPriceWithPlaywright(inputUrl, hostname) {
+  let browser;
+
+  try {
+    const playwright = await import("playwright-core");
+
+    try {
+      const chromiumModule = await import("@sparticuz/chromium");
+      const chromium = chromiumModule.default || chromiumModule;
+
+      browser = await playwright.chromium.launch({
+        args: chromium.args,
+        executablePath: await chromium.executablePath(),
+        headless: true,
+      });
+    } catch {
+      browser = await playwright.chromium.launch({
+        headless: true,
+      });
+    }
+
+    const page = await browser.newPage({
+      locale: "en-GB",
+      userAgent:
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      viewport: { width: 1440, height: 1400 },
+    });
+
+    await page.setExtraHTTPHeaders({
+      "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
+      DNT: "1",
+    });
+
+    await page.route("**/*", (route) => {
+      const type = route.request().resourceType();
+      if (["image", "stylesheet", "font", "media"].includes(type)) {
+        route.abort();
+      } else {
+        route.continue();
+      }
+    });
+
+    await page.goto(inputUrl, {
+      waitUntil: "domcontentloaded",
+      timeout: 25000,
+    });
+
+    await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(1200).catch(() => {});
+
+    const selectorsByRetailer = {
+      amazon: [
+        "#corePrice_feature_div .a-price .a-offscreen",
+        "#corePriceDisplay_desktop_feature_div .a-price .a-offscreen",
+        ".priceToPay .a-offscreen",
+        "#price_inside_buybox",
+        ".a-price .a-offscreen",
+      ],
+      johnlewis: [
+        '[data-testid="price"]',
+        '[itemprop="price"]',
+        'meta[property="product:price:amount"]',
+        '[class*="price"]',
+        ".price",
+      ],
+      argos: [
+        '[data-testid="price"]',
+        '[itemprop="price"]',
+        '[class*="price"]',
+        ".price",
+        ".product-price",
+      ],
+      currys: [
+        '[data-testid="price"]',
+        '[itemprop="price"]',
+        '[class*="price"]',
+        ".price",
+        ".product-price",
+      ],
+      generic: [
+        '[data-testid="price"]',
+        '[itemprop="price"]',
+        '[class*="price"]',
+        ".price",
+        ".product-price",
+      ],
+    };
+
+    const retailerKey = hostname.includes("amazon.")
+      ? "amazon"
+      : hostname.includes("johnlewis")
+      ? "johnlewis"
+      : hostname.includes("argos")
+      ? "argos"
+      : hostname.includes("currys")
+      ? "currys"
+      : "generic";
+
+    const selectors = selectorsByRetailer[retailerKey] || selectorsByRetailer.generic;
+    const priceRegex =
+      /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?|\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/i;
+
+    const cleanCandidate = (value = "") => {
+      const text = cleanText(String(value || ""));
+      if (!text) return "";
+      const match = text.match(priceRegex);
+      return match ? match[0].trim() : "";
+    };
+
+    for (const selector of selectors) {
+      try {
+        const handle = await page.waitForSelector(selector, {
+          timeout: 2500,
+          state: "attached",
+        });
+
+        if (!handle) continue;
+
+        const candidate = await page.evaluate((el, sel) => {
+          if (!el) return "";
+
+          if (sel.startsWith("meta[")) {
+            return el.getAttribute("content") || "";
+          }
+
+          if (el.getAttribute("content")) return el.getAttribute("content") || "";
+          if (el.getAttribute("value")) return el.getAttribute("value") || "";
+
+          return el.textContent || el.innerText || "";
+        }, handle, selector);
+
+        const cleaned = cleanCandidate(candidate);
+        if (cleaned) {
+          await browser.close();
+          return cleaned;
+        }
+      } catch {}
+    }
+
+    const jsonLdPrice = await page.evaluate(() => {
+      const scripts = Array.from(
+        document.querySelectorAll('script[type="application/ld+json"]')
+      );
+
+      const symbols = {
+        GBP: "£",
+        USD: "$",
+        EUR: "€",
+        AUD: "A$",
+        NZD: "NZ$",
+        CAD: "C$",
+        ZAR: "R",
+      };
+
+      const formatPrice = (price, currency) => {
+        if (price == null || price === "") return "";
+        const amount = String(price).trim();
+        const code = String(currency || "").toUpperCase();
+        const symbol = symbols[code] || "";
+        return symbol ? `${symbol}${amount}` : amount;
+      };
+
+      const visit = (node) => {
+        if (!node) return "";
+        if (Array.isArray(node)) {
+          for (const item of node) {
+            const found = visit(item);
+            if (found) return found;
+          }
+          return "";
+        }
+        if (typeof node !== "object") return "";
+
+        if (node.offers) {
+          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
+          for (const offer of offers) {
+            if (offer?.price) return formatPrice(offer.price, offer.priceCurrency);
+            if (offer?.priceSpecification?.price) {
+              return formatPrice(
+                offer.priceSpecification.price,
+                offer.priceSpecification.priceCurrency || offer.priceCurrency
+              );
+            }
+            if (offer?.lowPrice) return formatPrice(offer.lowPrice, offer.priceCurrency);
+          }
+        }
+
+        if (node.price) return formatPrice(node.price, node.priceCurrency);
+        if (node["@graph"]) {
+          const found = visit(node["@graph"]);
+          if (found) return found;
+        }
+
+        for (const value of Object.values(node)) {
+          if (value && typeof value === "object") {
+            const found = visit(value);
+            if (found) return found;
+          }
+        }
+
+        return "";
+      };
+
+      for (const script of scripts) {
+        try {
+          const raw = script.textContent || "";
+          if (!raw.trim()) continue;
+          const parsed = JSON.parse(raw);
+          const found = visit(parsed);
+          if (found) return found;
+        } catch {}
+      }
+
+      return "";
+    });
+
+    if (jsonLdPrice) {
+      const cleaned = cleanCandidate(jsonLdPrice);
+      if (cleaned) {
+        await browser.close();
+        return cleaned;
+      }
+    }
+
+    const metaPrice = await page.evaluate(() => {
+      const selectors = [
+        'meta[property="product:price:amount"]',
+        'meta[name="product:price:amount"]',
+        'meta[property="og:price:amount"]',
+        'meta[name="og:price:amount"]',
+        'meta[property="twitter:data1"]',
+        'meta[name="twitter:data1"]',
+      ];
+
+      const currencySelectors = [
+        'meta[property="product:price:currency"]',
+        'meta[name="product:price:currency"]',
+        'meta[property="og:price:currency"]',
+        'meta[name="og:price:currency"]',
+      ];
+
+      const price = selectors
+        .map((selector) => document.querySelector(selector)?.getAttribute("content") || "")
+        .find(Boolean);
+
+      const currency = currencySelectors
+        .map((selector) => document.querySelector(selector)?.getAttribute("content") || "")
+        .find(Boolean);
+
+      if (!price) return "";
+
+      const symbols = {
+        GBP: "£",
+        USD: "$",
+        EUR: "€",
+        AUD: "A$",
+        NZD: "NZ$",
+        CAD: "C$",
+        ZAR: "R",
+      };
+
+      const symbol = symbols[String(currency || "").toUpperCase()] || "";
+      return symbol ? `${symbol}${price}` : String(price);
+    });
+
+    if (metaPrice) {
+      const cleaned = cleanCandidate(metaPrice);
+      if (cleaned) {
+        await browser.close();
+        return cleaned;
+      }
+    }
+
+    const bodyPrice = await page.evaluate(() => {
+      const text = document.body?.innerText || document.body?.textContent || "";
+      const patterns = [
+        /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?/i,
+        /\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/i,
+      ];
+
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match?.[0]) return match[0];
+      }
+
+      return "";
+    });
+
+    if (bodyPrice) {
+      const cleaned = cleanCandidate(bodyPrice);
+      if (cleaned) {
+        await browser.close();
+        return cleaned;
+      }
+    }
+
+    await browser.close();
+    return "";
+  } catch {
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {}
+    }
+    return "";
+  }
+}
+
+function choosePrice({
+  preferredCurrency,
+  amazonPrice,
+  jsonLdPrice,
+  metaPrice,
+  textPrice,
+  playwrightPrice,
+}) {
+  const candidates = [
+    { value: amazonPrice, source: "amazon" },
+    { value: jsonLdPrice, source: "jsonld" },
+    { value: metaPrice, source: "meta" },
+    { value: textPrice, source: "text" },
+    { value: playwrightPrice, source: "playwright" },
+  ]
+    .filter((item) => item.value)
+    .map((item) => ({
+      ...item,
+      currency: detectCurrency(item.value),
+    }));
 
   if (!candidates.length) {
     return {
@@ -550,34 +878,18 @@ function choosePrice({ preferredCurrency, amazonPrice, jsonLdPrice, metaPrice, t
     };
   }
 
-  const tagged = candidates.map((value, index) => {
-    const currency = detectCurrency(value);
-    return {
-      value,
-      currency,
-      source:
-        index === 0
-          ? "amazon"
-          : index === 1
-          ? "jsonld"
-          : index === 2
-          ? "meta"
-          : "text",
-    };
-  });
-
   const preferredMatch = preferredCurrency
-    ? tagged.find((item) => item.currency === preferredCurrency)
+    ? candidates.find((item) => item.currency === preferredCurrency)
     : null;
 
-  const winner = preferredMatch || tagged[0];
+  const winner = preferredMatch || candidates[0];
 
   return {
     priceText: winner.value,
     detectedCurrency: winner.currency,
     matchedPreferredCurrency: Boolean(preferredMatch),
     source: winner.source,
-    candidates: tagged,
+    candidates,
   };
 }
 
@@ -829,12 +1141,23 @@ async function fetchPreview(inputUrl, preferredCurrency = "GBP") {
   const metaPrice = extractPriceFromMeta($) || "";
   const textPrice = extractGenericTextPrice($) || "";
 
+  let playwrightPrice = "";
+  const isDynamicRetailer =
+    hostname.includes("johnlewis") ||
+    hostname.includes("argos") ||
+    hostname.includes("currys");
+
+  if (!amazonPrice && !jsonLdPrice && !metaPrice && !textPrice && isDynamicRetailer) {
+    playwrightPrice = await fetchPriceWithPlaywright(finalUrl, hostname);
+  }
+
   const chosenPrice = choosePrice({
     preferredCurrency,
     amazonPrice,
     jsonLdPrice,
     metaPrice,
     textPrice,
+    playwrightPrice,
   });
 
   const imageCandidates = buildImageCandidates($, finalUrl, canonicalUrl, jsonLd.images);
@@ -880,6 +1203,8 @@ async function fetchPreview(inputUrl, preferredCurrency = "GBP") {
       jsonLdPrice,
       metaPrice,
       textPrice,
+      playwrightPrice,
+      wasPlaywrightUsed: Boolean(playwrightPrice),
       allPriceCandidates: chosenPrice.candidates,
       imageCandidateCount: imageCandidates.length,
       topImageCandidate: imageCandidates[0] || null,
@@ -909,16 +1234,15 @@ export async function POST(request) {
     } catch (previewError) {
       const fallback = buildFallbackPreview(inputUrl, "fetch_failed");
       fallback.debug.fetchErrors = previewError?.fetchErrors || [];
-      fallback.debug.message = previewError?.message || "Failed to fetch preview.";
+      fallback.debug.message =
+        previewError?.message || "Failed to fetch preview.";
       fallback.debug.preferredCurrency = preferredCurrency;
 
       return NextResponse.json(fallback, { status: 200 });
     }
   } catch (error) {
     return NextResponse.json(
-      {
-        error: error?.message || "Failed to fetch preview.",
-      },
+      { error: error?.message || "Failed to fetch preview." },
       { status: 500 }
     );
   }
