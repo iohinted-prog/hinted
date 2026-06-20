@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   closestCenter,
@@ -29,14 +29,13 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    priceBand: "high",
+    priceBand: "premium",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     tags: ["Travel"],
     starred: true,
     private: false,
-    size: "large",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -46,14 +45,13 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    priceBand: "high",
+    priceBand: "premium",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     tags: ["Tech"],
     starred: true,
     private: false,
-    size: "large",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -63,14 +61,13 @@ const demoHints = [
     retailer: "classbento.co.uk",
     priceLabel: "About £78",
     numericPrice: 78,
-    priceBand: "mid",
+    priceBand: "small",
     image:
       "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
     tags: ["Experience"],
     starred: false,
     private: false,
-    size: "medium",
     url: "https://classbento.co.uk/",
     position: 2,
   },
@@ -87,7 +84,6 @@ const demoHints = [
     tags: ["Home"],
     starred: false,
     private: true,
-    size: "small",
     url: "https://www.johnlewis.com/",
     position: 3,
   },
@@ -111,31 +107,57 @@ function normaliseRetailer(url) {
 
 function extractNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (!value || typeof value !== "string") return null;
+  if (typeof value === "string") {
+    const cleaned = value.replace(/,/g, "");
+    const match =
+      cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
+      cleaned.match(/(\d+(?:\.\d{1,2})?)/);
 
-  const cleaned = value.replace(/,/g, "");
-  const match =
-    cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
-    cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+    if (!match) return null;
+    const parsed = Number(match[1]);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
 
-  if (!match) return null;
+function normaliseNumericPrice(value) {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : extractNumericPrice(value);
+  }
+  return null;
+}
 
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) ? parsed : null;
+function getHintSize(price) {
+  const numeric = normaliseNumericPrice(price);
+  if (numeric == null) return "medium";
+  if (numeric < 100) return "small";
+  if (numeric < 1000) return "medium";
+  return "large";
+}
+
+function getTileHeightClass(price) {
+  const size = getHintSize(price);
+  if (size === "large") return "min-h-[580px]";
+  if (size === "medium") return "min-h-[440px]";
+  return "min-h-[320px]";
 }
 
 function getPriceBand(price) {
-  if (price == null) return "small";
-  if (price >= 220) return "high";
-  if (price >= 120) return "premium";
-  if (price >= 60) return "mid";
+  const numeric = normaliseNumericPrice(price);
+  if (numeric == null) return "small";
+  if (numeric >= 1000) return "high";
+  if (numeric >= 250) return "premium";
+  if (numeric >= 100) return "mid";
   return "small";
 }
 
 function formatPriceLabel(price, rawPrice) {
   if (rawPrice && typeof rawPrice === "string") return rawPrice;
-  if (price == null) return "Price unavailable";
-  return `About £${Math.round(price)}`;
+  const numeric = normaliseNumericPrice(price);
+  if (numeric == null) return "Price unavailable";
+  return `About £${Math.round(numeric)}`;
 }
 
 function buildFallbackGradient(index) {
@@ -243,40 +265,13 @@ function shortenTitle(title = "", retailer = "") {
     categoryWords.includes(word.toLowerCase())
   );
 
-  let finalWords;
-  if (foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()) {
-    finalWords = [brand, foundCategory];
-  } else {
-    finalWords = words.slice(0, Math.min(2, words.length));
-  }
+  const finalWords =
+    foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()
+      ? [brand, foundCategory]
+      : words.slice(0, Math.min(2, words.length));
 
   const compact = finalWords.join(" ").trim();
   return compact.charAt(0).toUpperCase() + compact.slice(1);
-}
-
-function getRelativePriceSize(price, allPrices = []) {
-  const valid = allPrices
-    .filter((value) => typeof value === "number" && Number.isFinite(value))
-    .sort((a, b) => a - b);
-
-  if (price == null) return "medium";
-  if (valid.length < 3) return "medium";
-
-  const lowIndex = Math.floor((valid.length - 1) * 0.33);
-  const highIndex = Math.floor((valid.length - 1) * 0.66);
-
-  const lowCut = valid[lowIndex];
-  const highCut = valid[highIndex];
-
-  if (price <= lowCut) return "small";
-  if (price >= highCut) return "large";
-  return "medium";
-}
-
-function getTileHeightClass(size) {
-  if (size === "large") return "min-h-[500px]";
-  if (size === "medium") return "min-h-[410px]";
-  return "min-h-[330px]";
 }
 
 function getPricePill(priceBand) {
@@ -284,6 +279,26 @@ function getPricePill(priceBand) {
   if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
   if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
   return "bg-[#f1f5ec] text-[#627f53]";
+}
+
+function toHintRecord(row, index = 0) {
+  const numericPrice = normaliseNumericPrice(row.numeric_price ?? row.price_text);
+
+  return {
+    id: row.id,
+    title: row.title || "Saved hint",
+    retailer: row.retailer || normaliseRetailer(row.url || ""),
+    priceLabel: row.price_text || formatPriceLabel(numericPrice, null),
+    numericPrice,
+    priceBand: getPriceBand(numericPrice),
+    image: row.image_url || "",
+    fallbackGradient: buildFallbackGradient(index),
+    tags: [],
+    starred: Boolean(row.starred),
+    private: Boolean(row.is_private),
+    url: row.url || "",
+    position: row.position ?? index,
+  };
 }
 
 function HintComposerModal({
@@ -295,6 +310,10 @@ function HintComposerModal({
   isSaving,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) setImageFailed(false);
+  }, [isOpen, draft.image]);
 
   if (!isOpen) return null;
 
@@ -580,11 +599,11 @@ function HintCard({
     <article
       className={`group relative flex h-full flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
         dragging
-          ? "rotate-[1.2deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
+          ? "rotate-[1.5deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
           : hint.private
           ? "border-white/50 bg-white/60 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
           : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
-      } ${getTileHeightClass(hint.size)}`}
+      } ${getTileHeightClass(hint.numericPrice)}`}
     >
       <div className="relative h-full overflow-hidden">
         {showImage ? (
@@ -593,22 +612,22 @@ function HintCard({
               src={hint.image}
               alt={hint.title}
               className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
-                hint.private ? "opacity-82" : ""
+                hint.private ? "opacity-80" : ""
               }`}
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => setImageFailed(true)}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.24)] to-[rgba(255,255,255,0.02)]" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.22)] to-[rgba(255,255,255,0.02)]" />
           </>
         ) : (
           <>
             <div
               className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
-                hint.private ? "opacity-82" : ""
+                hint.private ? "opacity-80" : ""
               }`}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.65)] via-[rgba(22,18,16,0.18)] to-transparent" />
           </>
         )}
 
@@ -625,7 +644,7 @@ function HintCard({
             )}
 
             {hint.private && (
-              <div className="rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+              <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
                 Private
               </div>
             )}
@@ -668,11 +687,7 @@ function HintCard({
 
         <div className="absolute inset-x-0 bottom-0 z-20 p-5 sm:p-6">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
-                hint.priceBand
-              )}`}
-            >
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(hint.priceBand)}`}>
               {hint.priceLabel}
             </span>
 
@@ -747,7 +762,7 @@ function SortableHintTile({
   } = useSortable({ id: hint.id });
 
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
     transition,
   };
 
@@ -793,14 +808,6 @@ export default function HintsClient() {
   const hasRealHints = hints.length > 0;
   const visibleHints = hasRealHints ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
-
-  const numericPrices = useMemo(
-    () =>
-      hints
-        .map((hint) => hint.numericPrice)
-        .filter((value) => typeof value === "number" && Number.isFinite(value)),
-    [hints]
-  );
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -848,29 +855,7 @@ export default function HintsClient() {
       }
 
       const rows = data || [];
-      const prices = rows
-        .map((row) => row.numeric_price)
-        .filter((value) => typeof value === "number" && Number.isFinite(value));
-
-      setHints(
-        rows.map((row, index) => ({
-          id: row.id,
-          title: row.title || "Saved hint",
-          retailer: row.retailer || normaliseRetailer(row.url || ""),
-          priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
-          numericPrice: row.numeric_price,
-          priceBand: getPriceBand(row.numeric_price),
-          image: row.image_url || "",
-          fallbackGradient: buildFallbackGradient(index),
-          tags: [],
-          starred: Boolean(row.starred),
-          private: Boolean(row.is_private),
-          size: getRelativePriceSize(row.numeric_price, prices),
-          url: row.url || "",
-          position: row.position ?? index,
-        }))
-      );
-
+      setHints(rows.map((row, index) => toHintRecord(row, index)));
       setIsLoading(false);
     }
 
@@ -883,8 +868,8 @@ export default function HintsClient() {
     const supabase = createClient();
 
     await Promise.all(
-      updatedHints.map((hint, idx) =>
-        supabase.from("hints").update({ position: idx }).eq("id", hint.id)
+      updatedHints.map((hint, index) =>
+        supabase.from("hints").update({ position: index }).eq("id", hint.id)
       )
     );
   }
@@ -911,107 +896,123 @@ export default function HintsClient() {
     const trimmedUrl = editForm.url.trim();
 
     setIsSavingEdit(true);
+    setError("");
 
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    const { error } = await supabase
-      .from("hints")
-      .update({
-        title: trimmedTitle,
-        url: trimmedUrl,
-        retailer: trimmedUrl ? normaliseRetailer(trimmedUrl) : null,
-      })
-      .eq("id", editingHintId);
+      const { error } = await supabase
+        .from("hints")
+        .update({
+          title: trimmedTitle || "Saved hint",
+          url: trimmedUrl || null,
+          retailer: trimmedUrl ? normaliseRetailer(trimmedUrl) : null,
+        })
+        .eq("id", editingHintId);
 
-    if (error) {
-      setError(error.message);
+      if (error) throw error;
+
+      setHints((current) =>
+        current.map((hint) =>
+          hint.id === editingHintId
+            ? {
+                ...hint,
+                title: trimmedTitle || "Saved hint",
+                url: trimmedUrl || hint.url,
+                retailer: trimmedUrl ? normaliseRetailer(trimmedUrl) : hint.retailer,
+              }
+            : hint
+        )
+      );
+
+      closeEditModal();
+    } catch (err) {
+      setError(err.message || "Could not save changes.");
+    } finally {
       setIsSavingEdit(false);
-      return;
     }
-
-    setHints((current) =>
-      current.map((hint) =>
-        hint.id === editingHintId
-          ? {
-              ...hint,
-              title: trimmedTitle || hint.title,
-              url: trimmedUrl || hint.url,
-              retailer: trimmedUrl ? normaliseRetailer(trimmedUrl) : hint.retailer,
-            }
-          : hint
-      )
-    );
-
-    setIsSavingEdit(false);
-    closeEditModal();
   }
 
   async function deleteHint() {
     if (!currentUser || !editingHintId) return;
 
-    const supabase = createClient();
-    const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
 
-    if (error) {
-      setError(error.message);
-      return;
+      if (error) throw error;
+
+      setHints((current) => current.filter((hint) => hint.id !== editingHintId));
+      closeEditModal();
+    } catch (err) {
+      setError(err.message || "Could not delete hint.");
     }
-
-    setHints((current) => current.filter((hint) => hint.id !== editingHintId));
-    closeEditModal();
   }
 
   async function toggleStarred(hint) {
     if (!currentUser) return;
 
-    const supabase = createClient();
-    const newStarred = !hint.starred;
+    const nextValue = !hint.starred;
 
     setHints((current) =>
-      current.map((h) => (h.id === hint.id ? { ...h, starred: newStarred } : h))
+      current.map((item) =>
+        item.id === hint.id ? { ...item, starred: nextValue } : item
+      )
     );
 
-    const { error } = await supabase
-      .from("hints")
-      .update({ starred: newStarred })
-      .eq("id", hint.id);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hints")
+        .update({ starred: nextValue })
+        .eq("id", hint.id);
 
-    if (error) {
-      setError(error.message);
+      if (error) throw error;
+    } catch (err) {
       setHints((current) =>
-        current.map((h) => (h.id === hint.id ? { ...h, starred: hint.starred } : h))
+        current.map((item) =>
+          item.id === hint.id ? { ...item, starred: hint.starred } : item
+        )
       );
+      setError(err.message || "Could not update hint.");
     }
   }
 
   async function togglePrivate(hint) {
     if (!currentUser) return;
 
-    const supabase = createClient();
-    const newPrivate = !hint.private;
+    const nextValue = !hint.private;
 
     setHints((current) =>
-      current.map((h) => (h.id === hint.id ? { ...h, private: newPrivate } : h))
+      current.map((item) =>
+        item.id === hint.id ? { ...item, private: nextValue } : item
+      )
     );
 
-    const { error } = await supabase
-      .from("hints")
-      .update({ is_private: newPrivate })
-      .eq("id", hint.id);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("hints")
+        .update({ is_private: nextValue })
+        .eq("id", hint.id);
 
-    if (error) {
-      setError(error.message);
+      if (error) throw error;
+    } catch (err) {
       setHints((current) =>
-        current.map((h) => (h.id === hint.id ? { ...h, private: hint.private } : h))
+        current.map((item) =>
+          item.id === hint.id ? { ...item, private: hint.private } : item
+        )
       );
+      setError(err.message || "Could not update privacy.");
     }
   }
 
   async function refreshHintFromLink() {
     const trimmed = editForm.url.trim();
-    if (!trimmed || editingHintId == null) return;
+    if (!trimmed || !editingHintId) return;
 
     setIsRefreshingEdit(true);
+    setError("");
 
     try {
       const response = await fetch("/api/link-preview", {
@@ -1022,48 +1023,40 @@ export default function HintsClient() {
         body: JSON.stringify({ url: trimmed }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(data?.error || "Could not refresh this link.");
       }
 
-      const numericPrice = extractNumericPrice(data.priceText);
-      const refreshedTitle = shortenTitle(
-        data.title || editForm.title || "",
-        data.siteName || normaliseRetailer(trimmed)
-      );
-
-      const nextPrices = [
-        ...numericPrices.filter((value) => value !== null),
-        ...(numericPrice != null ? [numericPrice] : []),
-      ];
+      const numericPrice = extractNumericPrice(data?.priceText);
+      const retailer = data?.siteName || normaliseRetailer(trimmed);
+      const title = shortenTitle(data?.title || editForm.title || "Saved hint", retailer);
 
       setHints((current) =>
-        current.map((hint) => {
-          if (hint.id !== editingHintId) return hint;
-
-          return {
-            ...hint,
-            title: refreshedTitle,
-            retailer: data.siteName || normaliseRetailer(trimmed),
-            priceLabel: formatPriceLabel(numericPrice, data.priceText),
-            numericPrice,
-            priceBand: getPriceBand(numericPrice),
-            image:
-              typeof data.image === "string" && data.image.startsWith("http")
-                ? data.image
-                : hint.image,
-            url: data.url || trimmed,
-            size: getRelativePriceSize(numericPrice, nextPrices),
-          };
-        })
+        current.map((hint) =>
+          hint.id === editingHintId
+            ? {
+                ...hint,
+                title,
+                retailer,
+                priceLabel: formatPriceLabel(numericPrice, data?.priceText),
+                numericPrice,
+                priceBand: getPriceBand(numericPrice),
+                image:
+                  typeof data?.image === "string" && data.image.startsWith("http")
+                    ? data.image
+                    : hint.image,
+                url: data?.url || trimmed,
+              }
+            : hint
+        )
       );
 
       setEditForm((current) => ({
         ...current,
-        title: refreshedTitle,
-        url: data.url || trimmed,
+        title,
+        url: data?.url || trimmed,
       }));
     } catch (err) {
       setError(err.message || "Could not refresh this link.");
@@ -1097,97 +1090,93 @@ export default function HintsClient() {
         body: JSON.stringify({ url: trimmed }),
       });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error(data?.error || "Could not extract this link.");
+        throw new Error(data?.error || "Could not fetch this link.");
       }
 
-      const numericPrice = extractNumericPrice(data.priceText);
-      const retailer = data.siteName || normaliseRetailer(trimmed);
-      const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
+      const numericPrice = extractNumericPrice(data?.priceText);
+      const retailer = data?.siteName || normaliseRetailer(trimmed);
+      const title = shortenTitle(data?.title || "Saved hint", retailer);
 
       setDraftHint({
-        title: shortTitle,
-        url: data.url || trimmed,
+        title,
+        url: data?.url || trimmed,
         image:
-          typeof data.image === "string" && data.image.startsWith("http")
+          typeof data?.image === "string" && data.image.startsWith("http")
             ? data.image
             : "",
         retailer,
-        priceLabel: formatPriceLabel(numericPrice, data.priceText),
+        priceLabel: formatPriceLabel(numericPrice, data?.priceText),
         numericPrice,
         private: false,
       });
 
       setIsComposerOpen(true);
     } catch (err) {
-      setError(err.message || "Could not extract this link.");
+      setError(err.message || "Could not fetch this link.");
     } finally {
       setIsFetchingDraft(false);
     }
   }
 
   async function handleSaveDraft() {
-    if (!currentUser) return;
+    if (!currentUser) {
+      setError("You must be signed in.");
+      return;
+    }
+
+    const trimmedUrl = draftHint.url.trim();
+    const trimmedTitle = draftHint.title.trim();
+
+    if (!trimmedUrl) {
+      setError("This hint needs a link.");
+      return;
+    }
 
     setIsSavingDraft(true);
+    setError("");
 
     try {
-      const incomingPriceSet = [
-        ...numericPrices,
-        ...(draftHint.numericPrice != null ? [draftHint.numericPrice] : []),
-      ];
-
-      const newHint = {
-        id: crypto.randomUUID(),
-        title: shortenTitle(draftHint.title || "Saved hint", draftHint.retailer),
-        retailer: draftHint.retailer || normaliseRetailer(draftHint.url),
-        priceLabel: draftHint.priceLabel,
-        numericPrice: draftHint.numericPrice,
-        priceBand: getPriceBand(draftHint.numericPrice),
-        image: draftHint.image || "",
-        fallbackGradient: buildFallbackGradient(hints.length),
-        tags: [],
-        starred: false,
-        private: draftHint.private,
-        size: getRelativePriceSize(draftHint.numericPrice, incomingPriceSet),
-        url: draftHint.url,
-        position: 0,
-      };
-
-      const reordered = [newHint, ...hints].map((hint, index) => ({
-        ...hint,
-        position: index,
-      }));
-
       const supabase = createClient();
 
-      const { error: insertError } = await supabase.from("hints").insert({
-        id: newHint.id,
+      const payload = {
         user_id: currentUser.id,
-        title: newHint.title,
-        url: newHint.url,
-        image_url: newHint.image,
-        retailer: newHint.retailer,
-        price_text: newHint.priceLabel,
-        numeric_price: newHint.numericPrice,
-        starred: newHint.starred,
-        is_private: newHint.private,
-        position: 0,
-        size: newHint.size,
+        title: trimmedTitle || "Saved hint",
+        url: trimmedUrl,
+        image_url: draftHint.image || null,
+        retailer: draftHint.retailer || normaliseRetailer(trimmedUrl),
+        price_text: draftHint.priceLabel || "Price unavailable",
+        numeric_price: draftHint.numericPrice,
+        starred: false,
+        is_private: Boolean(draftHint.private),
+        position: hints.length,
         source: "user",
+      };
+
+      const { data, error } = await supabase
+        .from("hints")
+        .insert(payload)
+        .select("*")
+        .single();
+
+      if (error) throw error;
+
+      const savedHint = toHintRecord(data, hints.length);
+
+      setHints((current) => [...current, savedHint]);
+      setDraftHint({
+        title: "",
+        url: "",
+        image: "",
+        retailer: "",
+        priceLabel: "Price unavailable",
+        numericPrice: null,
+        private: false,
       });
-
-      if (insertError) {
-        throw new Error(insertError.message || "Could not save this hint.");
-      }
-
-      setHints(reordered);
-      setLink("");
       setIsComposerOpen(false);
-
-      await persistPositions(reordered);
+      setLink("");
     } catch (err) {
       setError(err.message || "Could not save this hint.");
     } finally {
@@ -1220,9 +1209,9 @@ export default function HintsClient() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+    <main className="min-h-screen bg-[#fff8f4] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fff8f4]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
@@ -1232,30 +1221,10 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link
-                href="/feed"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Feed
-              </Link>
-              <Link
-                href="/hints"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
-              >
-                Hints
-              </Link>
-              <Link
-                href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Circles
-              </Link>
-              <Link
-                href="/shop"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-              >
-                Shop
-              </Link>
+              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
+              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
+              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
+              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
             </nav>
 
             <AvatarMenu />
@@ -1263,9 +1232,9 @@ export default function HintsClient() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1380px] px-5 py-10 md:px-8">
-        <section className="text-center">
-          <h1 className="text-[32px] font-extrabold tracking-[-0.06em] text-[#f19a78] sm:text-[44px] md:text-[56px]">
+      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8 md:py-12">
+        <section className="mx-auto max-w-[920px] text-center">
+          <h1 className="text-[38px] font-extrabold tracking-[-0.07em] text-[#f19a78] sm:text-[48px] md:text-[58px]">
             Paste a link here...
           </h1>
 
@@ -1273,8 +1242,8 @@ export default function HintsClient() {
             Save things you’d genuinely love, keep some private, and we can even remind you when it goes on sale.
           </p>
 
-          <div className="mt-6">
-            <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
+          <div className="mt-7">
+            <div className="mx-auto flex w-full max-w-[860px] flex-col gap-3 sm:flex-row">
               <input
                 id="hint-link"
                 type="url"
@@ -1309,31 +1278,29 @@ export default function HintsClient() {
           </div>
         </section>
 
-        <section className="mt-12">
-          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
+        <section className="mt-14">
+          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6 md:p-7">
             <div
-              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-75"
+              className="pointer-events-none absolute inset-0 opacity-90"
               style={{
                 backgroundImage: `
-                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
+                  linear-gradient(to right, rgba(217, 196, 184, 0.45) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(217, 196, 184, 0.45) 1px, transparent 1px)
                 `,
-                backgroundSize: "76px 76px",
+                backgroundSize: "88px 88px",
                 backgroundPosition: "center center",
               }}
             />
 
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
+
             {isLoading ? (
-              <div className="relative grid grid-cols-1 gap-7 md:grid-cols-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div className="relative columns-1 gap-8 md:columns-3 xl:columns-4">
+                {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] ${
-                      i % 3 === 0
-                        ? "min-h-[500px]"
-                        : i % 2 === 0
-                        ? "min-h-[410px]"
-                        : "min-h-[330px]"
+                    className={`mb-8 overflow-hidden rounded-[32px] border border-[#efdfd6] bg-[#f9f8f5] ${
+                      i === 1 ? "min-h-[580px]" : i === 2 ? "min-h-[440px]" : "min-h-[320px]"
                     }`}
                   >
                     <div className="skeleton h-full w-full" />
@@ -1351,28 +1318,23 @@ export default function HintsClient() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid grid-cols-1 gap-7 md:grid-cols-4">
+                  <div className="relative columns-1 gap-8 md:columns-3 xl:columns-4">
                     {visibleHints.map((hint) => (
-                      <SortableHintTile
-                        key={hint.id}
-                        hint={hint}
-                        onEdit={openEditModal}
-                        onToggleStarred={toggleStarred}
-                        onTogglePrivate={togglePrivate}
-                      />
+                      <div key={hint.id} className="mb-8 break-inside-avoid">
+                        <SortableHintTile
+                          hint={hint}
+                          onEdit={openEditModal}
+                          onToggleStarred={toggleStarred}
+                          onTogglePrivate={togglePrivate}
+                        />
+                      </div>
                     ))}
                   </div>
                 </SortableContext>
 
-                <DragOverlay
-                  adjustScale={false}
-                  dropAnimation={{
-                    duration: 220,
-                    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-                  }}
-                >
+                <DragOverlay>
                   {activeHint ? (
-                    <div className="w-[min(92vw,320px)]">
+                    <div className="w-[min(92vw,360px)]">
                       <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
@@ -1401,16 +1363,16 @@ export default function HintsClient() {
         onRefreshFromLink={refreshHintFromLink}
         onDelete={deleteHint}
         onTogglePrivate={() => {
-          const hint = visibleHints.find((h) => h.id === editingHintId);
+          const hint = hints.find((h) => h.id === editingHintId);
           if (hint) togglePrivate(hint);
         }}
         onToggleStarred={() => {
-          const hint = visibleHints.find((h) => h.id === editingHintId);
+          const hint = hints.find((h) => h.id === editingHintId);
           if (hint) toggleStarred(hint);
         }}
         isRefreshing={isRefreshingEdit}
         isSaving={isSavingEdit}
-        hint={visibleHints.find((h) => h.id === editingHintId)}
+        hint={hints.find((h) => h.id === editingHintId)}
       />
     </main>
   );
