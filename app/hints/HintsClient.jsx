@@ -29,14 +29,14 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    priceBand: "mid",
+    priceBand: "high",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     tags: ["Travel"],
     starred: true,
     private: false,
-    size: "medium",
+    size: "xl",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -46,14 +46,14 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    priceBand: "mid",
+    priceBand: "premium",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     tags: ["Tech"],
     starred: true,
     private: false,
-    size: "medium",
+    size: "large",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -63,14 +63,14 @@ const demoHints = [
     retailer: "classbento.co.uk",
     priceLabel: "About £78",
     numericPrice: 78,
-    priceBand: "small",
+    priceBand: "mid",
     image:
       "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
     tags: ["Experience"],
     starred: false,
     private: false,
-    size: "small",
+    size: "medium",
     url: "https://classbento.co.uk/",
     position: 2,
   },
@@ -124,16 +124,12 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getCardSize(price) {
-  if (price == null || price <= 100) return "small";
-  if (price <= 1000) return "medium";
-  return "large";
-}
-
 function getPriceBand(price) {
-  if (price == null || price <= 100) return "small";
-  if (price <= 1000) return "mid";
-  return "high";
+  if (price == null) return "small";
+  if (price >= 250) return "high";
+  if (price >= 140) return "premium";
+  if (price >= 60) return "mid";
+  return "small";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -258,15 +254,37 @@ function shortenTitle(title = "", retailer = "") {
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
+function getCardSize(price, index = 0) {
+  if (price == null) {
+    return index % 4 === 0 ? "medium" : "small";
+  }
+
+  if (price >= 260) {
+    return index % 3 === 0 ? "xl" : "large";
+  }
+
+  if (price >= 140) {
+    return "large";
+  }
+
+  if (price >= 60) {
+    return index % 2 === 0 ? "medium" : "small";
+  }
+
+  return "small";
+}
+
 function getTileHeightClass(size) {
-  if (size === "large") return "min-h-[540px]";
-  if (size === "medium") return "min-h-[420px]";
+  if (size === "xl") return "min-h-[680px]";
+  if (size === "large") return "min-h-[560px]";
+  if (size === "medium") return "min-h-[430px]";
   return "min-h-[320px]";
 }
 
 function getPricePill(priceBand) {
   if (priceBand === "high") return "bg-[#2f3b2d] text-white";
-  if (priceBand === "mid") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
+  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
   return "bg-[#f1f5ec] text-[#627f53]";
 }
 
@@ -578,7 +596,7 @@ function HintCard({
               src={hint.image}
               alt={hint.title}
               className={`absolute inset-0 z-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
-                hint.private ? "opacity-82" : ""
+                hint.private ? "opacity-80" : ""
               }`}
               loading="lazy"
               referrerPolicy="no-referrer"
@@ -590,7 +608,7 @@ function HintCard({
           <>
             <div
               className={`absolute inset-0 z-0 bg-gradient-to-br ${hint.fallbackGradient} ${
-                hint.private ? "opacity-82" : ""
+                hint.private ? "opacity-80" : ""
               }`}
             />
             <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
@@ -845,7 +863,7 @@ export default function HintsPage() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: getCardSize(row.numeric_price),
+          size: row.size || getCardSize(row.numeric_price, index),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1015,7 +1033,7 @@ export default function HintsPage() {
       );
 
       setHints((current) =>
-        current.map((hint) => {
+        current.map((hint, index) => {
           if (hint.id !== editingHintId) return hint;
 
           return {
@@ -1030,7 +1048,7 @@ export default function HintsPage() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: getCardSize(numericPrice),
+            size: getCardSize(numericPrice, index),
           };
         })
       );
@@ -1121,7 +1139,7 @@ export default function HintsPage() {
         tags: [],
         starred: false,
         private: draftHint.private,
-        size: getCardSize(draftHint.numericPrice),
+        size: getCardSize(draftHint.numericPrice, 0),
         url: draftHint.url,
         position: 0,
       };
@@ -1300,8 +1318,14 @@ export default function HintsPage() {
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`rounded-[32px] bg-[#f4eee8] ${
-                      i === 1 ? "min-h-[320px]" : i === 2 ? "min-h-[420px]" : "min-h-[540px]"
+                    className={`overflow-hidden rounded-[32px] bg-[#f4eee8] ${
+                      i === 1
+                        ? "min-h-[680px]"
+                        : i === 2
+                        ? "min-h-[560px]"
+                        : i === 3
+                        ? "min-h-[430px]"
+                        : "min-h-[320px]"
                     }`}
                   />
                 ))}
@@ -1330,7 +1354,12 @@ export default function HintsPage() {
                   </div>
                 </SortableContext>
 
-                <DragOverlay>
+                <DragOverlay
+                  dropAnimation={{
+                    duration: 220,
+                    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
+                >
                   {activeHint ? (
                     <div className="w-[min(92vw,320px)] md:w-full">
                       <HintCard hint={activeHint} dragging />
