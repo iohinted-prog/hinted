@@ -2,10 +2,30 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "../../../../lib/supabase/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  return new Stripe(secretKey);
+}
+
+function getBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "http://localhost:3000"
+  );
+}
 
 export async function POST() {
   try {
+    const stripe = getStripe();
     const supabase = await createClient();
 
     const {
@@ -35,7 +55,7 @@ export async function POST() {
 
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_SITE_URL}/billing`,
+      return_url: `${getBaseUrl()}/settings/billing`,
     });
 
     return NextResponse.json({ url: session.url });
