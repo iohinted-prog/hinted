@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -25,15 +25,6 @@ import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
 const ACTIVE_CURRENCY = "GBP";
-const LOCAL_PREVIEW_TIMEOUT_MS = 5000;
-const REMOTE_PREVIEW_TIMEOUT_MS = 6500;
-
-const PREVIEW_STAGE = {
-  IDLE: "idle",
-  LOCAL: "local",
-  REMOTE: "remote",
-  MANUAL: "manual",
-};
 
 const EMPTY_NEW_HINT_FORM = {
   title: "",
@@ -132,7 +123,7 @@ function LogoMark() {
   );
 }
 
-function errorToMessage(value) {
+function errorToMessage(value: any) {
   if (!value) return "Something went wrong.";
   if (typeof value === "string") return value;
   if (value instanceof Error) return value.message || "Something went wrong.";
@@ -150,7 +141,7 @@ function errorToMessage(value) {
   return String(value);
 }
 
-function normaliseRetailer(url) {
+function normaliseRetailer(url = "") {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
@@ -181,13 +172,15 @@ function detectCurrency(raw = "") {
   const text = String(raw || "").trim();
   if (!text) return null;
   if (text.includes("£")) return "GBP";
-  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) return "USD";
+  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) {
+    return "USD";
+  }
   if (text.includes("€")) return "EUR";
   if (/\bR\s?\d/i.test(text) || /\bZAR\b/i.test(text)) return "ZAR";
   return null;
 }
 
-function extractNumericPrice(value) {
+function extractNumericPrice(value: any) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value || typeof value !== "string") return null;
 
@@ -202,19 +195,19 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getSizeFromPrice(price) {
+function getSizeFromPrice(price: number | null) {
   if (price == null || price <= 100) return "small";
   if (price <= 1000) return "medium";
   return "large";
 }
 
-function getAspectRatio(size) {
+function getAspectRatio(size = "medium") {
   if (size === "large") return "1 / 1.7";
   if (size === "medium") return "1 / 1.35";
   return "1 / 1";
 }
 
-function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
+function formatPriceLabel(price: number | null, rawPrice?: string | null, currency = ACTIVE_CURRENCY) {
   if (currency !== ACTIVE_CURRENCY) return "Price unavailable";
   if (rawPrice && typeof rawPrice === "string" && detectCurrency(rawPrice) === ACTIVE_CURRENCY) {
     return rawPrice;
@@ -224,7 +217,7 @@ function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
   return `About ${Math.round(price)}`;
 }
 
-function sanitisePrice(rawPrice, numericPrice) {
+function sanitisePrice(rawPrice: any, numericPrice: number | null) {
   const detectedCurrency = detectCurrency(rawPrice) || ACTIVE_CURRENCY;
   if (detectedCurrency !== ACTIVE_CURRENCY) {
     return { numericPrice: null, priceLabel: "Price unavailable" };
@@ -235,7 +228,7 @@ function sanitisePrice(rawPrice, numericPrice) {
   };
 }
 
-function buildFallbackGradient(index) {
+function buildFallbackGradient(index: number) {
   const gradients = [
     "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
@@ -304,7 +297,7 @@ function shortenTitle(title = "", retailer = "") {
   return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
-function splitIntoColumns(items, columnCount = 3) {
+function splitIntoColumns(items: any[], columnCount = 3) {
   const columns = Array.from({ length: columnCount }, () => []);
   items.forEach((item, index) => {
     columns[index % columnCount].push(item);
@@ -312,8 +305,8 @@ function splitIntoColumns(items, columnCount = 3) {
   return columns;
 }
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
     reader.onerror = () => reject(new Error("Could not read the selected image."));
@@ -321,7 +314,7 @@ function fileToDataUrl(file) {
   });
 }
 
-function buildDraftFromPreview(data, rawUrl) {
+function buildDraftFromPreview(data: any, rawUrl: string) {
   const extractedNumericPrice =
     typeof data?.numericPrice === "number" ? data.numericPrice : extractNumericPrice(data?.priceText);
   const priceMeta = sanitisePrice(data?.priceText, extractedNumericPrice);
@@ -347,75 +340,97 @@ function buildDraftFromPreview(data, rawUrl) {
   };
 }
 
-function buildManualDraft(rawUrl = "") {
+function buildManualDraft(rawUrl: string) {
   const finalUrl = normaliseInputUrl(rawUrl);
+  const retailer = normaliseRetailer(finalUrl);
 
   return {
-    ...EMPTY_NEW_HINT_FORM,
     title: "",
-    retailer: normaliseRetailer(finalUrl),
+    retailer,
     image: "",
     uploadedImage: null,
     url: finalUrl,
     priceInput: "",
-    private: false,
+    priceLabel: "Price unavailable",
+    numericPrice: null,
     starred: false,
+    private: false,
     needsReview: true,
     source: "manual",
   };
 }
 
-async function fetchPreview(url, { signal } = {}) {
-  const response = await fetch("/api/link-preview", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ url, currency: ACTIVE_CURRENCY }),
-    signal,
-  });
-
-  const raw = await response.text();
-  let data = null;
+async function fetchPreview(url: string, { timeoutMs = 5000 } = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch {
-    throw new Error(raw || "The preview service returned an invalid response.");
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error ||
-        data?.message ||
-        (typeof data === "string" ? data : "Could not fetch this link preview.")
-    );
-  }
-
-  return data;
-}
-
-async function fetchPreviewWithTimeout(url, timeoutMs, controller) {
-  let timeoutId = null;
-
-  try {
-    const timeoutPromise = new Promise((_, reject) => {
-      timeoutId = setTimeout(() => {
-        controller.abort();
-        const err = new Error("Preview timed out.");
-        err.code = "PREVIEW_TIMEOUT";
-        reject(err);
-      }, timeoutMs);
+    const response = await fetch("/api/link-preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ url, currency: ACTIVE_CURRENCY }),
+      signal: controller.signal,
     });
 
-    return await Promise.race([
-      fetchPreview(url, { signal: controller.signal }),
-      timeoutPromise,
-    ]);
+    const raw = await response.text();
+    let data = null;
+
+    try {
+      data = raw ? JSON.parse(raw) : null;
+    } catch {
+      throw new Error(raw || "The preview service returned an invalid response.");
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+          data?.message ||
+          (typeof data === "string" ? data : "Could not fetch this link preview.")
+      );
+    }
+
+    return data;
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error("This link took too long to load. You can review and save it manually.");
+    }
+    throw err;
   } finally {
     clearTimeout(timeoutId);
   }
+}
+
+function FetchingHintModal({
+  isOpen,
+  label,
+}: {
+  isOpen: boolean;
+  label: string;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
+      <div className="w-full max-w-[460px] rounded-[30px] border border-[#efdcd2] bg-white p-7 text-center shadow-[0_28px_80px_rgba(75,45,30,0.18)]">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#f3d8cb] bg-[#fff5ef]">
+          <div className="h-7 w-7 animate-spin rounded-full border-2 border-[#f4b395] border-t-[#f36f64]" />
+        </div>
+
+        <p className="mt-5 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
+          Fetching
+        </p>
+
+        <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+          Checking this hint
+        </h2>
+
+        <p className="mt-3 text-[15px] leading-7 text-slate-500">{label}</p>
+      </div>
+    </div>
+  );
 }
 
 function HintFormFields({
@@ -425,7 +440,7 @@ function HintFormFields({
   showReviewCopy = false,
   showToggles = true,
   imageHelpText = "No image yet. Upload one here if you want to add a photo.",
-}) {
+}: any) {
   const previewImage = form.uploadedImage || form.image;
 
   return (
@@ -444,7 +459,7 @@ function HintFormFields({
           id={`${prefix}-link`}
           type="url"
           value={form.url}
-          onChange={(e) => setForm((current) => ({ ...current, url: e.target.value }))}
+          onChange={(e) => setForm((current: any) => ({ ...current, url: e.target.value }))}
           className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50"
         />
       </div>
@@ -457,7 +472,7 @@ function HintFormFields({
           id={`${prefix}-title`}
           type="text"
           value={form.title}
-          onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))}
+          onChange={(e) => setForm((current: any) => ({ ...current, title: e.target.value }))}
           placeholder="Give this hint a clear name"
           className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50"
         />
@@ -471,7 +486,7 @@ function HintFormFields({
           id={`${prefix}-price`}
           type="text"
           value={form.priceInput}
-          onChange={(e) => setForm((current) => ({ ...current, priceInput: e.target.value }))}
+          onChange={(e) => setForm((current: any) => ({ ...current, priceInput: e.target.value }))}
           placeholder="Leave blank if you don’t want to add a price"
           className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50"
         />
@@ -489,7 +504,7 @@ function HintFormFields({
             const file = e.target.files?.[0];
             if (!file) return;
             const imageUrl = await fileToDataUrl(file);
-            setForm((current) => ({ ...current, uploadedImage: imageUrl }));
+            setForm((current: any) => ({ ...current, uploadedImage: imageUrl }));
           }}
           className="block w-full rounded-[18px] border border-dashed border-[#eadcd3] bg-[#fcfaf8] px-4 py-4 text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-[#fff1e9] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[#df7c59]"
         />
@@ -513,7 +528,7 @@ function HintFormFields({
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => setForm((current) => ({ ...current, starred: !current.starred }))}
+            onClick={() => setForm((current: any) => ({ ...current, starred: !current.starred }))}
             className={`rounded-full border px-4 py-2 text-sm font-semibold ${
               form.starred
                 ? "border-[#ffd8c9] bg-[#fff2ea] text-[#e27956]"
@@ -525,7 +540,7 @@ function HintFormFields({
 
           <button
             type="button"
-            onClick={() => setForm((current) => ({ ...current, private: !current.private }))}
+            onClick={() => setForm((current: any) => ({ ...current, private: !current.private }))}
             className={`rounded-full border px-4 py-2 text-sm font-semibold ${
               form.private
                 ? "border-[#ffd8c9] bg-[#fffaf7] text-[#e08a67]"
@@ -540,7 +555,7 @@ function HintFormFields({
   );
 }
 
-function AddHintModal({ isOpen, form, setForm, onClose, onSubmit, isSaving }) {
+function AddHintModal({ isOpen, form, setForm, onClose, onSubmit, isSaving }: any) {
   if (!isOpen) return null;
 
   return (
@@ -603,7 +618,7 @@ function EditHintModal({
   isRefreshing,
   isSaving,
   hint,
-}) {
+}: any) {
   if (!isOpen || !hint) return null;
 
   return (
@@ -682,7 +697,7 @@ function HintCard({
   isDragging,
   dragHandleListeners,
   dragHandleAttributes,
-}) {
+}: any) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
@@ -698,17 +713,31 @@ function HintCard({
       <div className="absolute inset-0">
         {showImage ? (
           <>
+            <div className="absolute inset-0 bg-[#f6f1ec]" />
+
             <img
               src={hint.image}
-              alt={hint.title}
-              className={`h-full w-full object-cover transition-transform duration-500 ${
-                isDragging ? "scale-[1.02]" : "group-hover:scale-[1.03]"
-              } ${hint.private ? "opacity-80" : ""}`}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-30"
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={() => setImageFailed(true)}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.20)] to-[rgba(255,255,255,0.02)]" />
+
+            <div className="absolute inset-[10px] overflow-hidden rounded-[24px] bg-[#f8f4ef]">
+              <img
+                src={hint.image}
+                alt={hint.title}
+                className={`h-full w-full object-contain p-4 transition-transform duration-500 ${
+                  isDragging ? "scale-[1.01]" : "group-hover:scale-[1.02]"
+                } ${hint.private ? "opacity-84" : ""}`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+              />
+            </div>
+
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.76)] via-[rgba(22,18,16,0.14)] to-[rgba(255,255,255,0.02)]" />
           </>
         ) : (
           <>
@@ -726,7 +755,7 @@ function HintCard({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            className="flex cursor-grab active:cursor-grabbing items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
+            className="flex cursor-grab items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm active:cursor-grabbing"
             {...dragHandleAttributes}
             {...dragHandleListeners}
           >
@@ -796,7 +825,7 @@ function HintCard({
             display: "-webkit-box",
             WebkitBoxOrient: "vertical",
             WebkitLineClamp: 2,
-            lineClamp: 2,
+            lineClamp: 2 as any,
           }}
         >
           {hint.title}
@@ -827,8 +856,8 @@ function HintCard({
   );
 }
 
-function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
-  const animateLayoutChanges = (args) => {
+function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }: any) {
+  const animateLayoutChanges = (args: any) => {
     if (args.isSorting || args.wasDragging) return defaultAnimateLayoutChanges(args);
     return true;
   };
@@ -846,7 +875,7 @@ function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
     transform: CSS.Transform.toString(transform),
     transition,
     zIndex: isDragging ? 20 : 1,
-    position: "relative",
+    position: "relative" as const,
   };
 
   return (
@@ -865,28 +894,25 @@ function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
 }
 
 export default function HintsClient() {
-  const [hints, setHints] = useState([]);
+  const [hints, setHints] = useState<any[]>([]);
   const [link, setLink] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
-  const [editingHintId, setEditingHintId] = useState(null);
-  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM);
+  const [editingHintId, setEditingHintId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<any>(EMPTY_EDIT_FORM);
   const [isRefreshingEdit, setIsRefreshingEdit] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeId, setActiveId] = useState(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmittingNewHint, setIsSubmittingNewHint] = useState(false);
-  const [pendingHint, setPendingHint] = useState(null);
-  const [newHintForm, setNewHintForm] = useState(EMPTY_NEW_HINT_FORM);
+  const [pendingHint, setPendingHint] = useState<any>(null);
+  const [newHintForm, setNewHintForm] = useState<any>(EMPTY_NEW_HINT_FORM);
 
-  const [previewStage, setPreviewStage] = useState(PREVIEW_STAGE.IDLE);
-  const [previewMessage, setPreviewMessage] = useState("");
-
-  const localPreviewControllerRef = useRef(null);
-  const remotePreviewControllerRef = useRef(null);
+  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
+  const [fetchingLabel, setFetchingLabel] = useState("Checking this link...");
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -937,7 +963,7 @@ export default function HintsClient() {
       }
 
       setHints(
-        (data || []).map((row, index) => ({
+        (data || []).map((row: any, index: number) => ({
           id: row.id,
           title: row.title || "Saved hint",
           retailer: row.retailer || normaliseRetailer(row.url || ""),
@@ -960,18 +986,11 @@ export default function HintsClient() {
     loadHints();
   }, [currentUser]);
 
-  useEffect(() => {
-    return () => {
-      localPreviewControllerRef.current?.abort?.();
-      remotePreviewControllerRef.current?.abort?.();
-    };
-  }, []);
-
   const visibleHints = hints.length > 0 ? hints : demoHints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
   const columns = useMemo(() => splitIntoColumns(visibleHints, 3), [visibleHints]);
 
-  async function persistOrder(nextHints) {
+  async function persistOrder(nextHints: any[]) {
     if (!currentUser) return;
     const supabase = createClient();
     await Promise.all(
@@ -979,11 +998,11 @@ export default function HintsClient() {
     );
   }
 
-  function rebuildFromColumns(nextColumns) {
+  function rebuildFromColumns(nextColumns: any[][]) {
     return nextColumns.flat().map((hint, index) => ({ ...hint, position: index }));
   }
 
-  function openEditModal(hint) {
+  function openEditModal(hint: any) {
     setEditingHintId(hint.id);
     setEditForm({
       title: hint.title || "",
@@ -1000,8 +1019,6 @@ export default function HintsClient() {
     setEditForm(EMPTY_EDIT_FORM);
     setIsRefreshingEdit(false);
     setIsSavingEdit(false);
-    setPreviewStage(PREVIEW_STAGE.IDLE);
-    setPreviewMessage("");
   }
 
   function closeAddModal() {
@@ -1009,55 +1026,6 @@ export default function HintsClient() {
     setPendingHint(null);
     setIsSubmittingNewHint(false);
     setNewHintForm(EMPTY_NEW_HINT_FORM);
-    setPreviewStage(PREVIEW_STAGE.IDLE);
-    setPreviewMessage("");
-  }
-
-  async function runStagedPreview(rawUrl) {
-    const url = normaliseInputUrl(rawUrl);
-
-    localPreviewControllerRef.current?.abort?.();
-    remotePreviewControllerRef.current?.abort?.();
-
-    const localController = new AbortController();
-    const remoteController = new AbortController();
-
-    localPreviewControllerRef.current = localController;
-    remotePreviewControllerRef.current = remoteController;
-
-    setPreviewStage(PREVIEW_STAGE.LOCAL);
-    setPreviewMessage("Looking for title, image, and price from the page itself...");
-
-    try {
-      const localData = await fetchPreviewWithTimeout(
-        url,
-        LOCAL_PREVIEW_TIMEOUT_MS,
-        localController
-      );
-
-      setPreviewStage(PREVIEW_STAGE.IDLE);
-      setPreviewMessage("");
-      return localData;
-    } catch (localError) {
-      setPreviewStage(PREVIEW_STAGE.REMOTE);
-      setPreviewMessage("This is taking a little longer than expected. Trying a deeper fetch now...");
-
-      try {
-        const remoteData = await fetchPreviewWithTimeout(
-          url,
-          REMOTE_PREVIEW_TIMEOUT_MS,
-          remoteController
-        );
-
-        setPreviewStage(PREVIEW_STAGE.IDLE);
-        setPreviewMessage("");
-        return remoteData;
-      } catch {
-        setPreviewStage(PREVIEW_STAGE.MANUAL);
-        setPreviewMessage("");
-        throw localError;
-      }
-    }
   }
 
   async function saveEditChanges() {
@@ -1115,7 +1083,7 @@ export default function HintsClient() {
   }
 
   async function deleteHint() {
-    if (!currentUser) return;
+    if (!currentUser || editingHintId == null) return;
     const supabase = createClient();
     const { error } = await supabase.from("hints").delete().eq("id", editingHintId);
     if (error) {
@@ -1126,7 +1094,7 @@ export default function HintsClient() {
     closeEditModal();
   }
 
-  async function toggleStarred(hint) {
+  async function toggleStarred(hint: any) {
     if (!currentUser) return;
     const supabase = createClient();
     const newStarred = !hint.starred;
@@ -1140,7 +1108,7 @@ export default function HintsClient() {
     }
   }
 
-  async function togglePrivate(hint) {
+  async function togglePrivate(hint: any) {
     if (!currentUser) return;
     const supabase = createClient();
     const newPrivate = !hint.private;
@@ -1163,12 +1131,16 @@ export default function HintsClient() {
       return;
     }
 
+    const normalisedUrl = normaliseInputUrl(trimmed);
+
     setIsRefreshingEdit(true);
+    setIsFetchingPreview(true);
+    setFetchingLabel("Refreshing this hint from the link.");
     setError("");
 
     try {
-      const data = await runStagedPreview(trimmed);
-      const draft = buildDraftFromPreview(data, trimmed);
+      const data = await fetchPreview(normalisedUrl, { timeoutMs: 5000 });
+      const draft = buildDraftFromPreview(data, normalisedUrl);
 
       setHints((current) =>
         current.map((hint) =>
@@ -1188,7 +1160,7 @@ export default function HintsClient() {
         )
       );
 
-      setEditForm((current) => ({
+      setEditForm((current: any) => ({
         ...current,
         title: draft.title,
         url: draft.url,
@@ -1196,12 +1168,11 @@ export default function HintsClient() {
         image: draft.image || current.image,
         priceInput: draft.priceInput,
       }));
-    } catch {
-      setError("We tried, but couldn’t refresh this right now. You can update the details manually here.");
+    } catch (err) {
+      setError(errorToMessage(err));
     } finally {
       setIsRefreshingEdit(false);
-      setPreviewStage(PREVIEW_STAGE.IDLE);
-      setPreviewMessage("");
+      setIsFetchingPreview(false);
     }
   }
 
@@ -1216,33 +1187,38 @@ export default function HintsClient() {
       setError("Paste a link first.");
       return;
     }
-
     if (!isValidHttpUrl(trimmed)) {
       setError("Please paste a valid product or experience URL.");
       return;
     }
 
+    const normalisedUrl = normaliseInputUrl(trimmed);
+
     setIsAdding(true);
+    setIsFetchingPreview(true);
+    setFetchingLabel("We’ll try to pull the title, image, and price.");
     setError("");
 
     try {
-      const data = await runStagedPreview(trimmed);
-      const draft = buildDraftFromPreview(data, trimmed);
+      const data = await fetchPreview(normalisedUrl, { timeoutMs: 5000 });
+      const draft = buildDraftFromPreview(data, normalisedUrl);
 
       setPendingHint(draft);
       setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...draft });
       setIsAddModalOpen(true);
       setLink("");
-    } catch {
-      const manualDraft = buildManualDraft(trimmed);
+    } catch (err) {
+      const message = errorToMessage(err);
+      const manualDraft = buildManualDraft(normalisedUrl);
+
       setPendingHint(manualDraft);
-      setNewHintForm(manualDraft);
+      setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
       setIsAddModalOpen(true);
-      setError("We tried, but we couldn’t fetch the info you need right now. You can enter it manually here.");
+      setLink("");
+      setError(message);
     } finally {
+      setIsFetchingPreview(false);
       setIsAdding(false);
-      setPreviewStage(PREVIEW_STAGE.IDLE);
-      setPreviewMessage("");
     }
   }
 
@@ -1274,7 +1250,7 @@ export default function HintsClient() {
         size,
         url,
         position: 0,
-        needsReview: false,
+        needsReview: Boolean(newHintForm.needsReview),
       };
 
       const supabase = createClient();
@@ -1304,11 +1280,11 @@ export default function HintsClient() {
     }
   }
 
-  function handleDragStart(event) {
+  function handleDragStart(event: any) {
     setActiveId(event.active.id);
   }
 
-  async function handleDragEnd(event) {
+  async function handleDragEnd(event: any) {
     const { active, over } = event;
     setActiveId(null);
     if (!over || active.id === over.id || hints.length === 0) return;
@@ -1357,10 +1333,30 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
-              <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full border border-[#3c4d39] bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
-              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
-              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#3c4d39] bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#efe0d7] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
             </nav>
             <AvatarMenu />
           </div>
@@ -1395,26 +1391,16 @@ export default function HintsClient() {
                 disabled={isAdding || isLoading}
                 className="inline-flex h-[72px] shrink-0 items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-8 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70 sm:min-w-[170px]"
               >
-                {isAdding
-                  ? previewStage === PREVIEW_STAGE.REMOTE
-                    ? "Trying harder..."
-                    : "Checking..."
-                  : isLoading
-                    ? "Loading..."
-                    : "Add hint"}
+                {isAdding ? "Checking..." : isLoading ? "Loading..." : "Add hint"}
               </button>
             </div>
 
             {error ? (
               <p className="mt-3 text-sm font-medium text-[#c45c42]">{error}</p>
-            ) : previewStage === PREVIEW_STAGE.LOCAL ? (
-              <p className="mt-3 text-sm font-medium text-slate-500">{previewMessage}</p>
-            ) : previewStage === PREVIEW_STAGE.REMOTE ? (
-              <p className="mt-3 text-sm font-medium text-[#c4704d]">{previewMessage}</p>
             ) : (
               <div className="mt-3 space-y-1 text-sm text-slate-500">
-                <p>We’ll try the page first, then a deeper fetch only if needed.</p>
-                <p>If it still can’t load, you can enter the details manually and save anyway.</p>
+                <p>We’ll pull the title, image, and price, then let you fix anything before saving.</p>
+                <p>You can also save private hints, and both image and price are optional.</p>
               </div>
             )}
           </div>
@@ -1496,7 +1482,13 @@ export default function HintsClient() {
               <div className="columns-1 gap-6 md:columns-3">
                 {demoHints.map((hint) => (
                   <div key={hint.id} className="mb-6 break-inside-avoid">
-                    <HintCard hint={hint} onEdit={() => {}} onToggleStarred={() => {}} onTogglePrivate={() => {}} isDragging={false} />
+                    <HintCard
+                      hint={hint}
+                      onEdit={() => {}}
+                      onToggleStarred={() => {}}
+                      onTogglePrivate={() => {}}
+                      isDragging={false}
+                    />
                   </div>
                 ))}
               </div>
@@ -1504,6 +1496,8 @@ export default function HintsClient() {
           </div>
         </section>
       </div>
+
+      <FetchingHintModal isOpen={isFetchingPreview} label={fetchingLabel} />
 
       <AddHintModal
         isOpen={isAddModalOpen}
