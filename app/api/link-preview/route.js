@@ -10,14 +10,14 @@ const FORWARDED_HEADERS = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-  "Accept-Language": "en-GB,en;q=0.9",
+  "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
   "Cache-Control": "no-cache",
   Pragma: "no-cache",
   DNT: "1",
 };
 
 const PRICE_REGEX =
-  /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?|\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/gi;
+  /(?:A\$|NZ\$|C\$|US\$|CA\$|AU\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
 
 const BLOCK_WORDS = [
   "access denied",
@@ -32,6 +32,173 @@ const BLOCK_WORDS = [
   "enable cookies",
   "cloudflare",
   "amazon captcha",
+  "disable any ad blocker",
+  "please enable js",
+  "you don't have permission",
+  "errors.edgesuite.net",
+  "geo.captcha-delivery.com",
+];
+
+const PRIORITY_RETAILER_PATTERNS = [
+  /(^|\.)amazon\./i,
+  /(^|\.)ebay\./i,
+  /(^|\.)etsy\.com$/i,
+  /(^|\.)next\./i,
+  /(^|\.)asos\.com$/i,
+  /(^|\.)boohoo\./i,
+  /(^|\.)prettylittlething\./i,
+  /(^|\.)laredoute\./i,
+
+  /(^|\.)johnlewis\.com$/i,
+  /(^|\.)currys\.co\.uk$/i,
+  /(^|\.)argos\.co\.uk$/i,
+  /(^|\.)tesco\.com$/i,
+  /(^|\.)sainsburys\.co\.uk$/i,
+  /(^|\.)marksandspencer\.com$/i,
+  /(^|\.)boots\.com$/i,
+  /(^|\.)superdrug\.com$/i,
+  /(^|\.)dunelm\.com$/i,
+  /(^|\.)screwfix\.com$/i,
+  /(^|\.)wickes\.co\.uk$/i,
+  /(^|\.)ao\.com$/i,
+  /(^|\.)halfords\.com$/i,
+  /(^|\.)very\.co\.uk$/i,
+  /(^|\.)riverisland\.com$/i,
+  /(^|\.)newlook\.com$/i,
+  /(^|\.)matalan\.co\.uk$/i,
+  /(^|\.)houseoffraser\.co\.uk$/i,
+  /(^|\.)asda\.com$/i,
+  /(^|\.)waitrose\.com$/i,
+  /(^|\.)selfridges\.com$/i,
+  /(^|\.)harrods\.com$/i,
+  /(^|\.)fortnumandmason\.com$/i,
+  /(^|\.)libertylondon\.com$/i,
+  /(^|\.)primark\.com$/i,
+  /(^|\.)brownthomas\.com$/i,
+  /(^|\.)dunnesstores\.com$/i,
+  /(^|\.)zavvi\./i,
+  /(^|\.)thehut\./i,
+  /(^|\.)lookfantastic\./i,
+  /(^|\.)cultbeauty\./i,
+  /(^|\.)spacenk\.com$/i,
+  /(^|\.)allbeauty\.com$/i,
+  /(^|\.)perfumeshop\.com$/i,
+  /(^|\.)thebodyshop\.com$/i,
+  /(^|\.)lush\.com$/i,
+  /(^|\.)hmv\.com$/i,
+  /(^|\.)game\.co\.uk$/i,
+
+  /(^|\.)hm\.com$/i,
+  /(^|\.)zara\.com$/i,
+  /(^|\.)uniqlo\.com$/i,
+  /(^|\.)nike\.com$/i,
+  /(^|\.)adidas\./i,
+  /(^|\.)puma\.com$/i,
+  /(^|\.)decathlon\./i,
+  /(^|\.)gymshark\.com$/i,
+  /(^|\.)superdry\.com$/i,
+  /(^|\.)missguided\./i,
+  /(^|\.)boohooman\.com$/i,
+  /(^|\.)nastygal\.com$/i,
+  /(^|\.)net-a-porter\.com$/i,
+  /(^|\.)mrporter\.com$/i,
+  /(^|\.)farfetch\.com$/i,
+  /(^|\.)ssense\.com$/i,
+  /(^|\.)revolve\.com$/i,
+  /(^|\.)fashionnova\.com$/i,
+  /(^|\.)princesspolly\.com$/i,
+  /(^|\.)whitefoxboutique\.com$/i,
+  /(^|\.)lulus\.com$/i,
+  /(^|\.)abercrombie\.com$/i,
+  /(^|\.)hollisterco\.com$/i,
+  /(^|\.)urbanoutfitters\.com$/i,
+  /(^|\.)anthropologie\.com$/i,
+  /(^|\.)freepeople\.com$/i,
+  /(^|\.)gap\.com$/i,
+  /(^|\.)oldnavy\.gap\.com$/i,
+  /(^|\.)bananarepublic\.gap\.com$/i,
+  /(^|\.)ae\.com$/i,
+  /(^|\.)aerie\.com$/i,
+
+  /(^|\.)apple\.com$/i,
+  /(^|\.)samsung\.com$/i,
+  /(^|\.)dyson\./i,
+  /(^|\.)bestbuy\./i,
+  /(^|\.)newegg\.com$/i,
+  /(^|\.)jbhifi\./i,
+  /(^|\.)officeworks\.com\.au$/i,
+  /(^|\.)kogan\.com$/i,
+
+  /(^|\.)walmart\.com$/i,
+  /(^|\.)target\.com$/i,
+  /(^|\.)costco\./i,
+  /(^|\.)homedepot\.com$/i,
+  /(^|\.)lowes\.com$/i,
+  /(^|\.)macys\.com$/i,
+  /(^|\.)nordstrom\.com$/i,
+  /(^|\.)kohls\.com$/i,
+  /(^|\.)jcpenney\.com$/i,
+  /(^|\.)walgreens\.com$/i,
+  /(^|\.)cvs\.com$/i,
+  /(^|\.)riteaid\.com$/i,
+  /(^|\.)sears\.com$/i,
+  /(^|\.)bj\.com$/i,
+  /(^|\.)saksfifthavenue\.com$/i,
+  /(^|\.)bloomingdales\.com$/i,
+  /(^|\.)neimanmarcus\.com$/i,
+  /(^|\.)ulta\.com$/i,
+  /(^|\.)sephora\./i,
+  /(^|\.)chewy\.com$/i,
+  /(^|\.)crateandbarrel\.com$/i,
+  /(^|\.)bedbathandbeyond\./i,
+  /(^|\.)wayfair\./i,
+  /(^|\.)ikea\./i,
+  /(^|\.)overstock\.com$/i,
+
+  /(^|\.)canadiantire\.ca$/i,
+  /(^|\.)sportchek\.ca$/i,
+  /(^|\.)staples\.ca$/i,
+  /(^|\.)indigo\.ca$/i,
+  /(^|\.)londondrugs\.com$/i,
+  /(^|\.)mec\.ca$/i,
+  /(^|\.)thebay\.com$/i,
+  /(^|\.)simons\.ca$/i,
+
+  /(^|\.)harveynorman\./i,
+  /(^|\.)myer\.com\.au$/i,
+  /(^|\.)davidjones\.com$/i,
+  /(^|\.)kmart\.com\.au$/i,
+  /(^|\.)bunnings\.com\.au$/i,
+  /(^|\.)woolworths\.com\.au$/i,
+  /(^|\.)coles\.com\.au$/i,
+  /(^|\.)chemistwarehouse\./i,
+  /(^|\.)bigw\.com\.au$/i,
+  /(^|\.)theiconic\.com\.au$/i,
+  /(^|\.)mydeal\.com\.au$/i,
+  /(^|\.)adorebeauty\.com\.au$/i,
+  /(^|\.)mecca\.com\.au$/i,
+
+  /(^|\.)thewarehouse\.co\.nz$/i,
+  /(^|\.)mightyape\.co\.nz$/i,
+  /(^|\.)noelleeming\.co\.nz$/i,
+  /(^|\.)fishpond\./i,
+  /(^|\.)trademe\.co\.nz$/i,
+
+  /(^|\.)rakuten\./i,
+  /(^|\.)zalando\./i,
+  /(^|\.)otto\./i,
+  /(^|\.)allegro\./i,
+  /(^|\.)alibaba\.com$/i,
+  /(^|\.)aliexpress\.com$/i,
+  /(^|\.)temu\.com$/i,
+  /(^|\.)shein\./i,
+  /(^|\.)jd\./i,
+  /(^|\.)flipkart\.com$/i,
+  /(^|\.)mercadolibre\./i,
+  /(^|\.)shopee\./i,
+  /(^|\.)lazada\./i,
+  /(^|\.)coupang\.com$/i,
+  /(^|\.)tiktok\.com$/i,
 ];
 
 const RETAILER_RULES = {
@@ -55,12 +222,46 @@ const RETAILER_RULES = {
         .replace(/\s{2,}/g, " ")
         .trim(),
   },
+
+  etsy: {
+    match: (h) => /(^|\.)etsy\.com$/i.test(h),
+    titleSelectors: ['meta[property="og:title"]', "h1"],
+    priceSelectors: [
+      '[data-selector="price-only"]',
+      '[data-buy-box-region="price"]',
+      '[itemprop="price"]',
+      'meta[property="product:price:amount"]',
+      'meta[property="og:price:amount"]',
+      'meta[name="twitter:data1"]',
+    ],
+    imageSelectors: [
+      'meta[property="og:image"]',
+      'meta[name="twitter:image"]',
+      "img[data-src]",
+      "img[src]",
+    ],
+  },
+
+  next: {
+    match: (h) => /(^|\.)next\./i.test(h),
+    titleSelectors: ['meta[property="og:title"]', "h1", "title"],
+    priceSelectors: [
+      '[itemprop="price"]',
+      '[data-testid*="price"]',
+      '[class*="price"]',
+      'meta[property="product:price:amount"]',
+      'meta[property="og:price:amount"]',
+    ],
+    imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
+  },
+
   currys: {
     match: (h) => /(^|\.)currys\.co\.uk$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
     priceSelectors: ['[data-testid*="price"]', '[class*="price"]', '[itemprop="price"]'],
     imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
+
   johnlewis: {
     match: (h) => /(^|\.)johnlewis\.com$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
@@ -72,6 +273,7 @@ const RETAILER_RULES = {
     ],
     imageSelectors: ['meta[property="og:image"]', 'meta[name="twitter:image"]', "img[src]"],
   },
+
   argos: {
     match: (h) => /(^|\.)argos\.co\.uk$/i.test(h),
     titleSelectors: ['meta[property="og:title"]', "h1"],
@@ -82,6 +284,7 @@ const RETAILER_RULES = {
     ],
     imageSelectors: ['meta[property="og:image"]', "img[src]"],
   },
+
   ebay: {
     match: (h) => /(^|\.)ebay\./i.test(h),
     titleSelectors: [
@@ -100,16 +303,7 @@ const RETAILER_RULES = {
       'meta[property="og:image"]',
     ],
   },
-  etsy: {
-    match: (h) => /(^|\.)etsy\.com$/i.test(h),
-    titleSelectors: ['meta[property="og:title"]', "h1"],
-    priceSelectors: [
-      '[data-selector="price-only"]',
-      '[data-buy-box-region="price"]',
-      '[itemprop="price"]',
-    ],
-    imageSelectors: ['meta[property="og:image"]', "img[data-src]"],
-  },
+
   generic: {
     match: () => true,
     titleSelectors: [
@@ -165,6 +359,20 @@ function ensureHttpUrl(raw = "") {
   }
 }
 
+function cleanCanonicalUrl(inputUrl = "") {
+  try {
+    const url = new URL(inputUrl);
+    const keep = new Set(["sku", "pid", "dp", "variant", "v", "colour", "color", "size"]);
+    [...url.searchParams.keys()].forEach((key) => {
+      if (!keep.has(key.toLowerCase())) url.searchParams.delete(key);
+    });
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return inputUrl;
+  }
+}
+
 function makeAbsolute(url = "", base = "") {
   if (!url) return "";
   try {
@@ -184,7 +392,6 @@ function hostname(url = "") {
 
 function getCountryCodeForHost(host = "") {
   const h = String(host).toLowerCase();
-
   if (h.endsWith(".co.uk")) return "gb";
   if (h.endsWith(".ie")) return "ie";
   if (h.endsWith(".de")) return "de";
@@ -198,7 +405,6 @@ function getCountryCodeForHost(host = "") {
   if (h.endsWith(".ca")) return "ca";
   if (h.endsWith(".co.za")) return "za";
   if (h.endsWith(".com")) return "us";
-
   return "";
 }
 
@@ -208,6 +414,10 @@ function getRule(host = "") {
     if (rule.match(host)) return { key, rule };
   }
   return { key: "generic", rule: RETAILER_RULES.generic };
+}
+
+function isPriorityRetailerHost(host = "") {
+  return PRIORITY_RETAILER_PATTERNS.some((pattern) => pattern.test(host));
 }
 
 function getMeta($, selectors = []) {
@@ -258,12 +468,12 @@ function getImageAttr($, selectors = [], base = "") {
 function detectCurrency(val = "") {
   if (!val) return null;
   if (val.includes("£")) return "GBP";
-  if (val.includes("A$")) return "AUD";
+  if (val.includes("A$") || val.includes("AU$")) return "AUD";
   if (val.includes("NZ$")) return "NZD";
-  if (val.includes("C$")) return "CAD";
+  if (val.includes("C$") || val.includes("CA$")) return "CAD";
+  if (val.includes("US$")) return "USD";
   if (val.includes("$")) return "USD";
   if (val.includes("€")) return "EUR";
-  if (/\bR\s?\d/i.test(val) || /\bZAR\b/i.test(val)) return "ZAR";
   return null;
 }
 
@@ -275,7 +485,6 @@ function currencySymbol(code = "") {
     AUD: "A$",
     NZD: "NZ$",
     CAD: "C$",
-    ZAR: "R",
   };
   return map[String(code).toUpperCase()] || "";
 }
@@ -291,8 +500,9 @@ function formatPrice(amount = "", currency = "") {
 function extractNumericPrice(val = "") {
   const cleaned = String(val).replace(/,/g, "");
   const match =
-    cleaned.match(/(?:A\$|NZ\$|C\$|£|\$|€|R)\s?(\d+(?:\.\d{1,2})?)/) ||
+    cleaned.match(/(?:A\$|NZ\$|C\$|US\$|CA\$|AU\$|£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
     cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+
   if (!match) return null;
   const num = Number(match[1]);
   return Number.isFinite(num) ? num : null;
@@ -310,6 +520,7 @@ function extractJsonLd($, base = "") {
 
   function walk(node) {
     if (!node || typeof node !== "object") return;
+
     if (Array.isArray(node)) {
       node.forEach(walk);
       return;
@@ -346,6 +557,7 @@ function extractJsonLd($, base = "") {
         .concat(node.image)
         .map((img) => makeAbsolute(typeof img === "string" ? img : img.url || "", base))
         .filter(Boolean);
+
       result.images.push(...images);
     }
 
@@ -366,10 +578,12 @@ function extractMetaPrice($) {
     'meta[property="og:price:amount"]',
     'meta[name="twitter:data1"]',
   ]);
+
   const currency = getMeta($, [
     'meta[property="product:price:currency"]',
     'meta[property="og:price:currency"]',
   ]);
+
   if (!amount) return "";
   return formatPrice(amount, currency || detectCurrency(amount) || "");
 }
@@ -401,15 +615,24 @@ function pickBestPrice({ domPrice, jsonLdPrice, metaPrice }, preferredCurrency =
 
   if (!candidates.length) return { priceText: "", currency: null };
 
-  const preferred = candidates.filter(
+  const exactCurrency = candidates.filter(
     (c) => detectCurrency(c.value) === preferredCurrency
   );
-  const pool = preferred.length ? preferred : candidates;
+
+  const explicitCurrency = candidates.filter((c) => detectCurrency(c.value));
+  const pool = exactCurrency.length
+    ? exactCurrency
+    : explicitCurrency.length
+      ? explicitCurrency
+      : candidates;
 
   pool.sort((a, b) => b.priority - a.priority);
-  const winner = pool[0];
 
-  return { priceText: winner.value, currency: detectCurrency(winner.value) };
+  const winner = pool[0];
+  return {
+    priceText: winner.value,
+    currency: detectCurrency(winner.value),
+  };
 }
 
 const BAD_IMAGE_PATTERN =
@@ -428,7 +651,6 @@ function scoreImage(url = "", source = "") {
   if (source === "jsonld") score += 25;
   if (source === "og") score += 18;
   if (source === "dom") score += 5;
-
   return score;
 }
 
@@ -571,6 +793,7 @@ function detectBlockedPage({
   jsonLdPrice,
 }) {
   const blockedByStatus = status === 403 || status === 429 || status === 500 || status === 503;
+
   const blockedByText =
     includesBlockedText(titleTag) ||
     includesBlockedText(h1) ||
@@ -655,7 +878,7 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
     if (options.renderJs || options.stealthProxy) {
       apiUrl.searchParams.set("block_resources", "false");
       apiUrl.searchParams.set("wait_browser", options.waitBrowser || "networkidle0");
-      apiUrl.searchParams.set("wait", String(options.wait || 2000));
+      apiUrl.searchParams.set("wait", String(options.wait || 2500));
     }
 
     const res = await fetch(apiUrl.toString(), {
@@ -689,13 +912,12 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
         premium_proxy: Boolean(options.premiumProxy),
         stealth_proxy: Boolean(options.stealthProxy),
         country_code: options.countryCode || null,
-        wait: options.renderJs || options.stealthProxy ? options.wait || 2000 : 0,
+        wait: options.renderJs || options.stealthProxy ? options.wait || 2500 : 0,
         wait_browser:
           options.renderJs || options.stealthProxy
             ? options.waitBrowser || "networkidle0"
             : "",
-        block_resources:
-          options.renderJs || options.stealthProxy ? false : null,
+        block_resources: options.renderJs || options.stealthProxy ? false : null,
         forward_headers: true,
       },
     };
@@ -718,6 +940,8 @@ function parsePage({
   let canonicalUrl =
     makeAbsolute(getAttrValue($, ['link[rel="canonical"]'], "href") || "", finalUrl) ||
     finalUrl;
+
+  canonicalUrl = cleanCanonicalUrl(canonicalUrl);
 
   const host = hostname(canonicalUrl);
   const { key, rule } = getRule(host);
@@ -877,8 +1101,8 @@ async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
 
 async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
   const host = hostname(inputUrl);
-  const { key } = getRule(host);
   const countryCode = getCountryCodeForHost(host);
+  const isPriorityRetailer = isPriorityRetailerHost(host);
 
   const attempts = [
     {
@@ -902,19 +1126,19 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
         renderJs: true,
         premiumProxy: true,
         countryCode,
-        wait: 2000,
+        wait: 2500,
         waitBrowser: "networkidle0",
       },
     },
   ];
 
-  if (key === "amazon") {
+  if (isPriorityRetailer) {
     attempts.push({
       name: "stealth",
       options: {
         stealthProxy: true,
-        countryCode: countryCode || "gb",
-        wait: 2500,
+        countryCode: countryCode || "us",
+        wait: 3000,
         waitBrowser: "networkidle0",
       },
     });
@@ -938,6 +1162,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
     }
 
     const result = outcome.result;
+
     attemptsDebug.push({
       name: attempt.name,
       fatal: false,
@@ -973,6 +1198,7 @@ async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
   }
 
   bestResult.debug.attempts = attemptsDebug;
+  bestResult.debug.priorityRetailer = isPriorityRetailer;
   return bestResult;
 }
 
