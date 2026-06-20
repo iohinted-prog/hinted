@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "../../../../lib/supabase/server";
 
-export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 function getStripe() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -12,7 +12,9 @@ function getStripe() {
     throw new Error("Missing STRIPE_SECRET_KEY");
   }
 
-  return new Stripe(secretKey);
+  return new Stripe(secretKey, {
+    apiVersion: "2024-09-30.acacia",
+  });
 }
 
 export async function POST() {
@@ -22,7 +24,15 @@ export async function POST() {
 
     const {
       data: { user },
+      error: userError,
     } = await supabase.auth.getUser();
+
+    if (userError) {
+      return NextResponse.json(
+        { error: userError.message || "Failed to load user." },
+        { status: 500 }
+      );
+    }
 
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -35,7 +45,10 @@ export async function POST() {
       .single();
 
     if (profileError) {
-      return NextResponse.json({ error: profileError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: profileError.message || "Failed to load profile." },
+        { status: 500 }
+      );
     }
 
     if (profile?.stripe_customer_id) {
@@ -56,13 +69,21 @@ export async function POST() {
       .eq("id", user.id);
 
     if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
+      return NextResponse.json(
+        { error: updateError.message || "Failed to save Stripe customer." },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ customerId: customer.id });
   } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Failed to create Stripe customer." },
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Failed to create Stripe customer.",
+      },
       { status: 500 }
     );
   }
