@@ -506,8 +506,7 @@ function HintFormFields({
     <div className="space-y-4">
       {showReviewCopy && form.needsReview ? (
         <div className="rounded-[22px] border border-[#f4cdbd] bg-[#fff6f1] p-4 text-sm text-[#9b553d]">
-          We couldn’t fetch this item in time. You can still save it now — adding a photo manually will
-          help curate your page, and price is optional.
+          We’ll try our best to pull the title, image, and price. You can choose your privacy settings, and let fix anything before saving.
         </div>
       ) : null}
 
