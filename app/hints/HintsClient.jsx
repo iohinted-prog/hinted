@@ -430,7 +430,7 @@ function HintFormFields({
             <img
               src={previewImage}
               alt={form.title || "Selected hint image"}
-              className="h-40 w-full object-cover"
+              className="h-40 w-full object-contain p-3"
             />
           </div>
         ) : (
@@ -615,7 +615,9 @@ function HintCard({
   dragHandleAttributes,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-  const showImage = Boolean(hint.image) && !imageFailed;
+
+  const showImage = Boolean(hint.image && !imageFailed);
+  const previewImage = hint.uploadedImage || hint.image;
 
   return (
     <article
@@ -626,21 +628,18 @@ function HintCard({
       }`}
       style={{ aspectRatio: getAspectRatio(hint.size) }}
     >
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 bg-[#f7f2ee]">
         {showImage ? (
-          <>
-            <img
-              src={hint.image}
-              alt={hint.title}
-              className={`h-full w-full object-cover transition-transform duration-500 ${
-                isDragging ? "scale-[1.02]" : "group-hover:scale-[1.03]"
-              } ${hint.private ? "opacity-80" : ""}`}
-              loading="lazy"
-              referrerPolicy="no-referrer"
-              onError={() => setImageFailed(true)}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.20)] to-[rgba(255,255,255,0.02)]" />
-          </>
+          <img
+            src={previewImage}
+            alt={hint.title}
+            className={`h-full w-full object-contain p-4 ${
+              hint.private ? "opacity-80" : ""
+            }`}
+            loading="lazy"
+            referrerPolicy="no-referrer"
+            onError={() => setImageFailed(true)}
+          />
         ) : (
           <>
             <div
@@ -653,6 +652,13 @@ function HintCard({
         )}
       </div>
 
+      {showImage ? (
+        <>
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.78)] via-[rgba(22,18,16,0.22)] to-[rgba(255,255,255,0.04)]" />
+          <div className="absolute inset-x-0 bottom-0 h-[40%] bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.28)] to-transparent" />
+        </>
+      ) : null}
+
       <div className="absolute left-4 right-4 top-4 z-10 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -661,26 +667,26 @@ function HintCard({
             {...dragHandleAttributes}
             {...dragHandleListeners}
           >
-            ⋮⋮ Drag
+            Drag
           </button>
 
-          {hint.starred && (
+          {hint.starred ? (
             <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
               Top pick
             </div>
-          )}
+          ) : null}
 
-          {hint.private && (
+          {hint.private ? (
             <div className="rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
               Private
             </div>
-          )}
+          ) : null}
 
-          {hint.needsReview && (
+          {hint.needsReview ? (
             <div className="rounded-full border border-[#f6d2c2] bg-[#fff6f1] px-3 py-1 text-[11px] font-semibold text-[#c46545]">
               Needs review
             </div>
-          )}
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -694,12 +700,12 @@ function HintCard({
           </button>
 
           <button
+            type="button"
             onClick={() => onToggleStarred(hint)}
-            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/78 text-[16px] backdrop-blur-sm ${
-              hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
+            className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/78 text-[16px] backdrop-blur-sm hover:text-[#f36f64] ${
+              hint.starred ? "text-[#f36f64]" : "text-slate-400"
             }`}
             aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
-            type="button"
           >
             ★
           </button>
@@ -741,7 +747,7 @@ function HintCard({
             onClick={() => onTogglePrivate(hint)}
             className="rounded-full border border-white/60 bg-white/85 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-sm hover:bg-white"
           >
-            {hint.private ? "🔒 Private" : "🔓 Public"}
+            {hint.private ? "Private" : "Public"}
           </button>
 
           <a
@@ -757,7 +763,6 @@ function HintCard({
     </article>
   );
 }
-
 function SortableHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate }) {
   const animateLayoutChanges = (args) => {
     if (args.isSorting || args.wasDragging) return defaultAnimateLayoutChanges(args);
