@@ -33,7 +33,6 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
@@ -49,7 +48,6 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
@@ -65,7 +63,6 @@ const demoHints = [
     retailer: "johnlewis.com",
     priceLabel: "About £45",
     numericPrice: 45,
-    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
@@ -81,7 +78,6 @@ const demoHints = [
     retailer: "booking.com",
     priceLabel: "From £1290",
     numericPrice: 1290,
-    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
@@ -202,20 +198,18 @@ function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
 }
 
 function sanitisePrice(rawPrice, numericPrice) {
-  const currency = detectCurrency(rawPrice) || ACTIVE_CURRENCY;
+  const detectedCurrency = detectCurrency(rawPrice) || ACTIVE_CURRENCY;
 
-  if (currency !== ACTIVE_CURRENCY) {
+  if (detectedCurrency !== ACTIVE_CURRENCY) {
     return {
-      currency,
       numericPrice: null,
       priceLabel: "Price unavailable",
     };
   }
 
   return {
-    currency,
     numericPrice,
-    priceLabel: formatPriceLabel(numericPrice, rawPrice, currency),
+    priceLabel: formatPriceLabel(numericPrice, rawPrice, ACTIVE_CURRENCY),
   };
 }
 
@@ -782,7 +776,6 @@ export default function HintsClient() {
     image: "",
     priceLabel: "Price unavailable",
     numericPrice: null,
-    currency: ACTIVE_CURRENCY,
     private: false,
     starred: false,
   });
@@ -848,7 +841,6 @@ export default function HintsClient() {
           retailer: row.retailer || normaliseRetailer(row.url || ""),
           priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null, ACTIVE_CURRENCY),
           numericPrice: row.numeric_price,
-          currency: row.currency || ACTIVE_CURRENCY,
           image: row.image_url || "",
           fallbackGradient: buildFallbackGradient(index),
           starred: Boolean(row.starred),
@@ -917,7 +909,6 @@ export default function HintsClient() {
       image: "",
       priceLabel: "Price unavailable",
       numericPrice: null,
-      currency: ACTIVE_CURRENCY,
       private: false,
       starred: false,
     });
@@ -1061,7 +1052,6 @@ export default function HintsClient() {
                 retailer: data.siteName || normaliseRetailer(trimmed),
                 priceLabel: priceMeta.priceLabel,
                 numericPrice: priceMeta.numericPrice,
-                currency: priceMeta.currency,
                 size: getSizeFromPrice(priceMeta.numericPrice),
                 image:
                   typeof data.image === "string" && data.image.startsWith("http")
@@ -1124,7 +1114,6 @@ export default function HintsClient() {
         retailer,
         priceLabel: priceMeta.priceLabel,
         numericPrice: priceMeta.numericPrice,
-        currency: priceMeta.currency,
         image:
           typeof data.image === "string" && data.image.startsWith("http")
             ? data.image
@@ -1142,7 +1131,6 @@ export default function HintsClient() {
         image: draft.image,
         priceLabel: draft.priceLabel,
         numericPrice: draft.numericPrice,
-        currency: draft.currency,
         private: false,
         starred: false,
       });
@@ -1177,7 +1165,6 @@ export default function HintsClient() {
         retailer,
         priceLabel: newHintForm.priceLabel || "Price unavailable",
         numericPrice,
-        currency: newHintForm.currency || ACTIVE_CURRENCY,
         image: newHintForm.image || "",
         fallbackGradient: buildFallbackGradient(hints.length),
         starred: Boolean(newHintForm.starred),
@@ -1198,7 +1185,6 @@ export default function HintsClient() {
         retailer: newHint.retailer,
         price_text: newHint.priceLabel,
         numeric_price: newHint.numericPrice,
-        currency: newHint.currency,
         starred: newHint.starred,
         is_private: newHint.private,
         position: 0,
