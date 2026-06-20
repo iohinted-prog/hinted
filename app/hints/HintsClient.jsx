@@ -140,11 +140,11 @@ function getCardSize(price) {
   return "small";
 }
 
-function getTileHeightClass(size) {
-  if (size === "xl") return "min-h-[680px]";
-  if (size === "large") return "min-h-[560px]";
-  if (size === "medium") return "min-h-[430px]";
-  return "min-h-[320px]";
+function getTileSpanClass(size) {
+  if (size === "xl") return "md:col-span-4 md:row-span-36";
+  if (size === "large") return "md:col-span-4 md:row-span-30";
+  if (size === "medium") return "md:col-span-4 md:row-span-24";
+  return "md:col-span-4 md:row-span-18";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -575,7 +575,7 @@ function HintCard({
           : hint.private
           ? "border-white/50 bg-white/60 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
           : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
-      } ${getTileHeightClass(hint.size)}`}
+      }`}
     >
       <div className="relative h-full min-h-full overflow-hidden bg-[#ead8ca]">
         {showImage ? (
@@ -748,7 +748,11 @@ function SortableHintTile({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="touch-none">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`touch-none ${getTileSpanClass(hint.size)}`}
+    >
       <HintCard
         hint={hint}
         dragging={isDragging}
@@ -1302,18 +1306,18 @@ export default function HintsPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
 
             {isLoading ? (
-              <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+              <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[16px]">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`overflow-hidden rounded-[32px] bg-[#f4eee8] ${
+                    className={`overflow-hidden rounded-[32px] bg-[#f4eee8] md:col-span-4 ${
                       i === 1
-                        ? "min-h-[680px]"
+                        ? "md:row-span-36"
                         : i === 2
-                        ? "min-h-[560px]"
+                        ? "md:row-span-30"
                         : i === 3
-                        ? "min-h-[430px]"
-                        : "min-h-[320px]"
+                        ? "md:row-span-24"
+                        : "md:row-span-18"
                     }`}
                   />
                 ))}
@@ -1329,7 +1333,7 @@ export default function HintsPage() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-4">
+                  <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[16px]">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1349,7 +1353,7 @@ export default function HintsPage() {
                   }}
                 >
                   {activeHint ? (
-                    <div className="w-[min(92vw,320px)] md:w-full">
+                    <div className="w-[min(92vw,320px)] md:w-full md:max-w-none">
                       <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
