@@ -3,12 +3,25 @@ import * as cheerio from "cheerio";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 20;
 
-const REQUEST_HEADERS = {
+const PRIMARY_HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+  DNT: "1",
+  "Upgrade-Insecure-Requests": "1",
+};
+
+const SECONDARY_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
   "Accept-Language": "en-GB,en;q=0.9",
   "Cache-Control": "no-cache",
   Pragma: "no-cache",
@@ -87,7 +100,7 @@ function safeJsonParse(value = "") {
   }
 }
 
-function getMeta($, selectors = []) {
+function getMeta($: cheerio.CheerioAPI, selectors: string[] = []) {
   for (const selector of selectors) {
     const value = $(selector).attr("content");
     const cleaned = cleanText(value || "");
@@ -96,7 +109,7 @@ function getMeta($, selectors = []) {
   return "";
 }
 
-function getAttr($, selectors = [], attr = "content") {
+function getAttr($: cheerio.CheerioAPI, selectors: string[] = [], attr = "content") {
   for (const selector of selectors) {
     const value = $(selector).attr(attr);
     const cleaned = String(value || "").trim();
@@ -105,7 +118,7 @@ function getAttr($, selectors = [], attr = "content") {
   return "";
 }
 
-function getText($, selectors = []) {
+function getText($: cheerio.CheerioAPI, selectors: string[] = []) {
   for (const selector of selectors) {
     const value = $(selector).first().text();
     const cleaned = cleanText(value || "");
@@ -114,7 +127,7 @@ function getText($, selectors = []) {
   return "";
 }
 
-function extractCanonical($, fallbackUrl) {
+function extractCanonical($: cheerio.CheerioAPI, fallbackUrl: string) {
   const canonical =
     getAttr($, ['link[rel="canonical"]'], "href") ||
     getMeta($, ['meta[property="og:url"]', 'meta[name="og:url"]']);
@@ -131,7 +144,7 @@ function cleanAmazonTitle(title = "") {
     .trim();
 }
 
-function extractTitle($, canonicalUrl) {
+function extractTitle($: cheerio.CheerioAPI, canonicalUrl: string) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let title =
@@ -152,7 +165,7 @@ function extractTitle($, canonicalUrl) {
   return title || hostname || "Shared item";
 }
 
-function extractDescription($, canonicalUrl) {
+function extractDescription($: cheerio.CheerioAPI, canonicalUrl: string) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let description =
@@ -326,7 +339,7 @@ function shortenTitle(title = "", retailer = "") {
     .replace(/^./, (m) => m.toUpperCase());
 }
 
-function extractPriceFromMeta($) {
+function extractPriceFromMeta($: cheerio.CheerioAPI) {
   const directPrice =
     getMeta($, [
       'meta[property="product:price:amount"]',
@@ -349,7 +362,7 @@ function extractPriceFromMeta($) {
   return formatPrice(directPrice, currency);
 }
 
-function pickPriceFromOffer(offer) {
+function pickPriceFromOffer(offer: any) {
   if (!offer || typeof offer !== "object") return "";
 
   if (offer.price) return formatPrice(offer.price, offer.priceCurrency);
@@ -368,7 +381,7 @@ function pickPriceFromOffer(offer) {
   return "";
 }
 
-function collectImages(value, baseUrl = "") {
+function collectImages(value: any, baseUrl = "") {
   if (!value) return [];
   const values = Array.isArray(value) ? value : [value];
 
@@ -381,15 +394,15 @@ function collectImages(value, baseUrl = "") {
     .filter(Boolean);
 }
 
-function findProductDataInJsonLd(node, baseUrl = "") {
+function findProductDataInJsonLd(node: any, baseUrl = "") {
   const result = {
     title: "",
     brand: "",
     priceText: "",
-    images: [],
+    images: [] as string[],
   };
 
-  function visit(value) {
+  function visit(value: any) {
     if (!value) return;
     if (Array.isArray(value)) {
       value.forEach(visit);
@@ -447,9 +460,9 @@ function findProductDataInJsonLd(node, baseUrl = "") {
   };
 }
 
-function extractJsonLdProductData($, baseUrl = "") {
+function extractJsonLdProductData($: cheerio.CheerioAPI, baseUrl = "") {
   const scripts = $('script[type="application/ld+json"]');
-  let best = { title: "", brand: "", priceText: "", images: [] };
+  let best = { title: "", brand: "", priceText: "", images: [] as string[] };
 
   for (let i = 0; i < scripts.length; i += 1) {
     const raw = $(scripts[i]).contents().text();
@@ -470,13 +483,14 @@ function extractJsonLdProductData($, baseUrl = "") {
   return best;
 }
 
-function extractPriceFromText($) {
+function extractPriceFromText($: cheerio.CheerioAPI) {
   const textCandidates = [
     getText($, [".priceToPay .a-offscreen"]),
     getText($, [".a-price .a-offscreen"]),
     getText($, ["[data-testid='price']"]),
     getText($, [".price"]),
     getText($, ["main"]),
+    getText($, ["body"]),
   ].filter(Boolean);
 
   for (const text of textCandidates) {
@@ -520,9 +534,9 @@ function scoreImage(url = "", hostname = "", source = "") {
   return score;
 }
 
-function dedupeCandidates(candidates = []) {
+function dedupeCandidates(candidates: Array<{ url: string; source: string; score: number }>) {
   const seen = new Set();
-  const output = [];
+  const output: Array<{ url: string; source: string; score: number }> = [];
 
   for (const candidate of candidates) {
     if (!candidate?.url) continue;
@@ -534,11 +548,16 @@ function dedupeCandidates(candidates = []) {
   return output;
 }
 
-function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
+function buildImageCandidates(
+  $: cheerio.CheerioAPI,
+  baseUrl: string,
+  canonicalUrl: string,
+  jsonLdImages: string[] = []
+) {
   const hostname = getHostnameLabel(canonicalUrl);
-  const candidates = [];
+  const candidates: Array<{ url: string; source: string; score: number }> = [];
 
-  const addCandidate = (url, source) => {
+  const addCandidate = (url: string, source: string) => {
     const absolute = makeAbsoluteUrl(url, baseUrl);
     if (!absolute) return;
 
@@ -575,6 +594,7 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
       $(element).attr("data-old-hires"),
       $(element).attr("data-lazy-src"),
       $(element).attr("data-image"),
+      $(element).attr("srcset")?.split(",")[0]?.trim().split(" ")[0],
     ].filter(Boolean);
 
     for (const src of attrs) {
@@ -596,7 +616,7 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
     .sort((a, b) => b.score - a.score);
 }
 
-function extractSiteName($, canonicalUrl) {
+function extractSiteName($: cheerio.CheerioAPI, canonicalUrl: string) {
   return (
     getMeta($, [
       'meta[property="og:site_name"]',
@@ -607,36 +627,115 @@ function extractSiteName($, canonicalUrl) {
   );
 }
 
-async function fetchHtml(inputUrl) {
-  const response = await fetch(inputUrl, {
-    method: "GET",
-    headers: REQUEST_HEADERS,
-    redirect: "follow",
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Unable to fetch link (${response.status}).`);
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.includes("text/html")) {
-    throw new Error("That URL did not return an HTML page.");
-  }
-
-  const html = await response.text();
-  if (!html || !html.trim()) {
-    throw new Error("The page returned an empty response.");
-  }
-
+function buildFallbackPreview(url: string, reason = "preview_unavailable") {
+  const hostname = getHostnameLabel(url) || "Saved link";
   return {
-    html,
-    finalUrl: response.url || inputUrl,
+    url,
+    title: hostname,
+    titleShort: hostname,
+    description: "",
+    siteName: hostname,
+    image: "",
+    selectedImage: "",
+    imageCandidates: [],
+    priceText: "",
+    numericPrice: null,
+    confidence: "low",
+    needsReview: true,
+    source: "fallback",
+    brand: "",
+    warning: reason,
+    debug: {
+      hostname,
+      fallback: true,
+      reason,
+    },
   };
 }
 
-async function fetchPreview(inputUrl) {
-  const { html, finalUrl } = await fetchHtml(inputUrl);
+async function fetchWithTimeout(
+  inputUrl: string,
+  headers: Record<string, string>,
+  timeoutMs = 10000
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort("timeout"), timeoutMs);
+
+  try {
+    const response = await fetch(inputUrl, {
+      method: "GET",
+      headers,
+      redirect: "follow",
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    return response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function fetchHtml(inputUrl: string) {
+  const attempts = [
+    { headers: PRIMARY_HEADERS, label: "primary" },
+    { headers: SECONDARY_HEADERS, label: "secondary" },
+  ];
+
+  const errors: Array<{ attempt: string; message: string }> = [];
+
+  for (const attempt of attempts) {
+    try {
+      const response = await fetchWithTimeout(inputUrl, attempt.headers, 10000);
+
+      if (!response.ok) {
+        errors.push({
+          attempt: attempt.label,
+          message: `HTTP ${response.status}`,
+        });
+        continue;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      if (!contentType.includes("text/html")) {
+        throw new Error("That URL did not return an HTML page.");
+      }
+
+      const html = await response.text();
+
+      if (!html || !html.trim()) {
+        throw new Error("The page returned an empty response.");
+      }
+
+      return {
+        html,
+        finalUrl: response.url || inputUrl,
+        fetchDebug: {
+          attempt: attempt.label,
+          contentType,
+          status: response.status,
+        },
+      };
+    } catch (error: any) {
+      const message =
+        error?.name === "AbortError"
+          ? "Timed out"
+          : error?.message || "Fetch failed";
+
+      errors.push({
+        attempt: attempt.label,
+        message,
+      });
+    }
+  }
+
+  const error = new Error("Failed to fetch preview from remote site.");
+  (error as any).fetchErrors = errors;
+  throw error;
+}
+
+async function fetchPreview(inputUrl: string) {
+  const { html, finalUrl, fetchDebug } = await fetchHtml(inputUrl);
   const $ = cheerio.load(html);
 
   let canonicalUrl = extractCanonical($, finalUrl);
@@ -695,14 +794,17 @@ async function fetchPreview(inputUrl) {
       topImageCandidate: imageCandidates[0] || null,
       hasJsonLdImage: jsonLd.images.length > 0,
       hasPriceFromJsonLd: Boolean(jsonLd.priceText),
+      fetch: fetchDebug,
     },
   };
 }
 
-export async function POST(request) {
+export async function POST(request: Request) {
+  let inputUrl = "";
+
   try {
     const body = await request.json().catch(() => null);
-    const inputUrl = ensureHttpUrl(body?.url || "");
+    inputUrl = ensureHttpUrl(body?.url || "");
 
     if (!inputUrl) {
       return NextResponse.json(
@@ -713,11 +815,27 @@ export async function POST(request) {
 
     const result = await fetchPreview(inputUrl);
     return NextResponse.json(result);
-  } catch (error) {
-    console.error("link-preview route error:", error);
+  } catch (error: any) {
+    console.error("link-preview route error:", {
+      message: error?.message,
+      fetchErrors: error?.fetchErrors || [],
+      url: inputUrl,
+    });
+
+    const fallback = buildFallbackPreview(
+      inputUrl,
+      error?.fetchErrors?.length ? "fetch_blocked_or_timed_out" : "preview_unavailable"
+    );
+
     return NextResponse.json(
-      { error: error?.message || "Failed to fetch preview." },
-      { status: 500 }
+      {
+        ...fallback,
+        debug: {
+          ...fallback.debug,
+          fetchErrors: error?.fetchErrors || [],
+        },
+      },
+      { status: 200 }
     );
   }
 }
