@@ -390,6 +390,24 @@ async function fetchPreview(url) {
   return data;
 }
 
+function shouldContainImage(hint) {
+  const host = String(hint?.retailer || "").toLowerCase();
+  return [
+    "amazon",
+    "johnlewis",
+    "argos",
+    "currys",
+    "next",
+    "ebay",
+    "etsy",
+    "boots",
+    "very",
+    "ao.com",
+    "hm.com",
+    "zara",
+  ].some((name) => host.includes(name));
+}
+
 function HintFormFields({
   form,
   setForm,
@@ -658,6 +676,7 @@ function HintCard({
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
+  const useContain = shouldContainImage(hint);
 
   return (
     <article
@@ -671,17 +690,33 @@ function HintCard({
       <div className="absolute inset-0">
         {showImage ? (
           <>
+            <div className="absolute inset-0 bg-[#f6f1ec]" />
+
             <img
               src={hint.image}
-              alt={hint.title}
-              className={`h-full w-full object-cover transition-transform duration-500 ${
-                isDragging ? "scale-[1.02]" : "group-hover:scale-[1.03]"
-              } ${hint.private ? "opacity-80" : ""}`}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-30"
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={() => setImageFailed(true)}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.20)] to-[rgba(255,255,255,0.02)]" />
+
+            <div className="absolute inset-[10px] overflow-hidden rounded-[24px] bg-[#f8f4ef]">
+              <img
+                src={hint.image}
+                alt={hint.title}
+                className={`h-full w-full transition-transform duration-500 ${
+                  useContain ? "object-contain p-4" : "object-cover"
+                } ${isDragging ? "scale-[1.01]" : "group-hover:scale-[1.02]"} ${
+                  hint.private ? "opacity-84" : ""
+                }`}
+                loading="lazy"
+                referrerPolicy="no-referrer"
+                onError={() => setImageFailed(true)}
+              />
+            </div>
+
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.12)] to-[rgba(255,255,255,0.01)]" />
           </>
         ) : (
           <>
