@@ -33,10 +33,10 @@ const demoHints = [
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
-    tags: ["Travel", "Big gift"],
+    tags: ["Travel"],
     starred: true,
     private: false,
-    size: "tall",
+    size: "large",
     url: "https://www.airbnb.co.uk/",
     position: 0,
   },
@@ -50,10 +50,10 @@ const demoHints = [
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
-    tags: ["Tech", "Birthday"],
+    tags: ["Tech"],
     starred: true,
     private: false,
-    size: "medium",
+    size: "large",
     url: "https://www.amazon.co.uk/",
     position: 1,
   },
@@ -67,7 +67,7 @@ const demoHints = [
     image:
       "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
-    tags: ["Experience", "Couples"],
+    tags: ["Experience"],
     starred: false,
     private: false,
     size: "medium",
@@ -84,10 +84,10 @@ const demoHints = [
     image:
       "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
-    tags: ["Home", "Under £50"],
+    tags: ["Home"],
     starred: false,
     private: true,
-    size: "square",
+    size: "small",
     url: "https://www.johnlewis.com/",
     position: 3,
   },
@@ -254,22 +254,29 @@ function shortenTitle(title = "", retailer = "") {
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
-function getBoardSize(price, index, allPrices = []) {
-  if (price == null) return index % 5 === 0 ? "medium" : "square";
+function getRelativePriceSize(price, allPrices = []) {
+  const valid = allPrices
+    .filter((value) => typeof value === "number" && Number.isFinite(value))
+    .sort((a, b) => a - b);
 
-  const sorted = [...allPrices].sort((a, b) => a - b);
-  const highCut = sorted[Math.max(0, Math.floor(sorted.length * 0.75))] ?? price;
-  const midCut = sorted[Math.max(0, Math.floor(sorted.length * 0.45))] ?? price;
+  if (price == null) return "medium";
+  if (valid.length < 3) return "medium";
 
-  if (price >= highCut && price >= 180) return "tall";
-  if (price >= midCut && price >= 75) return "medium";
-  return "square";
+  const lowIndex = Math.floor((valid.length - 1) * 0.33);
+  const highIndex = Math.floor((valid.length - 1) * 0.66);
+
+  const lowCut = valid[lowIndex];
+  const highCut = valid[highIndex];
+
+  if (price <= lowCut) return "small";
+  if (price >= highCut) return "large";
+  return "medium";
 }
 
 function getTileHeightClass(size) {
-  if (size === "tall") return "min-h-[460px]";
-  if (size === "medium") return "min-h-[380px]";
-  return "min-h-[320px]";
+  if (size === "large") return "min-h-[500px]";
+  if (size === "medium") return "min-h-[410px]";
+  return "min-h-[330px]";
 }
 
 function getPricePill(priceBand) {
@@ -579,154 +586,144 @@ function HintCard({
           : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
       } ${getTileHeightClass(hint.size)}`}
     >
-      <div className="relative flex h-full flex-col">
-        <div className="relative min-h-[68%] flex-1 overflow-hidden">
-          {showImage ? (
-            <>
-              <img
-                src={hint.image}
-                alt={hint.title}
-                className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
-                  hint.private ? "opacity-80" : ""
-                }`}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                onError={() => setImageFailed(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,22,18,0.44)] via-[rgba(28,22,18,0.08)] to-[rgba(255,255,255,0.02)]" />
-            </>
-          ) : (
-            <>
-              <div
-                className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
-                  hint.private ? "opacity-80" : ""
-                }`}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[rgba(28,22,18,0.34)] via-[rgba(28,22,18,0.08)] to-transparent" />
-            </>
-          )}
+      <div className="relative h-full overflow-hidden">
+        {showImage ? (
+          <>
+            <img
+              src={hint.image}
+              alt={hint.title}
+              className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+                hint.private ? "opacity-82" : ""
+              }`}
+              loading="lazy"
+              referrerPolicy="no-referrer"
+              onError={() => setImageFailed(true)}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.24)] to-[rgba(255,255,255,0.02)]" />
+          </>
+        ) : (
+          <>
+            <div
+              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
+                hint.private ? "opacity-82" : ""
+              }`}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
+          </>
+        )}
 
-          <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
-                ⋮⋮ Drag
+        <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
+              ⋮⋮ Drag
+            </div>
+
+            {hint.starred && (
+              <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+                Top pick
               </div>
+            )}
 
-              {hint.starred && (
-                <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-                  Top pick
-                </div>
-              )}
+            {hint.private && (
+              <div className="rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
+                Private
+              </div>
+            )}
+          </div>
 
-              {hint.private && (
-                <div className="rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur-sm">
-                  Private
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-2">
+            {onEdit && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEdit(hint);
+                }}
+                className="relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
+                aria-label="Edit hint"
+              >
+                ✎
+              </button>
+            )}
 
-            <div className="flex items-center gap-2">
-              {onEdit && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onEdit(hint);
-                  }}
-                  className="relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
-                  aria-label="Edit hint"
-                >
-                  ✎
-                </button>
-              )}
-
-              {onToggleStarred && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onToggleStarred(hint);
-                  }}
-                  className={`relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[16px] backdrop-blur-sm ${
-                    hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
-                  }`}
-                  aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
-                >
-                  ★
-                </button>
-              )}
-            </div>
+            {onToggleStarred && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onToggleStarred(hint);
+                }}
+                className={`relative z-30 flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/75 text-[16px] backdrop-blur-sm ${
+                  hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
+                }`}
+                aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
+              >
+                ★
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="relative -mt-7 z-20 flex flex-1 px-4 pb-4 sm:px-5 sm:pb-5">
-          <div
-            className={`flex w-full flex-1 flex-col rounded-[26px] p-5 shadow-sm backdrop-blur-md ${
-              hint.private ? "bg-white/84" : "bg-white/92"
-            }`}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
-                  hint.priceBand
-                )}`}
-              >
-                {hint.priceLabel}
-              </span>
-
-              {hint.tags.map((tag) => (
-                <span
-                  key={tag}
-                  className="rounded-full bg-[#f8f5f2] px-2.5 py-1 text-[11px] font-medium text-slate-500"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <h2
-              className="mt-3 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-slate-900"
-              style={{
-                display: "-webkit-box",
-                WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                lineClamp: 2,
-              }}
+        <div className="absolute inset-x-0 bottom-0 z-20 p-5 sm:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${getPricePill(
+                hint.priceBand
+              )}`}
             >
-              {hint.title}
-            </h2>
+              {hint.priceLabel}
+            </span>
 
-            <p className="mt-1 truncate text-[13px] text-slate-500">{hint.retailer}</p>
+            {hint.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-medium text-white/88 backdrop-blur-sm"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
 
-            <div className="mt-auto pt-5">
-              <div className="flex items-center justify-end gap-2">
-                {onTogglePrivate && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      onTogglePrivate(hint);
-                    }}
-                    className="relative z-30 rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
-                  >
-                    {hint.private ? "🔒 Private" : "🔓 Public"}
-                  </button>
-                )}
+          <h2
+            className="mt-3 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              lineClamp: 2,
+            }}
+          >
+            {hint.title}
+          </h2>
 
-                <a
-                  href={hint.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="relative z-30 rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Open
-                </a>
-              </div>
-            </div>
+          <p className="mt-1 truncate text-[13px] text-white/75">{hint.retailer}</p>
+
+          <div className="mt-4 flex items-center justify-end gap-2">
+            {onTogglePrivate && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onTogglePrivate(hint);
+                }}
+                className="relative z-30 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm hover:bg-white/18"
+              >
+                {hint.private ? "🔒 Private" : "🔓 Public"}
+              </button>
+            )}
+
+            <a
+              href={hint.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="relative z-30 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm hover:bg-white/18"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Open
+            </a>
           </div>
         </div>
       </div>
@@ -750,18 +747,12 @@ function SortableHintTile({
   } = useSortable({ id: hint.id });
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
   };
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="touch-none"
-      {...attributes}
-      {...listeners}
-    >
+    <div ref={setNodeRef} style={style} className="touch-none" {...attributes} {...listeners}>
       <HintCard
         hint={hint}
         dragging={isDragging}
@@ -807,7 +798,7 @@ export default function HintsClient() {
     () =>
       hints
         .map((hint) => hint.numericPrice)
-        .filter((value) => typeof value === "number"),
+        .filter((value) => typeof value === "number" && Number.isFinite(value)),
     [hints]
   );
 
@@ -856,12 +847,13 @@ export default function HintsClient() {
         return;
       }
 
-      const prices = (data || [])
+      const rows = data || [];
+      const prices = rows
         .map((row) => row.numeric_price)
-        .filter((value) => typeof value === "number");
+        .filter((value) => typeof value === "number" && Number.isFinite(value));
 
       setHints(
-        (data || []).map((row, index) => ({
+        rows.map((row, index) => ({
           id: row.id,
           title: row.title || "Saved hint",
           retailer: row.retailer || normaliseRetailer(row.url || ""),
@@ -873,7 +865,7 @@ export default function HintsClient() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: row.size || getBoardSize(row.numeric_price, index, prices),
+          size: getRelativePriceSize(row.numeric_price, prices),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1042,8 +1034,13 @@ export default function HintsClient() {
         data.siteName || normaliseRetailer(trimmed)
       );
 
+      const nextPrices = [
+        ...numericPrices.filter((value) => value !== null),
+        ...(numericPrice != null ? [numericPrice] : []),
+      ];
+
       setHints((current) =>
-        current.map((hint, index) => {
+        current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
 
           return {
@@ -1058,7 +1055,7 @@ export default function HintsClient() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: getBoardSize(numericPrice, index, numericPrices),
+            size: getRelativePriceSize(numericPrice, nextPrices),
           };
         })
       );
@@ -1154,7 +1151,7 @@ export default function HintsClient() {
         tags: [],
         starred: false,
         private: draftHint.private,
-        size: getBoardSize(draftHint.numericPrice, hints.length, incomingPriceSet),
+        size: getRelativePriceSize(draftHint.numericPrice, incomingPriceSet),
         url: draftHint.url,
         position: 0,
       };
@@ -1333,10 +1330,10 @@ export default function HintsClient() {
                     key={i}
                     className={`overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] ${
                       i % 3 === 0
-                        ? "min-h-[460px]"
+                        ? "min-h-[500px]"
                         : i % 2 === 0
-                        ? "min-h-[380px]"
-                        : "min-h-[320px]"
+                        ? "min-h-[410px]"
+                        : "min-h-[330px]"
                     }`}
                   >
                     <div className="skeleton h-full w-full" />
@@ -1368,6 +1365,7 @@ export default function HintsClient() {
                 </SortableContext>
 
                 <DragOverlay
+                  adjustScale={false}
                   dropAnimation={{
                     duration: 220,
                     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
