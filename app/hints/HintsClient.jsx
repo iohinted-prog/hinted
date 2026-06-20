@@ -141,10 +141,10 @@ function getCardSize(price) {
 }
 
 function getTileSpanClass(size) {
-  if (size === "xl") return "md:col-span-4 md:row-span-36";
-  if (size === "large") return "md:col-span-4 md:row-span-30";
-  if (size === "medium") return "md:col-span-4 md:row-span-24";
-  return "md:col-span-4 md:row-span-18";
+  if (size === "xl") return "md:col-span-4 md:row-span-18";
+  if (size === "large") return "md:col-span-4 md:row-span-15";
+  if (size === "medium") return "md:col-span-4 md:row-span-12";
+  return "md:col-span-4 md:row-span-9";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -569,12 +569,12 @@ function HintCard({
 
   return (
     <article
-      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
+      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border transition-[transform,box-shadow,opacity] duration-200 ${
         dragging
-          ? "rotate-[1.2deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
+          ? "border-[#f0d6ca] bg-white shadow-[0_20px_48px_rgba(115,70,45,0.18)]"
           : hint.private
-          ? "border-white/50 bg-white/60 shadow-[0_12px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
-          : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
+          ? "border-white/60 bg-white/60 shadow-[0_10px_24px_rgba(176,118,86,0.08)] backdrop-blur-sm hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(176,118,86,0.12)]"
+          : "border-[#f0dfd6] bg-white shadow-[0_8px_22px_rgba(176,118,86,0.08)] hover:-translate-y-0.5 hover:shadow-[0_18px_34px_rgba(176,118,86,0.12)]"
       }`}
     >
       <div className="relative h-full min-h-full overflow-hidden bg-[#ead8ca]">
@@ -583,14 +583,14 @@ function HintCard({
             <img
               src={hint.image}
               alt={hint.title}
-              className={`absolute inset-0 z-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+              className={`absolute inset-0 z-0 h-full w-full object-cover transition duration-300 group-hover:scale-[1.02] ${
                 hint.private ? "opacity-80" : ""
               }`}
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => setImageFailed(true)}
             />
-            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.24)] to-[rgba(255,255,255,0.02)]" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.78)] via-[rgba(22,18,16,0.22)] to-[rgba(255,255,255,0.02)]" />
           </>
         ) : (
           <>
@@ -599,7 +599,7 @@ function HintCard({
                 hint.private ? "opacity-80" : ""
               }`}
             />
-            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.58)] via-[rgba(22,18,16,0.15)] to-transparent" />
           </>
         )}
 
@@ -608,7 +608,8 @@ function HintCard({
             <button
               type="button"
               {...dragHandleProps}
-              className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
+              onClick={(e) => e.preventDefault()}
+              className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm touch-none"
               aria-label="Drag to reorder"
             >
               ⋮⋮ Drag
@@ -631,6 +632,7 @@ function HintCard({
             {onEdit && (
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -646,6 +648,7 @@ function HintCard({
             {onToggleStarred && (
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -683,7 +686,7 @@ function HintCard({
           </div>
 
           <h2
-            className="mt-3 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
+            className="mt-3 overflow-hidden text-[21px] font-semibold tracking-[-0.05em] text-white"
             style={{
               display: "-webkit-box",
               WebkitBoxOrient: "vertical",
@@ -700,6 +703,7 @@ function HintCard({
             {onTogglePrivate && (
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -715,6 +719,7 @@ function HintCard({
               href={hint.url}
               target="_blank"
               rel="noopener noreferrer"
+              onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
               className="relative z-30 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm hover:bg-white/18"
             >
@@ -740,18 +745,21 @@ function SortableHintTile({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: hint.id });
+  } = useSortable({
+    id: hint.id,
+  });
 
   const style = {
     transform: CSS.Translate.toString(transform),
     transition,
+    zIndex: isDragging ? 2 : 1,
   };
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`touch-none ${getTileSpanClass(hint.size)}`}
+      className={`${getTileSpanClass(hint.size)} ${isDragging ? "opacity-35" : ""}`}
     >
       <HintCard
         hint={hint}
@@ -797,7 +805,9 @@ export default function HintsPage() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 6 },
+      activationConstraint: {
+        distance: 8,
+      },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
@@ -855,7 +865,7 @@ export default function HintsPage() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: getCardSize(row.numeric_price),
+          size: row.size || getCardSize(row.numeric_price),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -1179,6 +1189,10 @@ export default function HintsPage() {
     setActiveId(String(event.active.id));
   }
 
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   async function handleDragEnd(event) {
     const { active, over } = event;
     setActiveId(null);
@@ -1306,18 +1320,18 @@ export default function HintsPage() {
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
 
             {isLoading ? (
-              <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[16px]">
+              <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[8px]">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`overflow-hidden rounded-[32px] bg-[#f4eee8] md:col-span-4 ${
+                    className={`overflow-hidden rounded-[30px] bg-[#f4eee8] md:col-span-4 ${
                       i === 1
-                        ? "md:row-span-36"
+                        ? "md:row-span-18"
                         : i === 2
-                        ? "md:row-span-30"
+                        ? "md:row-span-15"
                         : i === 3
-                        ? "md:row-span-24"
-                        : "md:row-span-18"
+                        ? "md:row-span-12"
+                        : "md:row-span-9"
                     }`}
                   />
                 ))}
@@ -1327,13 +1341,14 @@ export default function HintsPage() {
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 onDragStart={handleDragStart}
+                onDragCancel={handleDragCancel}
                 onDragEnd={handleDragEnd}
               >
                 <SortableContext
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[16px]">
+                  <div className="relative grid grid-cols-1 gap-8 sm:grid-cols-2 md:grid-cols-12 md:auto-rows-[8px]">
                     {visibleHints.map((hint) => (
                       <SortableHintTile
                         key={hint.id}
@@ -1347,13 +1362,14 @@ export default function HintsPage() {
                 </SortableContext>
 
                 <DragOverlay
+                  zIndex={30}
                   dropAnimation={{
-                    duration: 220,
+                    duration: 180,
                     easing: "cubic-bezier(0.22, 1, 0.36, 1)",
                   }}
                 >
                   {activeHint ? (
-                    <div className="w-[min(92vw,320px)] md:w-full md:max-w-none">
+                    <div className="w-[min(92vw,340px)] md:w-[320px]">
                       <HintCard hint={activeHint} dragging />
                     </div>
                   ) : null}
