@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import crypto from "crypto";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -15,6 +16,12 @@ const FORWARDED_HEADERS = {
   Pragma: "no-cache",
   DNT: "1",
 };
+
+const FAST_TIMEOUT_MS = 2200;
+const ENRICH_TIMEOUT_MS = 20000;
+const TASK_TTL_MS = 10 * 60 * 1000;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const POLL_RETRY_AFTER_SECONDS = 2;
 
 const PRICE_REGEX =
   /(?:A\$|NZ\$|C\$|US\$|CA\$|AU\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
@@ -48,157 +55,9 @@ const PRIORITY_RETAILER_PATTERNS = [
   /(^|\.)boohoo\./i,
   /(^|\.)prettylittlething\./i,
   /(^|\.)laredoute\./i,
-
   /(^|\.)johnlewis\.com$/i,
   /(^|\.)currys\.co\.uk$/i,
   /(^|\.)argos\.co\.uk$/i,
-  /(^|\.)tesco\.com$/i,
-  /(^|\.)sainsburys\.co\.uk$/i,
-  /(^|\.)marksandspencer\.com$/i,
-  /(^|\.)boots\.com$/i,
-  /(^|\.)superdrug\.com$/i,
-  /(^|\.)dunelm\.com$/i,
-  /(^|\.)screwfix\.com$/i,
-  /(^|\.)wickes\.co\.uk$/i,
-  /(^|\.)ao\.com$/i,
-  /(^|\.)halfords\.com$/i,
-  /(^|\.)very\.co\.uk$/i,
-  /(^|\.)riverisland\.com$/i,
-  /(^|\.)newlook\.com$/i,
-  /(^|\.)matalan\.co\.uk$/i,
-  /(^|\.)houseoffraser\.co\.uk$/i,
-  /(^|\.)asda\.com$/i,
-  /(^|\.)waitrose\.com$/i,
-  /(^|\.)selfridges\.com$/i,
-  /(^|\.)harrods\.com$/i,
-  /(^|\.)fortnumandmason\.com$/i,
-  /(^|\.)libertylondon\.com$/i,
-  /(^|\.)primark\.com$/i,
-  /(^|\.)brownthomas\.com$/i,
-  /(^|\.)dunnesstores\.com$/i,
-  /(^|\.)zavvi\./i,
-  /(^|\.)thehut\./i,
-  /(^|\.)lookfantastic\./i,
-  /(^|\.)cultbeauty\./i,
-  /(^|\.)spacenk\.com$/i,
-  /(^|\.)allbeauty\.com$/i,
-  /(^|\.)perfumeshop\.com$/i,
-  /(^|\.)thebodyshop\.com$/i,
-  /(^|\.)lush\.com$/i,
-  /(^|\.)hmv\.com$/i,
-  /(^|\.)game\.co\.uk$/i,
-
-  /(^|\.)hm\.com$/i,
-  /(^|\.)zara\.com$/i,
-  /(^|\.)uniqlo\.com$/i,
-  /(^|\.)nike\.com$/i,
-  /(^|\.)adidas\./i,
-  /(^|\.)puma\.com$/i,
-  /(^|\.)decathlon\./i,
-  /(^|\.)gymshark\.com$/i,
-  /(^|\.)superdry\.com$/i,
-  /(^|\.)missguided\./i,
-  /(^|\.)boohooman\.com$/i,
-  /(^|\.)nastygal\.com$/i,
-  /(^|\.)net-a-porter\.com$/i,
-  /(^|\.)mrporter\.com$/i,
-  /(^|\.)farfetch\.com$/i,
-  /(^|\.)ssense\.com$/i,
-  /(^|\.)revolve\.com$/i,
-  /(^|\.)fashionnova\.com$/i,
-  /(^|\.)princesspolly\.com$/i,
-  /(^|\.)whitefoxboutique\.com$/i,
-  /(^|\.)lulus\.com$/i,
-  /(^|\.)abercrombie\.com$/i,
-  /(^|\.)hollisterco\.com$/i,
-  /(^|\.)urbanoutfitters\.com$/i,
-  /(^|\.)anthropologie\.com$/i,
-  /(^|\.)freepeople\.com$/i,
-  /(^|\.)gap\.com$/i,
-  /(^|\.)oldnavy\.gap\.com$/i,
-  /(^|\.)bananarepublic\.gap\.com$/i,
-  /(^|\.)ae\.com$/i,
-  /(^|\.)aerie\.com$/i,
-
-  /(^|\.)apple\.com$/i,
-  /(^|\.)samsung\.com$/i,
-  /(^|\.)dyson\./i,
-  /(^|\.)bestbuy\./i,
-  /(^|\.)newegg\.com$/i,
-  /(^|\.)jbhifi\./i,
-  /(^|\.)officeworks\.com\.au$/i,
-  /(^|\.)kogan\.com$/i,
-
-  /(^|\.)walmart\.com$/i,
-  /(^|\.)target\.com$/i,
-  /(^|\.)costco\./i,
-  /(^|\.)homedepot\.com$/i,
-  /(^|\.)lowes\.com$/i,
-  /(^|\.)macys\.com$/i,
-  /(^|\.)nordstrom\.com$/i,
-  /(^|\.)kohls\.com$/i,
-  /(^|\.)jcpenney\.com$/i,
-  /(^|\.)walgreens\.com$/i,
-  /(^|\.)cvs\.com$/i,
-  /(^|\.)riteaid\.com$/i,
-  /(^|\.)sears\.com$/i,
-  /(^|\.)bj\.com$/i,
-  /(^|\.)saksfifthavenue\.com$/i,
-  /(^|\.)bloomingdales\.com$/i,
-  /(^|\.)neimanmarcus\.com$/i,
-  /(^|\.)ulta\.com$/i,
-  /(^|\.)sephora\./i,
-  /(^|\.)chewy\.com$/i,
-  /(^|\.)crateandbarrel\.com$/i,
-  /(^|\.)bedbathandbeyond\./i,
-  /(^|\.)wayfair\./i,
-  /(^|\.)ikea\./i,
-  /(^|\.)overstock\.com$/i,
-
-  /(^|\.)canadiantire\.ca$/i,
-  /(^|\.)sportchek\.ca$/i,
-  /(^|\.)staples\.ca$/i,
-  /(^|\.)indigo\.ca$/i,
-  /(^|\.)londondrugs\.com$/i,
-  /(^|\.)mec\.ca$/i,
-  /(^|\.)thebay\.com$/i,
-  /(^|\.)simons\.ca$/i,
-
-  /(^|\.)harveynorman\./i,
-  /(^|\.)myer\.com\.au$/i,
-  /(^|\.)davidjones\.com$/i,
-  /(^|\.)kmart\.com\.au$/i,
-  /(^|\.)bunnings\.com\.au$/i,
-  /(^|\.)woolworths\.com\.au$/i,
-  /(^|\.)coles\.com\.au$/i,
-  /(^|\.)chemistwarehouse\./i,
-  /(^|\.)bigw\.com\.au$/i,
-  /(^|\.)theiconic\.com\.au$/i,
-  /(^|\.)mydeal\.com\.au$/i,
-  /(^|\.)adorebeauty\.com\.au$/i,
-  /(^|\.)mecca\.com\.au$/i,
-
-  /(^|\.)thewarehouse\.co\.nz$/i,
-  /(^|\.)mightyape\.co\.nz$/i,
-  /(^|\.)noelleeming\.co\.nz$/i,
-  /(^|\.)fishpond\./i,
-  /(^|\.)trademe\.co\.nz$/i,
-
-  /(^|\.)rakuten\./i,
-  /(^|\.)zalando\./i,
-  /(^|\.)otto\./i,
-  /(^|\.)allegro\./i,
-  /(^|\.)alibaba\.com$/i,
-  /(^|\.)aliexpress\.com$/i,
-  /(^|\.)temu\.com$/i,
-  /(^|\.)shein\./i,
-  /(^|\.)jd\./i,
-  /(^|\.)flipkart\.com$/i,
-  /(^|\.)mercadolibre\./i,
-  /(^|\.)shopee\./i,
-  /(^|\.)lazada\./i,
-  /(^|\.)coupang\.com$/i,
-  /(^|\.)tiktok\.com$/i,
 ];
 
 const RETAILER_RULES = {
@@ -328,6 +187,29 @@ const RETAILER_RULES = {
     ],
   },
 };
+
+const globalState = globalThis.__hintedPreviewState || {
+  cache: new Map(),
+  tasks: new Map(),
+};
+
+globalThis.__hintedPreviewState = globalState;
+
+function cleanupState() {
+  const now = Date.now();
+
+  for (const [key, entry] of globalState.cache.entries()) {
+    if (!entry || entry.expiresAt <= now) {
+      globalState.cache.delete(key);
+    }
+  }
+
+  for (const [key, task] of globalState.tasks.entries()) {
+    if (!task || task.expiresAt <= now) {
+      globalState.tasks.delete(key);
+    }
+  }
+}
 
 function cleanText(value = "") {
   return String(value)
@@ -835,96 +717,16 @@ function scoreResult(result) {
   return score;
 }
 
-function shouldRetryWithJs(result) {
-  if (!result) return true;
-  if (result.blocked) return false;
-  if (result.confidence === "high") return false;
-
-  const hasPrice = Boolean(result.priceText);
-  const hasImage = Boolean(result.image);
+function isGoodEnoughFastResult(result) {
+  if (!result || result.blocked) return false;
   const hasTitle = Boolean(result.title && result.title !== "Shared item");
-
-  return !(hasTitle && hasPrice && hasImage);
+  const hasImage = Boolean(result.image);
+  return hasTitle && hasImage;
 }
 
-async function fetchViaScrapingBee(inputUrl, options = {}) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeout || 25000);
-
-  try {
-    const apiKey = process.env.SCRAPINGBEE_API_KEY;
-    if (!apiKey) throw new Error("Missing SCRAPINGBEE_API_KEY");
-
-    const apiUrl = new URL("https://app.scrapingbee.com/api/v1");
-    apiUrl.searchParams.set("api_key", apiKey);
-    apiUrl.searchParams.set("url", inputUrl);
-    apiUrl.searchParams.set("transparent_status_code", "true");
-    apiUrl.searchParams.set("forward_headers", "true");
-    apiUrl.searchParams.set("render_js", options.renderJs ? "true" : "false");
-
-    if (options.premiumProxy) {
-      apiUrl.searchParams.set("premium_proxy", "true");
-    }
-
-    if (options.stealthProxy) {
-      apiUrl.searchParams.set("stealth_proxy", "true");
-      apiUrl.searchParams.set("render_js", "true");
-    }
-
-    if (options.countryCode) {
-      apiUrl.searchParams.set("country_code", options.countryCode);
-    }
-
-    if (options.renderJs || options.stealthProxy) {
-      apiUrl.searchParams.set("block_resources", "false");
-      apiUrl.searchParams.set("wait_browser", options.waitBrowser || "networkidle0");
-      apiUrl.searchParams.set("wait", String(options.wait || 2500));
-    }
-
-    const res = await fetch(apiUrl.toString(), {
-      method: "GET",
-      cache: "no-store",
-      signal: controller.signal,
-      headers: {
-        "Spb-User-Agent": FORWARDED_HEADERS["User-Agent"],
-        "Spb-Accept": FORWARDED_HEADERS.Accept,
-        "Spb-Accept-Language": FORWARDED_HEADERS["Accept-Language"],
-        "Spb-Cache-Control": FORWARDED_HEADERS["Cache-Control"],
-        "Spb-Pragma": FORWARDED_HEADERS.Pragma,
-        "Spb-DNT": FORWARDED_HEADERS.DNT,
-      },
-    });
-
-    const contentType = res.headers.get("content-type") || "text/html";
-    const html = await res.text();
-
-    clearTimeout(timer);
-
-    return {
-      ok: res.ok,
-      status: res.status,
-      contentType,
-      html: html || "",
-      finalUrl: inputUrl,
-      provider: "scrapingbee",
-      fetchProfile: {
-        render_js: Boolean(options.renderJs || options.stealthProxy),
-        premium_proxy: Boolean(options.premiumProxy),
-        stealth_proxy: Boolean(options.stealthProxy),
-        country_code: options.countryCode || null,
-        wait: options.renderJs || options.stealthProxy ? options.wait || 2500 : 0,
-        wait_browser:
-          options.renderJs || options.stealthProxy
-            ? options.waitBrowser || "networkidle0"
-            : "",
-        block_resources: options.renderJs || options.stealthProxy ? false : null,
-        forward_headers: true,
-      },
-    };
-  } catch (err) {
-    clearTimeout(timer);
-    throw err;
-  }
+function shouldCacheResult(result) {
+  if (!result || result.blocked) return false;
+  return Boolean(result.title || result.image || result.priceText);
 }
 
 function parsePage({
@@ -1068,10 +870,120 @@ function parsePage({
   };
 }
 
-async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
-  const fetched = await fetchViaScrapingBee(inputUrl, options);
+async function fetchHtmlDirect(inputUrl, timeout = FAST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
 
-  if (!fetched.contentType.includes("text/html")) {
+  try {
+    const res = await fetch(inputUrl, {
+      method: "GET",
+      cache: "no-store",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: FORWARDED_HEADERS,
+    });
+
+    const contentType = res.headers.get("content-type") || "";
+    const html = await res.text();
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      contentType,
+      html: html || "",
+      finalUrl: res.url || inputUrl,
+      provider: "direct",
+      fetchProfile: {
+        method: "direct",
+        timeout,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function fetchViaScrapingBee(inputUrl, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeout || ENRICH_TIMEOUT_MS);
+
+  try {
+    const apiKey = process.env.SCRAPINGBEE_API_KEY;
+    if (!apiKey) throw new Error("Missing SCRAPINGBEE_API_KEY");
+
+    const apiUrl = new URL("https://app.scrapingbee.com/api/v1");
+    apiUrl.searchParams.set("api_key", apiKey);
+    apiUrl.searchParams.set("url", inputUrl);
+    apiUrl.searchParams.set("transparent_status_code", "true");
+    apiUrl.searchParams.set("forward_headers", "true");
+    apiUrl.searchParams.set("render_js", options.renderJs ? "true" : "false");
+
+    if (options.premiumProxy) {
+      apiUrl.searchParams.set("premium_proxy", "true");
+    }
+
+    if (options.stealthProxy) {
+      apiUrl.searchParams.set("stealth_proxy", "true");
+      apiUrl.searchParams.set("render_js", "true");
+    }
+
+    if (options.countryCode) {
+      apiUrl.searchParams.set("country_code", options.countryCode);
+    }
+
+    if (options.renderJs || options.stealthProxy) {
+      apiUrl.searchParams.set("block_resources", "false");
+      apiUrl.searchParams.set("wait_browser", options.waitBrowser || "networkidle0");
+      apiUrl.searchParams.set("wait", String(options.wait || 2500));
+    }
+
+    const res = await fetch(apiUrl.toString(), {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        "Spb-User-Agent": FORWARDED_HEADERS["User-Agent"],
+        "Spb-Accept": FORWARDED_HEADERS.Accept,
+        "Spb-Accept-Language": FORWARDED_HEADERS["Accept-Language"],
+        "Spb-Cache-Control": FORWARDED_HEADERS["Cache-Control"],
+        "Spb-Pragma": FORWARDED_HEADERS.Pragma,
+        "Spb-DNT": FORWARDED_HEADERS.DNT,
+      },
+    });
+
+    const contentType = res.headers.get("content-type") || "text/html";
+    const html = await res.text();
+
+    return {
+      ok: res.ok,
+      status: res.status,
+      contentType,
+      html: html || "",
+      finalUrl: inputUrl,
+      provider: "scrapingbee",
+      fetchProfile: {
+        method: "scrapingbee",
+        render_js: Boolean(options.renderJs || options.stealthProxy),
+        premium_proxy: Boolean(options.premiumProxy),
+        stealth_proxy: Boolean(options.stealthProxy),
+        country_code: options.countryCode || null,
+        wait: options.renderJs || options.stealthProxy ? options.wait || 2500 : 0,
+        wait_browser:
+          options.renderJs || options.stealthProxy
+            ? options.waitBrowser || "networkidle0"
+            : "",
+        timeout: options.timeout || ENRICH_TIMEOUT_MS,
+      },
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function tryFetchAndParseWithFetcher(fetcher, inputUrl, preferredCurrency, options = {}) {
+  const fetched = await fetcher(inputUrl, options);
+
+  if (!String(fetched.contentType || "").includes("text/html")) {
     return {
       fatal: true,
       error: "URL did not return an HTML page.",
@@ -1079,7 +991,7 @@ async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
     };
   }
 
-  if (!fetched.html.trim()) {
+  if (!String(fetched.html || "").trim()) {
     return {
       fatal: true,
       error: "Empty response from page.",
@@ -1099,110 +1011,290 @@ async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
   return { fatal: false, result, fetched };
 }
 
-async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
-  const host = hostname(inputUrl);
-  const countryCode = getCountryCodeForHost(host);
-  const isPriorityRetailer = isPriorityRetailerHost(host);
+function makeCacheKey(inputUrl, preferredCurrency = "GBP") {
+  const normalized = cleanCanonicalUrl(ensureHttpUrl(inputUrl));
+  return `${normalized}::${String(preferredCurrency || "GBP").toUpperCase()}`;
+}
 
-  const attempts = [
-    {
-      name: "standard",
-      options: {
-        renderJs: false,
-        countryCode: "",
-      },
-    },
-    {
-      name: "premium",
-      options: {
-        renderJs: false,
-        premiumProxy: true,
-        countryCode,
-      },
-    },
-    {
-      name: "js-premium",
-      options: {
-        renderJs: true,
-        premiumProxy: true,
-        countryCode,
-        wait: 2500,
-        waitBrowser: "networkidle0",
-      },
-    },
-  ];
-
-  if (isPriorityRetailer) {
-    attempts.push({
-      name: "stealth",
-      options: {
-        stealthProxy: true,
-        countryCode: countryCode || "us",
-        wait: 3000,
-        waitBrowser: "networkidle0",
-      },
-    });
+function getCachedPreview(cacheKey) {
+  cleanupState();
+  const entry = globalState.cache.get(cacheKey);
+  if (!entry) return null;
+  if (entry.expiresAt <= Date.now()) {
+    globalState.cache.delete(cacheKey);
+    return null;
   }
+  return entry.value;
+}
 
-  let bestResult = null;
-  const attemptsDebug = [];
+function setCachedPreview(cacheKey, value) {
+  globalState.cache.set(cacheKey, {
+    value,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  });
+}
 
-  for (const attempt of attempts) {
-    const outcome = await tryFetchAndParse(inputUrl, preferredCurrency, attempt.options);
+function createTask({ inputUrl, preferredCurrency, cacheKey }) {
+  const taskId = crypto.randomUUID();
+  const now = Date.now();
 
-    if (outcome.fatal) {
-      attemptsDebug.push({
-        name: attempt.name,
-        fatal: true,
-        error: outcome.error,
-        fetchProfile: outcome.fetched?.fetchProfile || null,
-        status: outcome.fetched?.status || null,
+  const task = {
+    id: taskId,
+    inputUrl,
+    preferredCurrency,
+    cacheKey,
+    status: "pending",
+    createdAt: now,
+    updatedAt: now,
+    expiresAt: now + TASK_TTL_MS,
+    result: null,
+    error: null,
+  };
+
+  globalState.tasks.set(taskId, task);
+  return task;
+}
+
+function getTask(taskId) {
+  cleanupState();
+  const task = globalState.tasks.get(taskId);
+  if (!task) return null;
+  if (task.expiresAt <= Date.now()) {
+    globalState.tasks.delete(taskId);
+    return null;
+  }
+  return task;
+}
+
+function findActiveTaskByCacheKey(cacheKey) {
+  cleanupState();
+  for (const task of globalState.tasks.values()) {
+    if (task.cacheKey === cacheKey && (task.status === "pending" || task.status === "processing")) {
+      return task;
+    }
+  }
+  return null;
+}
+
+function updateTask(taskId, patch) {
+  const current = globalState.tasks.get(taskId);
+  if (!current) return null;
+
+  const next = {
+    ...current,
+    ...patch,
+    updatedAt: Date.now(),
+    expiresAt: Date.now() + TASK_TTL_MS,
+  };
+
+  globalState.tasks.set(taskId, next);
+  return next;
+}
+
+function publicTask(task) {
+  return {
+    taskId: task.id,
+    status: task.status,
+    result: task.result,
+    error: task.error,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+  };
+}
+
+function makePendingBody(task, preview = null) {
+  return {
+    taskId: task.id,
+    status: task.status,
+    preview,
+  };
+}
+
+function makeStatusUrl(request, taskId) {
+  const url = new URL(request.url);
+  url.search = "";
+  url.searchParams.set("taskId", taskId);
+  return url.toString();
+}
+
+async function enrichPreviewInBackground(taskId) {
+  const task = getTask(taskId);
+  if (!task) return;
+
+  updateTask(taskId, { status: "processing", error: null });
+
+  try {
+    const host = hostname(task.inputUrl);
+    const countryCode = getCountryCodeForHost(host);
+    const isPriorityRetailer = isPriorityRetailerHost(host);
+    const isEtsy = /(^|\.)etsy\.com$/i.test(host);
+
+    const attempts = [];
+
+    if (isEtsy) {
+      attempts.push({
+        name: "premium",
+        fetcher: fetchViaScrapingBee,
+        options: {
+          renderJs: false,
+          premiumProxy: true,
+          countryCode,
+          timeout: 15000,
+        },
       });
-      continue;
+    } else {
+      attempts.push({
+        name: "premium",
+        fetcher: fetchViaScrapingBee,
+        options: {
+          renderJs: false,
+          premiumProxy: true,
+          countryCode,
+          timeout: 15000,
+        },
+      });
+
+      if (isPriorityRetailer) {
+        attempts.push({
+          name: "js-premium",
+          fetcher: fetchViaScrapingBee,
+          options: {
+            renderJs: true,
+            premiumProxy: true,
+            countryCode,
+            wait: 2000,
+            waitBrowser: "networkidle0",
+            timeout: 18000,
+          },
+        });
+      }
+
+      if (isPriorityRetailer && /(^|\.)amazon\./i.test(host)) {
+        attempts.push({
+          name: "stealth",
+          fetcher: fetchViaScrapingBee,
+          options: {
+            stealthProxy: true,
+            countryCode: countryCode || "us",
+            wait: 2500,
+            waitBrowser: "networkidle0",
+            timeout: 20000,
+          },
+        });
+      }
     }
 
-    const result = outcome.result;
+    let bestResult = null;
+    const attemptsDebug = [];
 
-    attemptsDebug.push({
-      name: attempt.name,
-      fatal: false,
-      blocked: result.blocked,
-      confidence: result.confidence,
-      title: result.title,
-      priceText: result.priceText,
-      image: Boolean(result.image),
-      fetchProfile: result.debug?.fetchProfile || null,
-      status: result.debug?.status || null,
-      bodySnippet: result.debug?.bodySnippet?.slice(0, 120) || "",
+    for (const attempt of attempts) {
+      try {
+        const outcome = await tryFetchAndParseWithFetcher(
+          attempt.fetcher,
+          task.inputUrl,
+          task.preferredCurrency,
+          attempt.options
+        );
+
+        if (outcome.fatal) {
+          attemptsDebug.push({
+            name: attempt.name,
+            fatal: true,
+            error: outcome.error,
+          });
+          continue;
+        }
+
+        const result = outcome.result;
+
+        attemptsDebug.push({
+          name: attempt.name,
+          fatal: false,
+          blocked: result.blocked,
+          confidence: result.confidence,
+          title: result.title,
+          priceText: result.priceText,
+          image: Boolean(result.image),
+        });
+
+        if (!bestResult || scoreResult(result) > scoreResult(bestResult)) {
+          bestResult = result;
+        }
+
+        if (result.confidence === "high") break;
+      } catch (err) {
+        attemptsDebug.push({
+          name: attempt.name,
+          fatal: true,
+          error: err?.message || "Fetch error",
+        });
+      }
+    }
+
+    if (!bestResult) {
+      throw new Error("Could not enrich preview.");
+    }
+
+    bestResult.debug = {
+      ...(bestResult.debug || {}),
+      attempts: attemptsDebug,
+      mode: "background-enrich",
+    };
+
+    if (shouldCacheResult(bestResult)) {
+      setCachedPreview(task.cacheKey, bestResult);
+    }
+
+    updateTask(taskId, {
+      status: "completed",
+      result: bestResult,
+      error: null,
     });
-
-    if (!bestResult || scoreResult(result) > scoreResult(bestResult)) {
-      bestResult = result;
-    }
-
-    if (result.blocked) {
-      continue;
-    }
-
-    if (attempt.name === "standard" && shouldRetryWithJs(result)) {
-      continue;
-    }
-
-    if (result.confidence === "high") {
-      break;
-    }
+  } catch (err) {
+    updateTask(taskId, {
+      status: "failed",
+      error: err?.message || "Preview enrichment failed.",
+    });
   }
+}
 
-  if (!bestResult) {
-    throw new Error("Could not fetch usable HTML.");
-  }
+function fallbackResult(inputUrl, message = "Could not fetch page details.") {
+  const host = (() => {
+    try {
+      return new URL(inputUrl).hostname.replace(/^www\./i, "");
+    } catch {
+      return "";
+    }
+  })();
 
-  bestResult.debug.attempts = attemptsDebug;
-  bestResult.debug.priorityRetailer = isPriorityRetailer;
-  return bestResult;
+  return {
+    url: inputUrl,
+    title: "Needs review",
+    titleShort: "Needs review",
+    description: message,
+    siteName: host,
+    image: "",
+    selectedImage: "",
+    imageCandidates: [],
+    priceText: "",
+    numericPrice: null,
+    detectedCurrency: null,
+    brand: "",
+    confidence: "low",
+    needsReview: true,
+    blocked: false,
+    blockReason: null,
+    blockMessage: "",
+    source: "fallback",
+    debug: {
+      error: message,
+    },
+  };
 }
 
 export async function POST(request) {
+  cleanupState();
+
   try {
     const body = await request.json().catch(() => null);
     const inputUrl = ensureHttpUrl(body?.url || "");
@@ -1212,74 +1304,121 @@ export async function POST(request) {
       return NextResponse.json({ error: "Please provide a valid URL." }, { status: 400 });
     }
 
-    try {
-      const result = await scrapeUrl(inputUrl, preferredCurrency);
+    const cacheKey = makeCacheKey(inputUrl, preferredCurrency);
+    const cached = getCachedPreview(cacheKey);
 
-      console.log(
-        JSON.stringify({
-          type: "link-preview-debug",
-          inputUrl,
-          preferredCurrency,
-          source: result?.source,
-          blocked: result?.blocked,
-          blockReason: result?.blockReason,
-          title: result?.title,
-          priceText: result?.priceText,
-          image: result?.image,
-          debug: result?.debug,
-        })
-      );
-
-      return NextResponse.json(result, { status: 200 });
-    } catch (scrapeError) {
-      console.log(
-        JSON.stringify({
-          type: "link-preview-error",
-          inputUrl,
-          preferredCurrency,
-          error: scrapeError?.message || "Fetch error",
-        })
-      );
-
-      const host = (() => {
-        try {
-          return new URL(inputUrl).hostname.replace(/^www\./i, "");
-        } catch {
-          return "";
-        }
-      })();
-
+    if (cached) {
       return NextResponse.json(
         {
-          url: inputUrl,
-          title: "Needs review",
-          titleShort: "Needs review",
-          description: scrapeError?.message || "Could not fetch page details.",
-          siteName: host,
-          image: "",
-          selectedImage: "",
-          imageCandidates: [],
-          priceText: "",
-          numericPrice: null,
-          detectedCurrency: null,
-          brand: "",
-          confidence: "low",
-          needsReview: true,
-          blocked: false,
-          blockReason: null,
-          blockMessage: "",
-          source: "fallback",
-          debug: {
-            error: scrapeError?.message || "Fetch error",
-          },
+          status: "completed",
+          source: "cache",
+          result: cached,
         },
         { status: 200 }
       );
     }
+
+    try {
+      const fastOutcome = await tryFetchAndParseWithFetcher(
+        (url, options) => fetchHtmlDirect(url, options.timeout || FAST_TIMEOUT_MS),
+        inputUrl,
+        preferredCurrency,
+        { timeout: FAST_TIMEOUT_MS }
+      );
+
+      if (!fastOutcome.fatal) {
+        const fastResult = fastOutcome.result;
+
+        if (shouldCacheResult(fastResult)) {
+          setCachedPreview(cacheKey, fastResult);
+        }
+
+        if (isGoodEnoughFastResult(fastResult)) {
+          return NextResponse.json(
+            {
+              status: "completed",
+              source: "fast",
+              result: fastResult,
+            },
+            { status: 200 }
+          );
+        }
+
+        const existingTask = findActiveTaskByCacheKey(cacheKey);
+        const task =
+          existingTask ||
+          createTask({
+            inputUrl,
+            preferredCurrency,
+            cacheKey,
+          });
+
+        if (!existingTask) {
+          void enrichPreviewInBackground(task.id);
+        }
+
+        const response = NextResponse.json(makePendingBody(task, fastResult), {
+          status: 202,
+        });
+
+        response.headers.set("Location", makeStatusUrl(request, task.id));
+        response.headers.set("Retry-After", String(POLL_RETRY_AFTER_SECONDS));
+        return response;
+      }
+    } catch {}
+
+    const existingTask = findActiveTaskByCacheKey(cacheKey);
+    const task =
+      existingTask ||
+      createTask({
+        inputUrl,
+        preferredCurrency,
+        cacheKey,
+      });
+
+    if (!existingTask) {
+      void enrichPreviewInBackground(task.id);
+    }
+
+    const response = NextResponse.json(makePendingBody(task, fallbackResult(inputUrl, "Fetching preview...")), {
+      status: 202,
+    });
+
+    response.headers.set("Location", makeStatusUrl(request, task.id));
+    response.headers.set("Retry-After", String(POLL_RETRY_AFTER_SECONDS));
+    return response;
   } catch (err) {
     return NextResponse.json(
       { error: err?.message || "Unexpected error." },
       { status: 500 }
     );
   }
+}
+
+export async function GET(request) {
+  cleanupState();
+
+  const taskId = request.nextUrl.searchParams.get("taskId");
+
+  if (!taskId) {
+    return NextResponse.json({ error: "Missing taskId." }, { status: 400 });
+  }
+
+  const task = getTask(taskId);
+
+  if (!task) {
+    return NextResponse.json({ error: "Task not found or expired." }, { status: 404 });
+  }
+
+  if (task.status === "completed") {
+    return NextResponse.json(publicTask(task), { status: 200 });
+  }
+
+  if (task.status === "failed") {
+    return NextResponse.json(publicTask(task), { status: 200 });
+  }
+
+  const response = NextResponse.json(publicTask(task), { status: 202 });
+  response.headers.set("Retry-After", String(POLL_RETRY_AFTER_SECONDS));
+  return response;
 }
