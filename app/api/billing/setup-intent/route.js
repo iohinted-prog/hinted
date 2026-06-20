@@ -2,10 +2,22 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "../../../../lib/supabase/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  return new Stripe(secretKey);
+}
 
 export async function POST() {
   try {
+    const stripe = getStripe();
     const supabase = await createClient();
 
     const {
@@ -26,7 +38,7 @@ export async function POST() {
       return NextResponse.json({ error: profileError.message }, { status: 500 });
     }
 
-    let customerId = profile?.stripe_customer_id;
+    let customerId = profile?.stripe_customer_id || null;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -53,10 +65,14 @@ export async function POST() {
       customer: customerId,
       payment_method_types: ["card"],
       usage: "off_session",
+      metadata: {
+        supabase_user_id: user.id,
+      },
     });
 
     return NextResponse.json({
       clientSecret: setupIntent.client_secret,
+      customerId,
     });
   } catch (error) {
     return NextResponse.json(
