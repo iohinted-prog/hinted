@@ -2,6 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
@@ -12,14 +29,13 @@ const demoHints = [
     retailer: "airbnb.co.uk",
     priceLabel: "From £320",
     numericPrice: 320,
-    priceBand: "high",
-    image:
-      "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+    priceBand: "mid",
+    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     tags: ["Travel", "Big gift"],
     starred: true,
     private: false,
-    size: "tall",
+    size: "medium",
     url: "https://www.airbnb.co.uk/",
     position: 1,
   },
@@ -29,14 +45,13 @@ const demoHints = [
     retailer: "amazon.co.uk",
     priceLabel: "About £249",
     numericPrice: 249,
-    priceBand: "high",
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
+    priceBand: "mid",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
     tags: ["Tech", "Birthday"],
     starred: true,
     private: false,
-    size: "tall",
+    size: "medium",
     url: "https://www.amazon.co.uk/",
     position: 2,
   },
@@ -46,14 +61,13 @@ const demoHints = [
     retailer: "classbento.co.uk",
     priceLabel: "About £78",
     numericPrice: 78,
-    priceBand: "mid",
-    image:
-      "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
+    priceBand: "small",
+    image: "https://images.unsplash.com/photo-1516321497487-e288fb19713f?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#f3d5cc] via-[#e9b39f] to-[#d98c76]",
     tags: ["Experience", "Couples"],
     starred: false,
     private: false,
-    size: "portrait",
+    size: "small",
     url: "https://classbento.co.uk/",
     position: 3,
   },
@@ -64,13 +78,12 @@ const demoHints = [
     priceLabel: "About £45",
     numericPrice: 45,
     priceBand: "small",
-    image:
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
+    image: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
     tags: ["Home", "Under £50"],
     starred: false,
     private: true,
-    size: "square",
+    size: "small",
     url: "https://www.johnlewis.com/",
     position: 4,
   },
@@ -129,23 +142,15 @@ function extractNumericPrice(value) {
 }
 
 function getPriceBand(price) {
-  if (price == null) return "small";
-  if (price >= 180) return "high";
-  if (price >= 120) return "premium";
-  if (price >= 60) return "mid";
-  return "small";
+  if (price == null || price <= 100) return "small";
+  if (price < 1000) return "mid";
+  return "high";
 }
 
-function getSizeFromPrice(price, allPrices) {
-  if (price == null || allPrices.length < 3) return "portrait";
-
-  const sorted = [...allPrices].sort((a, b) => a - b);
-  const lowCut = sorted[Math.floor(sorted.length * 0.35)];
-  const highCut = sorted[Math.floor(sorted.length * 0.75)];
-
-  if (price >= highCut) return "tall";
-  if (price >= lowCut) return "portrait";
-  return "square";
+function getSizeFromPrice(price) {
+  if (price == null || price <= 100) return "small";
+  if (price < 1000) return "medium";
+  return "large";
 }
 
 function formatPriceLabel(price, rawPrice) {
@@ -167,15 +172,14 @@ function buildFallbackGradient(index) {
 }
 
 function getTileClass(size) {
-  if (size === "tall") return "md:col-span-3 md:row-span-9";
-  if (size === "portrait") return "md:col-span-3 md:row-span-7";
-  return "md:col-span-3 md:row-span-5";
+  if (size === "large") return "md:col-span-6 md:row-span-10";
+  if (size === "medium") return "md:col-span-4 md:row-span-8";
+  return "md:col-span-3 md:row-span-6";
 }
 
 function getPricePill(priceBand) {
   if (priceBand === "high") return "bg-[#2f3b2d] text-white";
-  if (priceBand === "premium") return "bg-[#fff1e9] text-[#df7c59]";
-  if (priceBand === "mid") return "bg-[#f3f0ff] text-[#7c61bf]";
+  if (priceBand === "mid") return "bg-[#fff1e9] text-[#df7c59]";
   return "bg-[#f1f5ec] text-[#627f53]";
 }
 
@@ -273,10 +277,10 @@ function shortenTitle(title = "", retailer = "") {
   if (foundCategory && brand.toLowerCase() !== foundCategory.toLowerCase()) {
     finalWords = [brand, foundCategory];
   } else {
-    finalWords = words.slice(0, Math.min(4, Math.max(2, words.length >= 2 ? 2 : 1)));
+    finalWords = words.slice(0, Math.min(2, words.length));
   }
 
-  const compact = finalWords.slice(0, 4).join(" ").trim();
+  const compact = finalWords.join(" ").trim();
   return compact.charAt(0).toUpperCase() + compact.slice(1);
 }
 
@@ -298,7 +302,7 @@ function EditHintModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(33,24,20,0.42)] px-4 py-8 backdrop-blur-sm">
-      <div className="w-full max-w-[560px] rounded-[30px] border border-[#ecdcd2] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
+      <div className="w-full max-w-[560px] rounded-[30px] bg-white p-6 shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:p-7">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#e08a67]">
@@ -312,7 +316,7 @@ function EditHintModal({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-[#ead9d0] text-slate-500 hover:bg-[#faf6f3]"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-slate-500 hover:bg-[#faf6f3]"
             aria-label="Close edit modal"
           >
             ✕
@@ -329,7 +333,7 @@ function EditHintModal({
               type="url"
               value={editForm.url}
               onChange={(e) => setEditForm((current) => ({ ...current, url: e.target.value }))}
-              className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
             />
           </div>
 
@@ -342,7 +346,7 @@ function EditHintModal({
               type="text"
               value={editForm.title}
               onChange={(e) => setEditForm((current) => ({ ...current, title: e.target.value }))}
-              className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-white px-5 text-[15px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              className="h-14 w-full rounded-[18px] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
             />
           </div>
 
@@ -350,10 +354,10 @@ function EditHintModal({
             <button
               type="button"
               onClick={onToggleStarred}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
                 hint.starred
-                  ? "border-[#f36f64] bg-[#fff2ea] text-[#e27956]"
-                  : "border-[#ead9d0] bg-white text-slate-700 hover:bg-[#faf6f3]"
+                  ? "bg-[#fff2ea] text-[#e27956]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
               }`}
             >
               <span>★</span>
@@ -363,10 +367,10 @@ function EditHintModal({
             <button
               type="button"
               onClick={onTogglePrivate}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold ${
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold ${
                 hint.private
-                  ? "border-[#e08a67] bg-[#fffaf7] text-[#e08a67]"
-                  : "border-[#ead9d0] bg-white text-slate-700 hover:bg-[#faf6f3]"
+                  ? "bg-[#fffaf7] text-[#e08a67]"
+                  : "bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]"
               }`}
             >
               <span>{hint.private ? "🔒" : "🔓"}</span>
@@ -379,7 +383,7 @@ function EditHintModal({
           <button
             type="button"
             onClick={onDelete}
-            className="inline-flex h-12 items-center justify-center rounded-full border border-[#f1d4c8] px-5 text-sm font-semibold text-[#d56949] hover:bg-[#fff4ef]"
+            className="inline-flex h-12 items-center justify-center rounded-full bg-[#fff4ef] px-5 text-sm font-semibold text-[#d56949] hover:bg-[#ffe9df]"
           >
             Delete hint
           </button>
@@ -389,7 +393,7 @@ function EditHintModal({
               type="button"
               onClick={onRefreshFromLink}
               disabled={isRefreshing}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-[#ead9d0] px-5 text-sm font-semibold text-slate-700 hover:bg-[#faf6f3] disabled:opacity-60"
+              className="inline-flex h-12 items-center justify-center rounded-full bg-[#f7f2ee] px-5 text-sm font-semibold text-slate-700 hover:bg-[#f1ebe6] disabled:opacity-60"
             >
               {isRefreshing ? "Refreshing..." : "Refresh from link"}
             </button>
@@ -409,22 +413,25 @@ function EditHintModal({
   );
 }
 
-function HintTile({
+function HintCard({
   hint,
   onEdit,
   onToggleStarred,
   onTogglePrivate,
+  isDragging,
+  dragHandleListeners,
+  dragHandleAttributes,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
   return (
     <article
-      className={`group relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)] ${getTileClass(hint.size)} ${
-        hint.private
-          ? "border-white/50 bg-white/55 shadow-[0_10px_28px_rgba(176,118,86,0.08)] backdrop-blur-sm"
-          : "border-[#f0dfd6] bg-white shadow-sm"
-      }`}
+      className={`group relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] bg-white transition-all duration-300 ${
+        isDragging
+          ? "scale-[1.02] shadow-[0_26px_70px_rgba(113,74,49,0.22)]"
+          : "shadow-[0_10px_30px_rgba(176,118,86,0.10)] hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(176,118,86,0.14)]"
+      } ${hint.private ? "bg-white/70 backdrop-blur-sm" : ""}`}
     >
       <div className="relative flex h-full flex-col">
         <div className="relative min-h-[62%] flex-1 overflow-hidden">
@@ -433,7 +440,7 @@ function HintTile({
               <img
                 src={hint.image}
                 alt={hint.title}
-                className={`absolute inset-0 h-full w-full object-cover ${hint.private ? "opacity-80" : ""}`}
+                className={`absolute inset-0 h-full w-full object-cover transition-transform duration-500 ${hint.private ? "opacity-80" : ""} ${isDragging ? "scale-[1.02]" : "group-hover:scale-[1.03]"}`}
                 loading="lazy"
                 referrerPolicy="no-referrer"
                 onError={() => setImageFailed(true)}
@@ -446,12 +453,15 @@ function HintTile({
 
           <div className="absolute left-4 right-4 top-4 flex items-start justify-between">
             <div className="flex flex-wrap items-center gap-2">
-              <div
-                className="flex items-center gap-1 rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
-                title="Board card"
+              <button
+                type="button"
+                className="flex cursor-grab active:cursor-grabbing items-center gap-1 rounded-full bg-white/78 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
+                title="Drag to reorder"
+                {...dragHandleAttributes}
+                {...dragHandleListeners}
               >
-                ✦ Hint
-              </div>
+                ⋮⋮ Drag
+              </button>
 
               {hint.starred && (
                 <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
@@ -470,7 +480,7 @@ function HintTile({
               <button
                 type="button"
                 onClick={() => onEdit(hint)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
+                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-[15px] text-slate-500 backdrop-blur-sm hover:text-slate-800"
                 aria-label="Edit hint"
               >
                 ✎
@@ -478,7 +488,7 @@ function HintTile({
 
               <button
                 onClick={() => onToggleStarred(hint)}
-                className={`flex h-10 w-10 items-center justify-center rounded-full border border-white/50 bg-white/72 text-[16px] backdrop-blur-sm ${
+                className={`flex h-10 w-10 items-center justify-center rounded-full bg-white/72 text-[16px] backdrop-blur-sm ${
                   hint.starred ? "text-[#f36f64]" : "text-slate-400 hover:text-[#f36f64]"
                 }`}
                 aria-label={hint.starred ? "Unhighlight hint" : "Highlight hint"}
@@ -526,7 +536,7 @@ function HintTile({
                 <button
                   type="button"
                   onClick={() => onTogglePrivate(hint)}
-                  className="rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
+                  className="rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
                 >
                   {hint.private ? "🔒 Private" : "🔓 Public"}
                 </button>
@@ -534,7 +544,7 @@ function HintTile({
                   href={hint.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="rounded-full border border-[#eadfd8] bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
+                  className="rounded-full bg-white px-3 py-1.5 text-[12px] font-medium text-slate-600 hover:bg-[#faf7f4]"
                 >
                   Open
                 </a>
@@ -544,6 +554,48 @@ function HintTile({
         </div>
       </div>
     </article>
+  );
+}
+
+function SortableHintTile({
+  hint,
+  onEdit,
+  onToggleStarred,
+  onTogglePrivate,
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: hint.id,
+    transition: {
+      duration: 220,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 2 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={getTileClass(hint.size)}>
+      <HintCard
+        hint={hint}
+        onEdit={onEdit}
+        onToggleStarred={onToggleStarred}
+        onTogglePrivate={onTogglePrivate}
+        isDragging={isDragging}
+        dragHandleAttributes={attributes}
+        dragHandleListeners={listeners}
+      />
+    </div>
   );
 }
 
@@ -558,10 +610,22 @@ export default function HintsClient() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeId, setActiveId] = useState(null);
 
   const numericPrices = useMemo(
     () => hints.map((hint) => hint.numericPrice).filter((value) => typeof value === "number"),
     [hints]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 6,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   useEffect(() => {
@@ -610,13 +674,13 @@ export default function HintsClient() {
           retailer: row.retailer || normaliseRetailer(row.url || ""),
           priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null),
           numericPrice: row.numeric_price,
-          priceBand: row.priceBand || getPriceBand(row.numeric_price),
+          priceBand: getPriceBand(row.numeric_price),
           image: row.image_url || "",
           fallbackGradient: buildFallbackGradient(index),
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size: row.size || "portrait",
+          size: getSizeFromPrice(row.numeric_price),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -627,6 +691,24 @@ export default function HintsClient() {
 
     loadHints();
   }, [currentUser]);
+
+  async function persistOrder(nextHints) {
+    if (!currentUser) return;
+
+    const supabase = createClient();
+
+    await Promise.all(
+      nextHints.map((hint, index) =>
+        supabase
+          .from("hints")
+          .update({
+            position: index,
+            size: hint.size,
+          })
+          .eq("id", hint.id)
+      )
+    );
+  }
 
   function openEditModal(hint) {
     setEditingHintId(hint.id);
@@ -778,6 +860,7 @@ export default function HintsClient() {
         typeof data.numericPrice === "number"
           ? data.numericPrice
           : extractNumericPrice(data.priceText);
+
       const refreshedTitle = shortenTitle(
         data.title || editForm.title || "",
         data.siteName || normaliseRetailer(trimmed)
@@ -794,6 +877,7 @@ export default function HintsClient() {
             priceLabel: formatPriceLabel(numericPrice, data.priceText),
             numericPrice,
             priceBand: getPriceBand(numericPrice),
+            size: getSizeFromPrice(numericPrice),
             image:
               typeof data.image === "string" && data.image.startsWith("http")
                 ? data.image
@@ -856,11 +940,6 @@ export default function HintsClient() {
           ? data.numericPrice
           : extractNumericPrice(data.priceText);
 
-      const size = getSizeFromPrice(
-        numericPrice,
-        [...numericPrices, ...(numericPrice != null ? [numericPrice] : [])]
-      );
-
       const retailer = data.siteName || normaliseRetailer(trimmed);
       const shortTitle = shortenTitle(data.title || "Saved hint", retailer);
 
@@ -884,7 +963,7 @@ export default function HintsClient() {
         tags: data.needsReview ? ["Review"] : [],
         starred: false,
         private: false,
-        size: size === "square" ? "portrait" : size,
+        size: getSizeFromPrice(numericPrice),
         url: data.url || normaliseInputUrl(trimmed),
         position: hints.length,
       };
@@ -924,9 +1003,38 @@ export default function HintsClient() {
     }
   }
 
+  function handleDragStart(event) {
+    setActiveId(event.active.id);
+  }
+
+  async function handleDragEnd(event) {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = hints.findIndex((hint) => hint.id === active.id);
+    const newIndex = hints.findIndex((hint) => hint.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const nextHints = arrayMove(hints, oldIndex, newIndex).map((hint, index) => ({
+      ...hint,
+      position: index,
+    }));
+
+    setHints(nextHints);
+    await persistOrder(nextHints);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+  }
+
   const hasRealHints = hints.length > 0;
   const visibleHints = hasRealHints ? hints : demoHints;
   const editingHint = visibleHints.find((h) => h.id === editingHintId) || null;
+  const activeHint = visibleHints.find((h) => h.id === activeId) || null;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -941,10 +1049,10 @@ export default function HintsClient() {
 
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
-              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
+              <Link href="/feed" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Feed</Link>
               <Link href="/hints" className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5">Hints</Link>
-              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
-              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
+              <Link href="/circles" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Circles</Link>
+              <Link href="/shop" className="inline-flex h-11 items-center justify-center rounded-full bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5">Shop</Link>
             </nav>
 
             <AvatarMenu />
@@ -957,10 +1065,6 @@ export default function HintsClient() {
           <h1 className="text-[32px] font-extrabold tracking-[-0.06em] text-[#f19a78] sm:text-[44px] md:text-[56px]">
             Paste a link here...
           </h1>
-
-          <p className="mx-auto mt-3 max-w-[620px] text-sm text-slate-500 sm:text-[15px]">
-            Save things you love, keep some private, and we can even remind you when it goes on sale.
-          </p>
 
           <div className="mt-6">
             <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
@@ -976,7 +1080,7 @@ export default function HintsClient() {
                   }
                 }}
                 placeholder="Paste a link here..."
-                className="h-[72px] w-full rounded-full border border-[#eadcd3] bg-white px-8 text-[16px] text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+                className="h-[72px] w-full rounded-full bg-white px-8 text-[16px] text-slate-700 outline-none ring-1 ring-[#eadcd3] focus:ring-2 focus:ring-[#f19a78]/50"
               />
               <button
                 type="button"
@@ -999,7 +1103,7 @@ export default function HintsClient() {
         </section>
 
         <section className="mt-12">
-          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-3 sm:p-5">
+          <div className="relative rounded-[36px] bg-[#fffdfb] p-3 sm:p-5">
             <div
               className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
               style={{
@@ -1017,8 +1121,8 @@ export default function HintsClient() {
                 {[1, 2, 3].map((i) => (
                   <div
                     key={i}
-                    className={`relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] border border-[#efdfd6] bg-[#f9f8f5] md:col-span-3 ${
-                      i === 1 ? "md:row-span-9" : i === 2 ? "md:row-span-7" : "md:row-span-5"
+                    className={`relative flex h-full min-h-[280px] flex-col overflow-hidden rounded-[30px] bg-[#f9f8f5] ${
+                      i === 1 ? "md:col-span-6 md:row-span-10" : i === 2 ? "md:col-span-4 md:row-span-8" : "md:col-span-3 md:row-span-6"
                     }`}
                   >
                     <div className="relative min-h-[62%] flex-1 overflow-hidden">
@@ -1027,16 +1131,62 @@ export default function HintsClient() {
                   </div>
                 ))}
               </div>
+            ) : hasRealHints ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <SortableContext
+                  items={hints.map((hint) => hint.id)}
+                  strategy={rectSortingStrategy}
+                >
+                  <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
+                    {hints.map((hint) => (
+                      <SortableHintTile
+                        key={hint.id}
+                        hint={hint}
+                        onEdit={openEditModal}
+                        onToggleStarred={toggleStarred}
+                        onTogglePrivate={togglePrivate}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+
+                <DragOverlay
+                  dropAnimation={{
+                    duration: 220,
+                    easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+                  }}
+                >
+                  {activeHint ? (
+                    <div className={`${getTileClass(activeHint.size)} w-[min(92vw,520px)]`}>
+                      <HintCard
+                        hint={activeHint}
+                        onEdit={() => {}}
+                        onToggleStarred={() => {}}
+                        onTogglePrivate={() => {}}
+                        isDragging
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
             ) : (
               <div className="relative grid auto-rows-[46px] grid-cols-1 gap-6 md:grid-cols-12">
-                {visibleHints.map((hint) => (
-                  <HintTile
-                    key={hint.id}
-                    hint={hint}
-                    onEdit={openEditModal}
-                    onToggleStarred={toggleStarred}
-                    onTogglePrivate={togglePrivate}
-                  />
+                {demoHints.map((hint) => (
+                  <div key={hint.id} className={getTileClass(hint.size)}>
+                    <HintCard
+                      hint={hint}
+                      onEdit={() => {}}
+                      onToggleStarred={() => {}}
+                      onTogglePrivate={() => {}}
+                      isDragging={false}
+                    />
+                  </div>
                 ))}
               </div>
             )}
