@@ -31,6 +31,7 @@ const BLOCK_WORDS = [
   "automated access",
   "enable cookies",
   "cloudflare",
+  "amazon captcha",
 ];
 
 const RETAILER_RULES = {
@@ -179,6 +180,26 @@ function hostname(url = "") {
   } catch {
     return "";
   }
+}
+
+function getCountryCodeForHost(host = "") {
+  const h = String(host).toLowerCase();
+
+  if (h.endsWith(".co.uk")) return "gb";
+  if (h.endsWith(".ie")) return "ie";
+  if (h.endsWith(".de")) return "de";
+  if (h.endsWith(".fr")) return "fr";
+  if (h.endsWith(".es")) return "es";
+  if (h.endsWith(".it")) return "it";
+  if (h.endsWith(".nl")) return "nl";
+  if (h.endsWith(".be")) return "be";
+  if (h.endsWith(".com.au")) return "au";
+  if (h.endsWith(".co.nz")) return "nz";
+  if (h.endsWith(".ca")) return "ca";
+  if (h.endsWith(".co.za")) return "za";
+  if (h.endsWith(".com")) return "us";
+
+  return "";
 }
 
 function getRule(host = "") {
@@ -384,9 +405,10 @@ function pickBestPrice({ domPrice, jsonLdPrice, metaPrice }, preferredCurrency =
     (c) => detectCurrency(c.value) === preferredCurrency
   );
   const pool = preferred.length ? preferred : candidates;
-  pool.sort((a, b) => b.priority - a.priority);
 
+  pool.sort((a, b) => b.priority - a.priority);
   const winner = pool[0];
+
   return { priceText: winner.value, currency: detectCurrency(winner.value) };
 }
 
@@ -406,6 +428,7 @@ function scoreImage(url = "", source = "") {
   if (source === "jsonld") score += 25;
   if (source === "og") score += 18;
   if (source === "dom") score += 5;
+
   return score;
 }
 
@@ -547,7 +570,7 @@ function detectBlockedPage({
   jsonLdTitle,
   jsonLdPrice,
 }) {
-  const blockedByStatus = status === 403 || status === 503;
+  const blockedByStatus = status === 403 || status === 429 || status === 500 || status === 503;
   const blockedByText =
     includesBlockedText(titleTag) ||
     includesBlockedText(h1) ||
@@ -573,9 +596,37 @@ function detectBlockedPage({
   return { blocked: false, blockReason: null, blockMessage: "" };
 }
 
+function scoreResult(result) {
+  if (!result) return -1;
+  if (result.blocked) return 0;
+
+  let score = 1;
+  if (result.title && result.title !== "Shared item") score += 2;
+  if (result.priceText) score += 3;
+  if (result.image) score += 2;
+  if (result.debug?.jsonLdTitle) score += 1;
+  if (result.debug?.jsonLdPrice) score += 1;
+  if (result.confidence === "high") score += 2;
+  if (result.confidence === "medium") score += 1;
+
+  return score;
+}
+
+function shouldRetryWithJs(result) {
+  if (!result) return true;
+  if (result.blocked) return false;
+  if (result.confidence === "high") return false;
+
+  const hasPrice = Boolean(result.priceText);
+  const hasImage = Boolean(result.image);
+  const hasTitle = Boolean(result.title && result.title !== "Shared item");
+
+  return !(hasTitle && hasPrice && hasImage);
+}
+
 async function fetchViaScrapingBee(inputUrl, options = {}) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), options.timeout || 20000);
+  const timer = setTimeout(() => controller.abort(), options.timeout || 25000);
 
   try {
     const apiKey = process.env.SCRAPINGBEE_API_KEY;
@@ -588,10 +639,23 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
     apiUrl.searchParams.set("forward_headers", "true");
     apiUrl.searchParams.set("render_js", options.renderJs ? "true" : "false");
 
-    if (options.renderJs) {
+    if (options.premiumProxy) {
+      apiUrl.searchParams.set("premium_proxy", "true");
+    }
+
+    if (options.stealthProxy) {
+      apiUrl.searchParams.set("stealth_proxy", "true");
+      apiUrl.searchParams.set("render_js", "true");
+    }
+
+    if (options.countryCode) {
+      apiUrl.searchParams.set("country_code", options.countryCode);
+    }
+
+    if (options.renderJs || options.stealthProxy) {
       apiUrl.searchParams.set("block_resources", "false");
-      apiUrl.searchParams.set("wait_browser", "networkidle0");
-      apiUrl.searchParams.set("wait", "1800");
+      apiUrl.searchParams.set("wait_browser", options.waitBrowser || "networkidle0");
+      apiUrl.searchParams.set("wait", String(options.wait || 2000));
     }
 
     const res = await fetch(apiUrl.toString(), {
@@ -621,10 +685,17 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
       finalUrl: inputUrl,
       provider: "scrapingbee",
       fetchProfile: {
-        render_js: Boolean(options.renderJs),
-        wait: options.renderJs ? 1800 : 0,
-        wait_browser: options.renderJs ? "networkidle0" : "",
-        block_resources: options.renderJs ? false : null,
+        render_js: Boolean(options.renderJs || options.stealthProxy),
+        premium_proxy: Boolean(options.premiumProxy),
+        stealth_proxy: Boolean(options.stealthProxy),
+        country_code: options.countryCode || null,
+        wait: options.renderJs || options.stealthProxy ? options.wait || 2000 : 0,
+        wait_browser:
+          options.renderJs || options.stealthProxy
+            ? options.waitBrowser || "networkidle0"
+            : "",
+        block_resources:
+          options.renderJs || options.stealthProxy ? false : null,
         forward_headers: true,
       },
     };
@@ -634,7 +705,14 @@ async function fetchViaScrapingBee(inputUrl, options = {}) {
   }
 }
 
-function parsePage({ html, finalUrl, status, provider, fetchProfile, preferredCurrency }) {
+function parsePage({
+  html,
+  finalUrl,
+  status,
+  provider,
+  fetchProfile,
+  preferredCurrency,
+}) {
   const $ = cheerio.load(html);
 
   let canonicalUrl =
@@ -766,72 +844,136 @@ function parsePage({ html, finalUrl, status, provider, fetchProfile, preferredCu
   };
 }
 
-function shouldRetryWithJs(result) {
-  if (result.blocked) return false;
-  if (result.confidence === "high") return false;
+async function tryFetchAndParse(inputUrl, preferredCurrency, options = {}) {
+  const fetched = await fetchViaScrapingBee(inputUrl, options);
 
-  const hasAnyUsefulSignal =
-    result?.debug?.jsonLdTitle ||
-    result?.debug?.jsonLdPrice ||
-    result?.priceText ||
-    result?.image ||
-    result?.title;
+  if (!fetched.contentType.includes("text/html")) {
+    return {
+      fatal: true,
+      error: "URL did not return an HTML page.",
+      fetched,
+    };
+  }
 
-  return !hasAnyUsefulSignal || result.confidence === "low";
+  if (!fetched.html.trim()) {
+    return {
+      fatal: true,
+      error: "Empty response from page.",
+      fetched,
+    };
+  }
+
+  const result = parsePage({
+    html: fetched.html,
+    finalUrl: fetched.finalUrl,
+    status: fetched.status,
+    provider: fetched.provider,
+    fetchProfile: fetched.fetchProfile,
+    preferredCurrency,
+  });
+
+  return { fatal: false, result, fetched };
 }
 
 async function scrapeUrl(inputUrl, preferredCurrency = "GBP") {
-  const firstFetch = await fetchViaScrapingBee(inputUrl, { renderJs: false });
+  const host = hostname(inputUrl);
+  const { key } = getRule(host);
+  const countryCode = getCountryCodeForHost(host);
 
-  if (!firstFetch.contentType.includes("text/html")) {
-    throw new Error("URL did not return an HTML page.");
+  const attempts = [
+    {
+      name: "standard",
+      options: {
+        renderJs: false,
+        countryCode: "",
+      },
+    },
+    {
+      name: "premium",
+      options: {
+        renderJs: false,
+        premiumProxy: true,
+        countryCode,
+      },
+    },
+    {
+      name: "js-premium",
+      options: {
+        renderJs: true,
+        premiumProxy: true,
+        countryCode,
+        wait: 2000,
+        waitBrowser: "networkidle0",
+      },
+    },
+  ];
+
+  if (key === "amazon") {
+    attempts.push({
+      name: "stealth",
+      options: {
+        stealthProxy: true,
+        countryCode: countryCode || "gb",
+        wait: 2500,
+        waitBrowser: "networkidle0",
+      },
+    });
   }
 
-  if (!firstFetch.html.trim()) {
-    throw new Error("Empty response from page.");
+  let bestResult = null;
+  const attemptsDebug = [];
+
+  for (const attempt of attempts) {
+    const outcome = await tryFetchAndParse(inputUrl, preferredCurrency, attempt.options);
+
+    if (outcome.fatal) {
+      attemptsDebug.push({
+        name: attempt.name,
+        fatal: true,
+        error: outcome.error,
+        fetchProfile: outcome.fetched?.fetchProfile || null,
+        status: outcome.fetched?.status || null,
+      });
+      continue;
+    }
+
+    const result = outcome.result;
+    attemptsDebug.push({
+      name: attempt.name,
+      fatal: false,
+      blocked: result.blocked,
+      confidence: result.confidence,
+      title: result.title,
+      priceText: result.priceText,
+      image: Boolean(result.image),
+      fetchProfile: result.debug?.fetchProfile || null,
+      status: result.debug?.status || null,
+      bodySnippet: result.debug?.bodySnippet?.slice(0, 120) || "",
+    });
+
+    if (!bestResult || scoreResult(result) > scoreResult(bestResult)) {
+      bestResult = result;
+    }
+
+    if (result.blocked) {
+      continue;
+    }
+
+    if (attempt.name === "standard" && shouldRetryWithJs(result)) {
+      continue;
+    }
+
+    if (result.confidence === "high") {
+      break;
+    }
   }
 
-  let firstPass = parsePage({
-    html: firstFetch.html,
-    finalUrl: firstFetch.finalUrl,
-    status: firstFetch.status,
-    provider: firstFetch.provider,
-    fetchProfile: firstFetch.fetchProfile,
-    preferredCurrency,
-  });
-
-  if (!shouldRetryWithJs(firstPass)) {
-    return firstPass;
+  if (!bestResult) {
+    throw new Error("Could not fetch usable HTML.");
   }
 
-  const secondFetch = await fetchViaScrapingBee(inputUrl, { renderJs: true });
-
-  if (!secondFetch.contentType.includes("text/html") || !secondFetch.html.trim()) {
-    return firstPass;
-  }
-
-  const secondPass = parsePage({
-    html: secondFetch.html,
-    finalUrl: secondFetch.finalUrl,
-    status: secondFetch.status,
-    provider: secondFetch.provider,
-    fetchProfile: secondFetch.fetchProfile,
-    preferredCurrency,
-  });
-
-  const secondScore =
-    (secondPass.blocked ? 0 : 1) +
-    (secondPass.title ? 1 : 0) +
-    (secondPass.priceText ? 1 : 0) +
-    (secondPass.image ? 1 : 0);
-
-  const firstScore =
-    (firstPass.blocked ? 0 : 1) +
-    (firstPass.title ? 1 : 0) +
-    (firstPass.priceText ? 1 : 0) +
-    (firstPass.image ? 1 : 0);
-
-  return secondScore >= firstScore ? secondPass : firstPass;
+  bestResult.debug.attempts = attemptsDebug;
+  return bestResult;
 }
 
 export async function POST(request) {
