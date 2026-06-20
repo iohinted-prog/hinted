@@ -274,9 +274,15 @@ function getRelativePriceSize(price, allPrices = []) {
 }
 
 function getTileHeightClass(size) {
-  if (size === "large") return "min-h-[500px]";
-  if (size === "medium") return "min-h-[410px]";
-  return "min-h-[330px]";
+  if (size === "large") return "min-h-[520px]";
+  if (size === "medium") return "min-h-[430px]";
+  return "min-h-[340px]";
+}
+
+function getBoardSpanClass(size) {
+  if (size === "large") return "md:col-span-6 xl:col-span-5";
+  if (size === "medium") return "md:col-span-6 xl:col-span-4";
+  return "md:col-span-6 xl:col-span-3";
 }
 
 function getPricePill(priceBand) {
@@ -295,10 +301,6 @@ function HintComposerModal({
   isSaving,
 }) {
   const [imageFailed, setImageFailed] = useState(false);
-
-  useEffect(() => {
-    setImageFailed(false);
-  }, [draft.image, isOpen]);
 
   if (!isOpen) return null;
 
@@ -573,6 +575,9 @@ function EditHintModal({
 function HintCard({
   hint,
   dragging = false,
+  dragHandleRef,
+  dragHandleListeners,
+  dragHandleAttributes,
   onEdit,
   onToggleStarred,
   onTogglePrivate,
@@ -580,13 +585,9 @@ function HintCard({
   const [imageFailed, setImageFailed] = useState(false);
   const showImage = Boolean(hint.image) && !imageFailed;
 
-  useEffect(() => {
-    setImageFailed(false);
-  }, [hint.image]);
-
   return (
     <article
-      className={`group relative flex h-full flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
+      className={`group relative flex h-full w-full flex-col overflow-hidden rounded-[32px] border transition-all duration-300 ${
         dragging
           ? "rotate-[1.2deg] border-[#f0cdbf] bg-white shadow-[0_30px_80px_rgba(115,70,45,0.22)]"
           : hint.private
@@ -594,37 +595,44 @@ function HintCard({
           : "border-[#f0dfd6] bg-white shadow-[0_8px_24px_rgba(176,118,86,0.08)] hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(176,118,86,0.14)]"
       } ${getTileHeightClass(hint.size)}`}
     >
-      <div className="relative h-full overflow-hidden">
+      <div className="relative h-full min-h-full overflow-hidden bg-[#ead8ca]">
         {showImage ? (
           <>
             <img
               src={hint.image}
               alt={hint.title}
-              className={`absolute inset-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
+              className={`absolute inset-0 z-0 h-full w-full object-cover transition duration-500 group-hover:scale-[1.03] ${
                 hint.private ? "opacity-82" : ""
               }`}
               loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => setImageFailed(true)}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.24)] to-[rgba(255,255,255,0.02)]" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.82)] via-[rgba(22,18,16,0.24)] to-[rgba(255,255,255,0.02)]" />
           </>
         ) : (
           <>
             <div
-              className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
+              className={`absolute inset-0 z-0 bg-gradient-to-br ${hint.fallbackGradient} ${
                 hint.private ? "opacity-82" : ""
               }`}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
+            <div className="absolute inset-0 z-10 bg-gradient-to-t from-[rgba(22,18,16,0.62)] via-[rgba(22,18,16,0.16)] to-transparent" />
           </>
         )}
 
         <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <div className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm">
+            <button
+              ref={dragHandleRef}
+              type="button"
+              {...dragHandleAttributes}
+              {...dragHandleListeners}
+              className="cursor-grab active:cursor-grabbing rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-sm"
+              aria-label="Drag to reorder"
+            >
               ⋮⋮ Drag
-            </div>
+            </button>
 
             {hint.starred && (
               <div className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
@@ -684,7 +692,7 @@ function HintCard({
               {hint.priceLabel}
             </span>
 
-            {(hint.tags || []).map((tag) => (
+            {hint.tags.map((tag) => (
               <span
                 key={tag}
                 className="rounded-full bg-white/14 px-2.5 py-1 text-[11px] font-medium text-white/88 backdrop-blur-sm"
@@ -727,8 +735,8 @@ function HintCard({
               href={hint.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="relative z-30 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm hover:bg-white/18"
               onClick={(e) => e.stopPropagation()}
+              className="relative z-30 rounded-full border border-white/20 bg-white/12 px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-sm hover:bg-white/18"
             >
               Open
             </a>
@@ -749,6 +757,7 @@ function SortableHintTile({
     attributes,
     listeners,
     setNodeRef,
+    setActivatorNodeRef,
     transform,
     transition,
     isDragging,
@@ -760,10 +769,17 @@ function SortableHintTile({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="touch-none" {...attributes} {...listeners}>
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`${getBoardSpanClass(hint.size)} touch-none`}
+    >
       <HintCard
         hint={hint}
         dragging={isDragging}
+        dragHandleRef={setActivatorNodeRef}
+        dragHandleListeners={listeners}
+        dragHandleAttributes={attributes}
         onEdit={onEdit}
         onToggleStarred={onToggleStarred}
         onTogglePrivate={onTogglePrivate}
@@ -795,6 +811,7 @@ export default function HintsPage() {
     numericPrice: null,
     private: false,
   });
+
   const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const hasRealHints = hints.length > 0;
@@ -839,7 +856,6 @@ export default function HintsPage() {
 
     async function loadHints() {
       setIsLoading(true);
-      setError("");
 
       const { data, error } = await supabase
         .from("hints")
@@ -873,10 +889,7 @@ export default function HintsPage() {
           tags: [],
           starred: Boolean(row.starred),
           private: Boolean(row.is_private),
-          size:
-            row.size && ["small", "medium", "large"].includes(row.size)
-              ? row.size
-              : getRelativePriceSize(row.numeric_price, prices),
+          size: row.size || getRelativePriceSize(row.numeric_price, prices),
           url: row.url || "",
           position: row.position ?? index,
         }))
@@ -895,13 +908,7 @@ export default function HintsPage() {
 
     await Promise.all(
       updatedHints.map((hint, idx) =>
-        supabase
-          .from("hints")
-          .update({
-            position: idx,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", hint.id)
+        supabase.from("hints").update({ position: idx }).eq("id", hint.id)
       )
     );
   }
@@ -934,10 +941,9 @@ export default function HintsPage() {
     const { error } = await supabase
       .from("hints")
       .update({
-        title: trimmedTitle || "Saved hint",
+        title: trimmedTitle,
         url: trimmedUrl,
         retailer: trimmedUrl ? normaliseRetailer(trimmedUrl) : null,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", editingHintId);
 
@@ -991,10 +997,7 @@ export default function HintsPage() {
 
     const { error } = await supabase
       .from("hints")
-      .update({
-        starred: newStarred,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ starred: newStarred })
       .eq("id", hint.id);
 
     if (error) {
@@ -1017,10 +1020,7 @@ export default function HintsPage() {
 
     const { error } = await supabase
       .from("hints")
-      .update({
-        is_private: newPrivate,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ is_private: newPrivate })
       .eq("id", hint.id);
 
     if (error) {
@@ -1063,31 +1063,6 @@ export default function HintsPage() {
         ...(numericPrice != null ? [numericPrice] : []),
       ];
 
-      const nextSize = getRelativePriceSize(numericPrice, nextPrices);
-
-      const supabase = createClient();
-
-      const { error } = await supabase
-        .from("hints")
-        .update({
-          title: refreshedTitle,
-          url: data.url || trimmed,
-          retailer: data.siteName || normaliseRetailer(trimmed),
-          image_url:
-            typeof data.image === "string" && data.image.startsWith("http")
-              ? data.image
-              : null,
-          price_text: formatPriceLabel(numericPrice, data.priceText),
-          numeric_price: numericPrice,
-          size: nextSize,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", editingHintId);
-
-      if (error) {
-        throw new Error(error.message || "Could not refresh this link.");
-      }
-
       setHints((current) =>
         current.map((hint) => {
           if (hint.id !== editingHintId) return hint;
@@ -1104,7 +1079,7 @@ export default function HintsPage() {
                 ? data.image
                 : hint.image,
             url: data.url || trimmed,
-            size: nextSize,
+            size: getRelativePriceSize(numericPrice, nextPrices),
           };
         })
       );
@@ -1225,7 +1200,6 @@ export default function HintsPage() {
         is_private: newHint.private,
         position: 0,
         size: newHint.size,
-        updated_at: new Date().toISOString(),
         source: "user",
       });
 
@@ -1272,7 +1246,7 @@ export default function HintsPage() {
   return (
     <main className="min-h-screen bg-[#fff8f4] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fff8f4]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+        <div className="mx-auto flex max-w-[1480px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
@@ -1313,9 +1287,9 @@ export default function HintsPage() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1380px] px-5 py-10 md:px-8">
-        <section className="text-center">
-          <h1 className="text-[32px] font-extrabold tracking-[-0.06em] text-[#f19a78] sm:text-[44px] md:text-[56px]">
+      <div className="mx-auto max-w-[1480px] px-5 py-10 md:px-8 md:py-12">
+        <section className="mx-auto max-w-[920px] text-center">
+          <h1 className="text-[38px] font-extrabold tracking-[-0.07em] text-[#f19a78] sm:text-[48px] md:text-[58px]">
             Paste a link here...
           </h1>
 
@@ -1323,8 +1297,8 @@ export default function HintsPage() {
             Save things you’d genuinely love, keep some private, and we can even remind you when it goes on sale.
           </p>
 
-          <div className="mt-6">
-            <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
+          <div className="mt-7">
+            <div className="mx-auto flex w-full max-w-[860px] flex-col gap-3 sm:flex-row">
               <input
                 id="hint-link"
                 type="url"
@@ -1359,31 +1333,35 @@ export default function HintsPage() {
           </div>
         </section>
 
-        <section className="mt-12">
-          <div className="relative rounded-[36px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-5">
+        <section className="mt-14">
+          <div className="relative overflow-hidden rounded-[40px] border border-[#efdfd6] bg-[#fffdfb] p-4 sm:p-6 md:p-7">
             <div
-              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
+              className="pointer-events-none absolute inset-0 opacity-90"
               style={{
                 backgroundImage: `
-                  linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px),
-                  linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)
+                  linear-gradient(to right, rgba(217, 196, 184, 0.42) 1px, transparent 1px),
+                  linear-gradient(to bottom, rgba(217, 196, 184, 0.42) 1px, transparent 1px)
                 `,
-                backgroundSize: "76px 76px",
+                backgroundSize: "88px 88px",
                 backgroundPosition: "center center",
               }}
             />
 
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.88),transparent_44%)]" />
+
             {isLoading ? (
-              <div className="relative columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
+              <div className="relative grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-12">
                 {[1, 2, 3, 4].map((i) => (
                   <div
                     key={i}
-                    className={`mb-6 break-inside-avoid overflow-hidden rounded-[32px] border border-[#efdfd6] bg-[#f9f8f5] ${
-                      i === 1 ? "min-h-[500px]" : i === 2 ? "min-h-[410px]" : "min-h-[330px]"
+                    className={`rounded-[32px] bg-[#f4eee8] ${
+                      i === 1
+                        ? "min-h-[520px] xl:col-span-5"
+                        : i === 2
+                        ? "min-h-[430px] xl:col-span-4"
+                        : "min-h-[340px] xl:col-span-3"
                     }`}
-                  >
-                    <div className="skeleton h-full w-full" />
-                  </div>
+                  />
                 ))}
               </div>
             ) : (
@@ -1397,24 +1375,26 @@ export default function HintsPage() {
                   items={visibleHints.map((hint) => hint.id)}
                   strategy={rectSortingStrategy}
                 >
-                  <div className="relative columns-1 gap-6 sm:columns-2 lg:columns-3 xl:columns-4">
+                  <div className="relative grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-12">
                     {visibleHints.map((hint) => (
-                      <div key={hint.id} className="mb-6 break-inside-avoid">
-                        <SortableHintTile
-                          hint={hint}
-                          onEdit={openEditModal}
-                          onToggleStarred={toggleStarred}
-                          onTogglePrivate={togglePrivate}
-                        />
-                      </div>
+                      <SortableHintTile
+                        key={hint.id}
+                        hint={hint}
+                        onEdit={openEditModal}
+                        onToggleStarred={toggleStarred}
+                        onTogglePrivate={togglePrivate}
+                      />
                     ))}
                   </div>
                 </SortableContext>
 
-                <DragOverlay dropAnimation={{ duration: 220, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }}>
+                <DragOverlay>
                   {activeHint ? (
-                    <div className="w-[min(92vw,360px)]">
-                      <HintCard hint={activeHint} dragging />
+                    <div className="w-[min(92vw,420px)]">
+                      <HintCard
+                        hint={activeHint}
+                        dragging
+                      />
                     </div>
                   ) : null}
                 </DragOverlay>
@@ -1442,16 +1422,16 @@ export default function HintsPage() {
         onRefreshFromLink={refreshHintFromLink}
         onDelete={deleteHint}
         onTogglePrivate={() => {
-          const hint = hints.find((h) => h.id === editingHintId);
+          const hint = visibleHints.find((h) => h.id === editingHintId);
           if (hint) togglePrivate(hint);
         }}
         onToggleStarred={() => {
-          const hint = hints.find((h) => h.id === editingHintId);
+          const hint = visibleHints.find((h) => h.id === editingHintId);
           if (hint) toggleStarred(hint);
         }}
         isRefreshing={isRefreshingEdit}
         isSaving={isSavingEdit}
-        hint={hints.find((h) => h.id === editingHintId)}
+        hint={visibleHints.find((h) => h.id === editingHintId)}
       />
     </main>
   );
