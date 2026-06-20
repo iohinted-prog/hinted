@@ -147,13 +147,13 @@ function extractTitle($, canonicalUrl) {
   const hostname = getHostnameLabel(canonicalUrl);
 
   let title =
-    getText($, ["#productTitle", "h1"]) ||
     getMeta($, [
       'meta[property="og:title"]',
       'meta[name="og:title"]',
       'meta[name="twitter:title"]',
       'meta[name="title"]',
     ]) ||
+    getText($, ["h1"]) ||
     getText($, ["title"]) ||
     hostname;
 
@@ -177,6 +177,7 @@ function extractDescription($) {
       "#bookDescription_feature_div",
       "#productDescription",
       "main p",
+      "article p",
     ]) ||
     ""
   );
@@ -211,7 +212,9 @@ function normalisePriceNumber(value = "") {
   const cleaned = String(value).replace(/,/g, "").trim();
   const parsed = Number(cleaned);
   if (!Number.isFinite(parsed) || parsed <= 0) return "";
-  return parsed % 1 === 0 ? String(parsed) : parsed.toFixed(2).replace(/\.00$/, "");
+  return parsed % 1 === 0
+    ? String(parsed)
+    : parsed.toFixed(2).replace(/\.00$/, "");
 }
 
 function formatPrice(value = "", currency = "") {
@@ -379,7 +382,10 @@ function pickPriceFromOffer(offer) {
       return formatPrice(spec.price, spec.priceCurrency || offer.priceCurrency);
     }
     if (spec.minPrice) {
-      return formatPrice(spec.minPrice, spec.priceCurrency || offer.priceCurrency);
+      return formatPrice(
+        spec.minPrice,
+        spec.priceCurrency || offer.priceCurrency
+      );
     }
   }
 
@@ -489,408 +495,84 @@ function extractJsonLdProductData($, baseUrl = "") {
   return best;
 }
 
-function extractAmazonPrice($) {
-  const selectors = [
-    "#corePrice_feature_div .a-price .a-offscreen",
-    "#corePriceDisplay_desktop_feature_div .a-price .a-offscreen",
-    "#apex_desktop .a-price .a-offscreen",
-    ".priceToPay .a-offscreen",
-    "#price_inside_buybox",
-    "#newAccordionRow_1 .a-price .a-offscreen",
-    ".a-price .a-offscreen",
-  ];
+function scorePriceCandidate(text = "", context = "") {
+  let score = 0;
+  const combined = `${text} ${context}`.toLowerCase();
 
-  for (const selector of selectors) {
-    const text = cleanText($(selector).first().text());
-    if (text) return text;
+  if (!text) return -100;
+
+  if (/£\s?\d|€\s?\d|\$\s?\d|a\$\s?\d|nz\$\s?\d|c\$\s?\d|\br\s?\d/i.test(text)) score += 40;
+  if (/sale|now|price|our price|current price|buy|add to basket|add to bag|add to cart/i.test(combined)) score += 18;
+  if (/delivery|returns|warranty|support plan|installation|recycling/i.test(combined)) score -= 10;
+  if (/finance|monthly|per month|apr|credit/.test(combined)) score -= 8;
+  if (/was|save|rrp/.test(combined)) score -= 4;
+  if (/item no|product code|sku|model/.test(combined)) score -= 6;
+
+  const numeric = extractNumericPrice(text);
+  if (numeric != null) {
+    if (numeric >= 1 && numeric <= 25000) score += 12;
+    if (numeric < 1) score -= 20;
   }
 
-  const whole = cleanText($(".a-price .a-price-whole").first().text());
-  const fraction = cleanText($(".a-price .a-price-fraction").first().text());
-  if (whole) {
-    return `£${whole}${fraction ? `.${fraction}` : ""}`.replace(/\.00$/, "");
-  }
-
-  return "";
+  return score;
 }
 
 function extractGenericTextPrice($) {
-  const textCandidates = [
-    getText($, ["[data-testid='price']"]),
-    getText($, ["[itemprop='price']"]),
-    getText($, [".price"]),
-    getText($, [".product-price"]),
-    getText($, ["main"]),
-    getText($, ["body"]),
-  ].filter(Boolean);
+  const candidates = [];
+  const seen = new Set();
 
-  const patterns = [
-    /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?/,
-    /\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/i,
+  const addCandidate = (value = "", context = "") => {
+    const cleanedValue = cleanText(value);
+    if (!cleanedValue) return;
+
+    const match = cleanedValue.match(/(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?/i);
+    if (!match?.[0]) return;
+
+    const priceText = match[0].trim();
+    const key = `${priceText}__${context}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    candidates.push({
+      value: priceText,
+      score: scorePriceCandidate(priceText, context),
+      context: cleanText(context).slice(0, 180),
+      source: "generic-text",
+    });
+  };
+
+  const selectors = [
+    "[itemprop='price']",
+    "[data-price]",
+    "[data-testid*='price']",
+    "[class*='price']",
+    "[id*='price']",
+    "[aria-label*='price']",
+    "h1",
+    "main",
+    "article",
+    "section",
+    "body",
   ];
 
-  for (const text of textCandidates) {
-    for (const pattern of patterns) {
-      const match = String(text).match(pattern);
-      if (match && match[0]) return match[0].replace(",", "");
-    }
-  }
-
-  return "";
-}
-
-async function fetchPriceWithPlaywright(inputUrl, hostname) {
-  let browser;
-
-  try {
-    const playwright = await import("playwright-core");
-
-    try {
-      const chromiumModule = await import("@sparticuz/chromium");
-      const chromium = chromiumModule.default || chromiumModule;
-
-      browser = await playwright.chromium.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: true,
-      });
-    } catch {
-      browser = await playwright.chromium.launch({
-        headless: true,
-      });
-    }
-
-    const page = await browser.newPage({
-      locale: "en-GB",
-      userAgent:
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-      viewport: { width: 1440, height: 1400 },
-    });
-
-    await page.setExtraHTTPHeaders({
-      "Accept-Language": "en-GB,en;q=0.9,en-US;q=0.8",
-      DNT: "1",
-    });
-
-    await page.route("**/*", (route) => {
-      const type = route.request().resourceType();
-      if (["image", "stylesheet", "font", "media"].includes(type)) {
-        route.abort();
-      } else {
-        route.continue();
-      }
-    });
-
-    await page.goto(inputUrl, {
-      waitUntil: "domcontentloaded",
-      timeout: 25000,
-    });
-
-    await page.waitForLoadState("networkidle", { timeout: 8000 }).catch(() => {});
-    await page.waitForTimeout(1200).catch(() => {});
-
-    const selectorsByRetailer = {
-      amazon: [
-        "#corePrice_feature_div .a-price .a-offscreen",
-        "#corePriceDisplay_desktop_feature_div .a-price .a-offscreen",
-        ".priceToPay .a-offscreen",
-        "#price_inside_buybox",
-        ".a-price .a-offscreen",
-      ],
-      johnlewis: [
-        '[data-testid="price"]',
-        '[itemprop="price"]',
-        'meta[property="product:price:amount"]',
-        '[class*="price"]',
-        ".price",
-      ],
-      argos: [
-        '[data-testid="price"]',
-        '[itemprop="price"]',
-        '[class*="price"]',
-        ".price",
-        ".product-price",
-      ],
-      currys: [
-        '[data-testid="price"]',
-        '[itemprop="price"]',
-        '[class*="price"]',
-        ".price",
-        ".product-price",
-      ],
-      generic: [
-        '[data-testid="price"]',
-        '[itemprop="price"]',
-        '[class*="price"]',
-        ".price",
-        ".product-price",
-      ],
-    };
-
-    const retailerKey = hostname.includes("amazon.")
-      ? "amazon"
-      : hostname.includes("johnlewis")
-      ? "johnlewis"
-      : hostname.includes("argos")
-      ? "argos"
-      : hostname.includes("currys")
-      ? "currys"
-      : "generic";
-
-    const selectors = selectorsByRetailer[retailerKey] || selectorsByRetailer.generic;
-    const priceRegex =
-      /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?|\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/i;
-
-    const cleanCandidate = (value = "") => {
-      const text = cleanText(String(value || ""));
-      if (!text) return "";
-      const match = text.match(priceRegex);
-      return match ? match[0].trim() : "";
-    };
-
-    for (const selector of selectors) {
-      try {
-        const handle = await page.waitForSelector(selector, {
-          timeout: 2500,
-          state: "attached",
-        });
-
-        if (!handle) continue;
-
-        const candidate = await page.evaluate((el, sel) => {
-          if (!el) return "";
-
-          if (sel.startsWith("meta[")) {
-            return el.getAttribute("content") || "";
-          }
-
-          if (el.getAttribute("content")) return el.getAttribute("content") || "";
-          if (el.getAttribute("value")) return el.getAttribute("value") || "";
-
-          return el.textContent || el.innerText || "";
-        }, handle, selector);
-
-        const cleaned = cleanCandidate(candidate);
-        if (cleaned) {
-          await browser.close();
-          return cleaned;
-        }
-      } catch {}
-    }
-
-    const jsonLdPrice = await page.evaluate(() => {
-      const scripts = Array.from(
-        document.querySelectorAll('script[type="application/ld+json"]')
+  for (const selector of selectors) {
+    $(selector).each((_, el) => {
+      const text = cleanText($(el).text());
+      const context = cleanText(
+        [
+          $(el).attr("aria-label") || "",
+          $(el).attr("data-testid") || "",
+          $(el).attr("class") || "",
+          $(el).closest("section, article, div").first().text() || "",
+        ].join(" ")
       );
 
-      const symbols = {
-        GBP: "£",
-        USD: "$",
-        EUR: "€",
-        AUD: "A$",
-        NZD: "NZ$",
-        CAD: "C$",
-        ZAR: "R",
-      };
-
-      const formatPrice = (price, currency) => {
-        if (price == null || price === "") return "";
-        const amount = String(price).trim();
-        const code = String(currency || "").toUpperCase();
-        const symbol = symbols[code] || "";
-        return symbol ? `${symbol}${amount}` : amount;
-      };
-
-      const visit = (node) => {
-        if (!node) return "";
-        if (Array.isArray(node)) {
-          for (const item of node) {
-            const found = visit(item);
-            if (found) return found;
-          }
-          return "";
-        }
-        if (typeof node !== "object") return "";
-
-        if (node.offers) {
-          const offers = Array.isArray(node.offers) ? node.offers : [node.offers];
-          for (const offer of offers) {
-            if (offer?.price) return formatPrice(offer.price, offer.priceCurrency);
-            if (offer?.priceSpecification?.price) {
-              return formatPrice(
-                offer.priceSpecification.price,
-                offer.priceSpecification.priceCurrency || offer.priceCurrency
-              );
-            }
-            if (offer?.lowPrice) return formatPrice(offer.lowPrice, offer.priceCurrency);
-          }
-        }
-
-        if (node.price) return formatPrice(node.price, node.priceCurrency);
-        if (node["@graph"]) {
-          const found = visit(node["@graph"]);
-          if (found) return found;
-        }
-
-        for (const value of Object.values(node)) {
-          if (value && typeof value === "object") {
-            const found = visit(value);
-            if (found) return found;
-          }
-        }
-
-        return "";
-      };
-
-      for (const script of scripts) {
-        try {
-          const raw = script.textContent || "";
-          if (!raw.trim()) continue;
-          const parsed = JSON.parse(raw);
-          const found = visit(parsed);
-          if (found) return found;
-        } catch {}
-      }
-
-      return "";
+      addCandidate(text, context);
     });
-
-    if (jsonLdPrice) {
-      const cleaned = cleanCandidate(jsonLdPrice);
-      if (cleaned) {
-        await browser.close();
-        return cleaned;
-      }
-    }
-
-    const metaPrice = await page.evaluate(() => {
-      const selectors = [
-        'meta[property="product:price:amount"]',
-        'meta[name="product:price:amount"]',
-        'meta[property="og:price:amount"]',
-        'meta[name="og:price:amount"]',
-        'meta[property="twitter:data1"]',
-        'meta[name="twitter:data1"]',
-      ];
-
-      const currencySelectors = [
-        'meta[property="product:price:currency"]',
-        'meta[name="product:price:currency"]',
-        'meta[property="og:price:currency"]',
-        'meta[name="og:price:currency"]',
-      ];
-
-      const price = selectors
-        .map((selector) => document.querySelector(selector)?.getAttribute("content") || "")
-        .find(Boolean);
-
-      const currency = currencySelectors
-        .map((selector) => document.querySelector(selector)?.getAttribute("content") || "")
-        .find(Boolean);
-
-      if (!price) return "";
-
-      const symbols = {
-        GBP: "£",
-        USD: "$",
-        EUR: "€",
-        AUD: "A$",
-        NZD: "NZ$",
-        CAD: "C$",
-        ZAR: "R",
-      };
-
-      const symbol = symbols[String(currency || "").toUpperCase()] || "";
-      return symbol ? `${symbol}${price}` : String(price);
-    });
-
-    if (metaPrice) {
-      const cleaned = cleanCandidate(metaPrice);
-      if (cleaned) {
-        await browser.close();
-        return cleaned;
-      }
-    }
-
-    const bodyPrice = await page.evaluate(() => {
-      const text = document.body?.innerText || document.body?.textContent || "";
-      const patterns = [
-        /(?:A\$|NZ\$|C\$|£|\$|€|R)\s?\d[\d,]*(?:\.\d{1,2})?/i,
-        /\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD|ZAR)/i,
-      ];
-
-      for (const pattern of patterns) {
-        const match = text.match(pattern);
-        if (match?.[0]) return match[0];
-      }
-
-      return "";
-    });
-
-    if (bodyPrice) {
-      const cleaned = cleanCandidate(bodyPrice);
-      if (cleaned) {
-        await browser.close();
-        return cleaned;
-      }
-    }
-
-    await browser.close();
-    return "";
-  } catch {
-    if (browser) {
-      try {
-        await browser.close();
-      } catch {}
-    }
-    return "";
-  }
-}
-
-function choosePrice({
-  preferredCurrency,
-  amazonPrice,
-  jsonLdPrice,
-  metaPrice,
-  textPrice,
-  playwrightPrice,
-}) {
-  const candidates = [
-    { value: amazonPrice, source: "amazon" },
-    { value: jsonLdPrice, source: "jsonld" },
-    { value: metaPrice, source: "meta" },
-    { value: textPrice, source: "text" },
-    { value: playwrightPrice, source: "playwright" },
-  ]
-    .filter((item) => item.value)
-    .map((item) => ({
-      ...item,
-      currency: detectCurrency(item.value),
-    }));
-
-  if (!candidates.length) {
-    return {
-      priceText: "",
-      detectedCurrency: null,
-      matchedPreferredCurrency: false,
-      source: "none",
-      candidates: [],
-    };
   }
 
-  const preferredMatch = preferredCurrency
-    ? candidates.find((item) => item.currency === preferredCurrency)
-    : null;
-
-  const winner = preferredMatch || candidates[0];
-
-  return {
-    priceText: winner.value,
-    detectedCurrency: winner.currency,
-    matchedPreferredCurrency: Boolean(preferredMatch),
-    source: winner.source,
-    candidates,
-  };
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0]?.value || "";
 }
 
 function improveAmazonImage(url = "") {
@@ -960,8 +642,6 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
   jsonLdImages.forEach((url) => addCandidate(url, "jsonld"));
 
   [
-    getAttr($, ["#landingImage", "#imgBlkFront", "#ebooksImgBlkFront"], "src"),
-    getAttr($, ["#landingImage", "#imgBlkFront", "#ebooksImgBlkFront"], "data-old-hires"),
     getMeta($, [
       'meta[property="og:image"]',
       'meta[property="og:image:url"]',
@@ -970,6 +650,8 @@ function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
       'meta[name="twitter:image:src"]',
     ]),
     getAttr($, ['link[rel="image_src"]'], "href"),
+    getAttr($, ["#landingImage", "#imgBlkFront", "#ebooksImgBlkFront"], "src"),
+    getAttr($, ["#landingImage", "#imgBlkFront", "#ebooksImgBlkFront"], "data-old-hires"),
   ]
     .filter(Boolean)
     .forEach((url) => addCandidate(url, "og"));
@@ -1013,6 +695,48 @@ function extractSiteName($, canonicalUrl) {
       'meta[name="application-name"]',
     ]) || getHostnameLabel(canonicalUrl)
   );
+}
+
+function choosePrice({
+  preferredCurrency,
+  jsonLdPrice,
+  metaPrice,
+  textPrice,
+}) {
+  const candidates = [
+    { value: jsonLdPrice, source: "jsonld" },
+    { value: metaPrice, source: "meta" },
+    { value: textPrice, source: "text" },
+  ]
+    .filter((item) => item.value)
+    .map((item) => ({
+      ...item,
+      currency: detectCurrency(item.value),
+    }));
+
+  if (!candidates.length) {
+    return {
+      priceText: "",
+      detectedCurrency: null,
+      matchedPreferredCurrency: false,
+      source: "none",
+      candidates: [],
+    };
+  }
+
+  const preferredMatch = preferredCurrency
+    ? candidates.find((item) => item.currency === preferredCurrency)
+    : null;
+
+  const winner = preferredMatch || candidates[0];
+
+  return {
+    priceText: winner.value,
+    detectedCurrency: winner.currency,
+    matchedPreferredCurrency: Boolean(preferredMatch),
+    source: winner.source,
+    candidates,
+  };
 }
 
 function buildFallbackPreview(url, reason = "preview_unavailable") {
@@ -1071,7 +795,7 @@ async function fetchHtml(inputUrl) {
 
   for (const attempt of attempts) {
     try {
-      const response = await fetchWithTimeout(inputUrl, attempt.headers, 10000);
+      const response = await fetchWithTimeout(inputUrl, attempt.headers, 12000);
 
       if (!response.ok) {
         errors.push({
@@ -1132,32 +856,24 @@ async function fetchPreview(inputUrl, preferredCurrency = "GBP") {
   }
 
   const jsonLd = extractJsonLdProductData($, finalUrl);
-  const title = jsonLd.title || extractTitle($, canonicalUrl);
+
+  const title =
+    jsonLd.title ||
+    extractTitle($, canonicalUrl) ||
+    getHostnameLabel(canonicalUrl);
+
   const description = extractDescription($);
   const siteName = extractSiteName($, canonicalUrl);
 
-  const amazonPrice = hostname.includes("amazon.") ? extractAmazonPrice($) : "";
   const jsonLdPrice = jsonLd.priceText || "";
   const metaPrice = extractPriceFromMeta($) || "";
   const textPrice = extractGenericTextPrice($) || "";
 
-  let playwrightPrice = "";
-  const isDynamicRetailer =
-    hostname.includes("johnlewis") ||
-    hostname.includes("argos") ||
-    hostname.includes("currys");
-
-  if (!amazonPrice && !jsonLdPrice && !metaPrice && !textPrice && isDynamicRetailer) {
-    playwrightPrice = await fetchPriceWithPlaywright(finalUrl, hostname);
-  }
-
   const chosenPrice = choosePrice({
     preferredCurrency,
-    amazonPrice,
     jsonLdPrice,
     metaPrice,
     textPrice,
-    playwrightPrice,
   });
 
   const imageCandidates = buildImageCandidates($, finalUrl, canonicalUrl, jsonLd.images);
@@ -1199,12 +915,9 @@ async function fetchPreview(inputUrl, preferredCurrency = "GBP") {
       matchedPreferredCurrency: chosenPrice.matchedPreferredCurrency,
       selectedPriceSource: chosenPrice.source,
       selectedPriceText: chosenPrice.priceText || "",
-      amazonPrice,
       jsonLdPrice,
       metaPrice,
       textPrice,
-      playwrightPrice,
-      wasPlaywrightUsed: Boolean(playwrightPrice),
       allPriceCandidates: chosenPrice.candidates,
       imageCandidateCount: imageCandidates.length,
       topImageCandidate: imageCandidates[0] || null,
