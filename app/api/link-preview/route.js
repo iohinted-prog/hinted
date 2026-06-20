@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import * as cheerio from "cheerio";
-import { preview, presets } from "linkpeek";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const REQUEST_HEADERS = {
   "User-Agent":
-    "Mozilla/5.0 (compatible; Twitterbot/1.0; +https://developer.x.com/en/docs/x-for-websites/cards/overview/summary)",
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
   Accept:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
   "Accept-Language": "en-GB,en;q=0.9",
@@ -21,8 +20,6 @@ function decodeHtml(value = "") {
     .replace(/&apos;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
-    .replace(/&#x2F;/gi, "/")
-    .replace(/&#47;/gi, "/")
     .replace(/&nbsp;/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -238,66 +235,19 @@ function shortenTitle(title = "", retailer = "") {
     .toLowerCase();
 
   const stopWords = new Set([
-    "the",
-    "and",
-    "with",
-    "for",
-    "from",
-    "new",
-    "latest",
-    "edition",
-    "model",
-    "official",
-    "amazon",
-    "uk",
-    "black",
-    "white",
-    "silver",
-    "blue",
-    "green",
-    "pink",
-    "grey",
-    "gray",
-    "wireless",
-    "bluetooth",
+    "the", "and", "with", "for", "from", "new", "latest",
+    "edition", "model", "official", "amazon", "uk",
+    "black", "white", "silver", "blue", "green", "pink", "grey", "gray",
+    "wireless", "bluetooth",
   ]);
 
   const categoryWords = [
-    "headphones",
-    "earbuds",
-    "speaker",
-    "kindle",
-    "book",
-    "pillowcase",
-    "pillowcases",
-    "dish",
-    "pan",
-    "mug",
-    "print",
-    "necklace",
-    "ring",
-    "bag",
-    "dress",
-    "trainer",
-    "trainers",
-    "jacket",
-    "candle",
-    "coffee",
-    "set",
-    "workshop",
-    "experience",
-    "voucher",
-    "lego",
-    "camera",
-    "watch",
-    "sofa",
-    "blanket",
-    "coat",
-    "boots",
-    "sandals",
-    "lamp",
-    "vase",
-    "frame",
+    "headphones", "earbuds", "speaker", "kindle", "book",
+    "pillowcase", "pillowcases", "dish", "pan", "mug", "print",
+    "necklace", "ring", "bag", "dress", "trainer", "trainers",
+    "jacket", "candle", "coffee", "set", "workshop", "experience",
+    "voucher", "lego", "camera", "watch", "sofa", "blanket",
+    "coat", "boots", "sandals", "lamp", "vase", "frame",
   ];
 
   let cleaned = source
@@ -502,13 +452,12 @@ function scoreImage(url = "", hostname = "", source = "") {
   if (!url) return -100;
   if (looksLikeBadImage(url)) score -= 80;
   if (/\b(product|products|prod)\b/i.test(lower)) score += 20;
-  if (/\b(hero|primary|main|large)\b/i.test(lower)) score += 16;
+  if (/\bhero|primary|main|large\b/i.test(lower)) score += 16;
   if (/\blogo|icon|favicon|sprite|avatar|placeholder|spacer|banner\b/i.test(lower)) score -= 50;
   if (/\.(jpg|jpeg|png|webp|avif)(\?|$)/i.test(lower)) score += 12;
   if (hostname && lower.includes(hostname.replace(/^www\./, ""))) score += 6;
   if (source === "jsonld") score += 25;
   if (source === "og") score += 18;
-  if (source === "linkpeek") score += 24;
   if (source === "dom") score += 8;
   if (/1500|1200|1024|960|800/.test(lower)) score += 8;
 
@@ -529,13 +478,7 @@ function dedupeCandidates(candidates = []) {
   return output;
 }
 
-function buildImageCandidates(
-  $,
-  baseUrl,
-  canonicalUrl,
-  jsonLdImages = [],
-  preferredImages = []
-) {
+function buildImageCandidates($, baseUrl, canonicalUrl, jsonLdImages = []) {
   const hostname = getHostnameLabel(canonicalUrl);
   const candidates = [];
 
@@ -550,7 +493,6 @@ function buildImageCandidates(
     });
   };
 
-  preferredImages.forEach((url) => addCandidate(url, "linkpeek"));
   jsonLdImages.forEach((url) => addCandidate(url, "jsonld"));
 
   [
@@ -603,104 +545,7 @@ function extractSiteName($, canonicalUrl) {
   );
 }
 
-async function fetchViaLinkpeek(inputUrl) {
-  const result = await preview(inputUrl, {
-    ...presets.quality,
-    timeout: 4500,
-    maxBytes: 120000,
-    includeBodyContent: true,
-    followMetaRefresh: true,
-    userAgent: REQUEST_HEADERS["User-Agent"],
-    headers: {
-      Accept: REQUEST_HEADERS.Accept,
-      "Accept-Language": REQUEST_HEADERS["Accept-Language"],
-    },
-  });
-
-  const canonicalUrl = stripAmazonParams(result?.url || inputUrl);
-  const siteName = cleanText(result?.siteName || "") || getHostnameLabel(canonicalUrl);
-  const title = cleanText(result?.title || "") || "Shared item";
-  const description = cleanText(result?.description || "");
-
-  const imageCandidates = dedupeCandidates(
-    [
-      result?.image
-        ? {
-            url: makeAbsoluteUrl(result.image, canonicalUrl),
-            source: "linkpeek",
-            score: 30,
-          }
-        : null,
-      result?.ogImage?.url
-        ? {
-            url: makeAbsoluteUrl(result.ogImage.url, canonicalUrl),
-            source: "linkpeek",
-            score: 28,
-          }
-        : null,
-      result?.twitterImage
-        ? {
-            url: makeAbsoluteUrl(result.twitterImage, canonicalUrl),
-            source: "linkpeek",
-            score: 26,
-          }
-        : null,
-    ].filter(Boolean)
-  ).sort((a, b) => b.score - a.score);
-
-  const rawPriceCandidates = [
-    result?.price,
-    result?.product?.price,
-    result?.offers?.price,
-    result?.jsonLd?.offers?.price,
-    description,
-    title,
-  ].filter(Boolean);
-
-  let priceText = "";
-  for (const value of rawPriceCandidates) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      priceText = `£${Math.round(value)}`;
-      break;
-    }
-
-    if (typeof value === "string") {
-      const cleaned = value.replace(/,/g, "");
-      const match =
-        cleaned.match(/(?:£|\$|€|A\$|NZ\$|C\$|R)\s?(\d+(?:\.\d{1,2})?)/) ||
-        cleaned.match(/(\d+(?:\.\d{1,2})?)/);
-
-      if (match) {
-        const symbol = cleaned.match(/£|\$|€|A\$|NZ\$|C\$|R/)?.[0] || "£";
-        priceText = `${symbol}${match[1]}`;
-        break;
-      }
-    }
-  }
-
-  const selectedImage = imageCandidates[0]?.url || "";
-  const titleShort = shortenTitle(title, siteName);
-  const confidence =
-    selectedImage && title ? (priceText ? "high" : "medium") : "low";
-
-  return {
-    url: canonicalUrl,
-    title,
-    titleShort,
-    description,
-    siteName,
-    image: selectedImage,
-    selectedImage,
-    imageCandidates,
-    priceText,
-    numericPrice: extractNumericPrice(priceText),
-    confidence,
-    needsReview: confidence === "low",
-    source: "linkpeek",
-  };
-}
-
-async function fetchViaFallbackScraper(inputUrl) {
+async function fetchPreview(inputUrl) {
   const response = await fetch(inputUrl, {
     method: "GET",
     headers: REQUEST_HEADERS,
@@ -741,8 +586,7 @@ async function fetchViaFallbackScraper(inputUrl) {
     $,
     finalUrl,
     canonicalUrl,
-    jsonLd.images,
-    []
+    jsonLd.images
   );
 
   const selectedImage = imageCandidates[0]?.url || "";
@@ -763,7 +607,7 @@ async function fetchViaFallbackScraper(inputUrl) {
     numericPrice: extractNumericPrice(priceText || ""),
     confidence,
     needsReview: confidence === "low",
-    source: "fallback",
+    source: "scraper",
     brand: jsonLd.brand || "",
   };
 }
@@ -780,14 +624,8 @@ export async function POST(request) {
       );
     }
 
-    try {
-      const result = await fetchViaLinkpeek(inputUrl);
-      return NextResponse.json(result);
-    } catch (linkpeekError) {
-      console.warn("Linkpeek failed, using fallback scraper:", linkpeekError);
-      const result = await fetchViaFallbackScraper(inputUrl);
-      return NextResponse.json(result);
-    }
+    const result = await fetchPreview(inputUrl);
+    return NextResponse.json(result);
   } catch (error) {
     console.error("link-preview route error:", error);
     return NextResponse.json(
