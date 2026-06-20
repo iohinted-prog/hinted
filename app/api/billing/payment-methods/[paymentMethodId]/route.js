@@ -1,55 +1,104 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "../../../../../lib/supabase/server";
+import { createClient } from "../../../../../../lib/supabase/server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-export async function DELETE(request, { params }) {
+function getStripe() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  return new Stripe(secretKey);
+}
+
+async function getAuthedCustomer() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: "Unauthorized", status: 401 };
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError) {
+    return { error: profileError.message, status: 500 };
+  }
+
+  if (!profile?.stripe_customer_id) {
+    return { error: "No Stripe customer found for this user.", status: 400 };
+  }
+
+  return { stripeCustomerId: profile.stripe_customer_id };
+}
+
+export async function PATCH(request, context) {
   try {
-    const supabase = await createClient();
+    const stripe = getStripe();
+    const { paymentMethodId } = await context.params;
+    const auth = await getAuthedCustomer();
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
     }
 
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("stripe_customer_id")
-      .eq("id", user.id)
-      .single();
+    const { makeDefault } = await request.json().catch(() => ({}));
 
-    if (profileError || !profile?.stripe_customer_id) {
-      return NextResponse.json({ error: "Customer not found" }, { status: 404 });
-    }
-
-    const paymentMethodId = params?.paymentMethodId;
-
-    if (!paymentMethodId) {
-      return NextResponse.json({ error: "Missing payment method ID" }, { status: 400 });
-    }
-
-    const paymentMethods = await stripe.customers.listPaymentMethods(
-      profile.stripe_customer_id,
-      {
-        type: "card",
-        limit: 100,
-      }
-    );
-
-    const belongsToCustomer = paymentMethods.data.some(
-      (pm) => pm.id === paymentMethodId
-    );
-
-    if (!belongsToCustomer) {
+    if (!makeDefault) {
       return NextResponse.json(
-        { error: "Payment method does not belong to this customer" },
-        { status: 403 }
+        { error: "No supported update action was provided." },
+        { status: 400 }
       );
+    }
+
+    await stripe.customers.update(auth.stripeCustomerId, {
+      invoice_settings: {
+        default_payment_method: paymentMethodId,
+      },
+    });
+
+    return NextResponse.json({ success: true, defaultPaymentMethodId: paymentMethodId });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error.message || "Failed to update payment method." },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(_request, context) {
+  try {
+    const stripe = getStripe();
+    const { paymentMethodId } = await context.params;
+    const auth = await getAuthedCustomer();
+
+    if (auth.error) {
+      return NextResponse.json({ error: auth.error }, { status: auth.status });
+    }
+
+    const customer = await stripe.customers.retrieve(auth.stripeCustomerId);
+    const defaultPaymentMethodId =
+      customer && !("deleted" in customer)
+        ? customer.invoice_settings?.default_payment_method || null
+        : null;
+
+    if (defaultPaymentMethodId === paymentMethodId) {
+      await stripe.customers.update(auth.stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: null,
+        },
+      });
     }
 
     await stripe.paymentMethods.detach(paymentMethodId);
@@ -57,7 +106,7 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Failed to delete payment method" },
+      { error: error.message || "Failed to delete payment method." },
       { status: 500 }
     );
   }
