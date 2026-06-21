@@ -55,28 +55,31 @@ const demoContacts = [
     id: "demo-1",
     name: "Maya",
     role: "Friend",
-    note: "Saved 8 hints",
+    note: "On Hinted",
     initials: "M",
     colors: "from-[#efc3af] to-[#ae6e57]",
     email: "",
+    isPlatformUser: true,
   },
   {
     id: "demo-2",
     name: "James",
     role: "Brother",
-    note: "Saved 5 hints",
+    note: "Not on Hinted yet",
     initials: "J",
     colors: "from-[#4e596d] to-[#212a3c]",
     email: "",
+    isPlatformUser: false,
   },
   {
     id: "demo-3",
     name: "Fiona",
     role: "Friend",
-    note: "Saved 4 hints",
+    note: "On Hinted",
     initials: "F",
     colors: "from-[#809168] to-[#41512e]",
     email: "",
+    isPlatformUser: true,
   },
 ];
 
@@ -88,19 +91,8 @@ const demoFeedItems = [
     title: "was added as a friend",
     body: "You’ve started building your gifting network.",
     created_at: new Date().toISOString(),
-    comments: [
-      {
-        id: "comment-1",
-        user_id: "demo",
-        body: "Nice start.",
-        author_name: "You",
-        created_at: new Date().toISOString(),
-      },
-    ],
-    reactions: [
-      { id: "reaction-1", user_id: "demo-1", emoji: "❤️" },
-      { id: "reaction-2", user_id: "demo-2", emoji: "🎉" },
-    ],
+    comments: [],
+    reactions: [],
     isDemo: true,
   },
   {
@@ -111,7 +103,7 @@ const demoFeedItems = [
     body: "Silk pillowcase set · Around £45.",
     created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     comments: [],
-    reactions: [{ id: "reaction-3", user_id: "demo-3", emoji: "👏" }],
+    reactions: [],
     isDemo: true,
   },
   {
@@ -122,10 +114,7 @@ const demoFeedItems = [
     body: "£320 of £400 raised · 4 contributors.",
     created_at: new Date(Date.now() - 1000 * 60 * 56).toISOString(),
     comments: [],
-    reactions: [
-      { id: "reaction-4", user_id: "demo-1", emoji: "🎉" },
-      { id: "reaction-5", user_id: "demo-2", emoji: "💚" },
-    ],
+    reactions: [],
     isDemo: true,
   },
 ];
@@ -136,8 +125,8 @@ const eventTypeConfig = {
     border: "border-[#f6ddd2]",
     icon: "👋",
     badge: "Friend",
-    actionText: "View contact",
-    actionHref: null,
+    actionText: "View hints",
+    actionHref: "/hints",
     avatarColors: "from-[#efcdbf] to-[#c88c73]",
   },
   hint_added: {
@@ -290,10 +279,12 @@ function buildContactRecordFromRow(row) {
     profileConnectionId: row.id,
     name: safeName,
     role: relationship,
-    note: "Saved to contacts",
+    note: row?.connected_user_id ? "On Hinted" : "Not on Hinted yet",
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship),
     email: row?.email || "",
+    isPlatformUser: Boolean(row?.connected_user_id),
+    connectedUserId: row?.connected_user_id || null,
     raw: row,
   };
 }
@@ -1262,8 +1253,8 @@ function MiniCalendar({
   );
 }
 
-function FeedAction({ text, href }) {
-  if (href) {
+function FeedAction({ text, href, disabled = false }) {
+  if (href && !disabled) {
     return (
       <Link
         href={href}
@@ -1277,7 +1268,12 @@ function FeedAction({ text, href }) {
   return (
     <button
       type="button"
-      className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+      disabled={disabled}
+      className={`inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-medium ${
+        disabled
+          ? "cursor-not-allowed border-[#efe6e1] bg-[#faf7f5] text-slate-400"
+          : "border-[#ebdfd8] bg-white text-slate-600 hover:bg-slate-50"
+      }`}
     >
       {text}
     </button>
@@ -1299,6 +1295,7 @@ function FeedItem({
   const reactionCounts = item.reactionCounts || {};
   const viewerReaction = item.viewerReaction || null;
   const allowEngagement = item.allowEngagement;
+  const isDemo = Boolean(item.isDemo);
 
   return (
     <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${config.border}`}>
@@ -1316,7 +1313,7 @@ function FeedItem({
                 <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${config.chip}`}>
                   {config.icon} {config.badge}
                 </span>
-                {item.isDemo ? (
+                {isDemo ? (
                   <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
                     Demo data
                   </span>
@@ -1419,7 +1416,11 @@ function FeedItem({
             </>
           ) : (
             <div className="mt-4 flex flex-wrap items-center gap-2">
-              <FeedAction text={config.actionText} href={config.actionHref} />
+              <FeedAction
+                text={isDemo ? "Live interactions unlock once real activity begins" : config.actionText}
+                href={isDemo ? null : config.actionHref}
+                disabled={isDemo}
+              />
             </div>
           )}
         </div>
@@ -1535,8 +1536,8 @@ export default function FeedClient() {
   );
 
   const transformFeedItem = useCallback((item, userId) => {
-    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
-    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
+    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : Array.isArray(item.comments) ? item.comments : [];
+    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : Array.isArray(item.reactions) ? item.reactions : [];
 
     const reactionCounts = reactions.reduce((acc, reaction) => {
       const key = reaction.emoji;
@@ -1547,13 +1548,11 @@ export default function FeedClient() {
 
     const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
 
-    const allowEngagement = [
-      "friend_added",
-      "hint_added",
-      "circle_joined",
-      "circle_top_up",
-      "circle_milestone",
-    ].includes(item.event_type);
+    const allowEngagement =
+      !item.isDemo &&
+      ["friend_added", "hint_added", "circle_joined", "circle_top_up", "circle_milestone"].includes(
+        item.event_type
+      );
 
     return {
       ...item,
@@ -1924,6 +1923,7 @@ export default function FeedClient() {
   async function handleSubmitComment(item) {
     if (!sessionUser?.id) return;
     if (!draftComment.trim()) return;
+    if (item.isDemo) return;
 
     setFeedActionLoading(true);
     setFeedError("");
@@ -1971,6 +1971,7 @@ export default function FeedClient() {
   async function handleReact(item, emoji) {
     if (!sessionUser?.id) return;
     if (!item.allowEngagement) return;
+    if (item.isDemo) return;
 
     setFeedActionLoading(true);
     setFeedError("");
@@ -2021,10 +2022,6 @@ export default function FeedClient() {
   }
 
   const eventsByDate = useMemo(() => {
-    return (calendarEvents || []).reduce((acc) => acc, {}) || {};
-  }, [calendarEvents]);
-
-  const safeEventsByDate = useMemo(() => {
     return (calendarEvents || []).reduce((acc, row) => {
       const key = row.event_date;
       if (!key) return acc;
@@ -2296,7 +2293,7 @@ export default function FeedClient() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-slate-900">Contacts</h2>
-                  <p className="mt-1 text-xs text-slate-500">Manage people from the same source as Circles.</p>
+                  <p className="mt-1 text-xs text-slate-500">People you track, whether they have joined Hinted or not.</p>
                 </div>
 
                 <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
@@ -2327,7 +2324,9 @@ export default function FeedClient() {
                           </div>
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
-                            <p className="text-xs text-slate-500">{contact.role}</p>
+                            <p className="text-xs text-slate-500">
+                              {contact.role} · {contact.note}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -2374,7 +2373,7 @@ export default function FeedClient() {
 
                   {shouldShowSingleDemoFeedCard ? (
                     <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      A demo social card is showing until real friend, hint, or circle activity begins.
+                      A single demo social card is showing until real friend, hint, or circle activity begins.
                     </div>
                   ) : null}
                 </div>
@@ -2576,6 +2575,14 @@ export default function FeedClient() {
               </section>
             ) : null}
 
+            <MiniCalendar
+              eventsByDate={eventsByDate}
+              calendarLoading={calendarLoading}
+              calendarError={calendarError}
+              onCreateEvent={handleCreateCalendarEvent}
+              onDeleteEvent={handleDeleteCalendarEvent}
+            />
+
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -2632,14 +2639,6 @@ export default function FeedClient() {
                 </div>
               )}
             </section>
-
-            <MiniCalendar
-              eventsByDate={safeEventsByDate}
-              calendarLoading={calendarLoading}
-              calendarError={calendarError}
-              onCreateEvent={handleCreateCalendarEvent}
-              onDeleteEvent={handleDeleteCalendarEvent}
-            />
           </aside>
         </div>
       </div>
