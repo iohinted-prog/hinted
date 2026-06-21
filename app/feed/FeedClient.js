@@ -803,6 +803,37 @@ export default function FeedClient() {
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [invitesError, setInvitesError] = useState("");
 
+  async function loadPendingInvites() {
+    setInvitesLoading(true);
+    setInvitesError("");
+
+    const supabase = createClient();
+
+    const { data, error } = await supabase
+      .from("circle_invites")
+      .select(`
+        id,
+        circle_id,
+        invite_name,
+        invite_email,
+        status,
+        created_at,
+        invited_user_id
+      `)
+      .in("status", ["pending", "viewed"])
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      setInvitesError(error.message || "Could not load invites.");
+      setPendingInvites([]);
+      setInvitesLoading(false);
+      return;
+    }
+
+    setPendingInvites(data || []);
+    setInvitesLoading(false);
+  }
+
   const showDemoGuide = demoMode && !hasContacts;
 
   const visibleFeedItems = useMemo(() => {
