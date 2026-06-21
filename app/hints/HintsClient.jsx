@@ -827,13 +827,9 @@ function HintCard({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
-        <div className="flex flex-col items-start gap-3">
-          <span className="rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
-            {hint.priceLabel}
-          </span>
-
-          <div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1">
             <h2
               className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.24)]"
               style={{
@@ -847,9 +843,15 @@ function HintCard({
             </h2>
 
             <p className="mt-1 truncate text-[13px] text-white/78">{hint.retailer}</p>
+
+            <div className="mt-3">
+              <span className="inline-flex rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
+                {hint.priceLabel}
+              </span>
+            </div>
           </div>
 
-          <div className="pointer-events-auto mt-1 flex items-center justify-end gap-2 self-end">
+          <div className="pointer-events-auto flex shrink-0 items-center gap-2 self-end">
             <button
               type="button"
               onClick={() => onTogglePrivate(hint)}
