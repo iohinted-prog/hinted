@@ -24,9 +24,9 @@ const relationshipOptions = [
 
 const initialFilters = [
   { key: "all", label: "All activity" },
-  { key: "friend_added", label: "Friends" },
+  { key: "friend_added", label: "Contacts" },
   { key: "hint_added", label: "Hints" },
-  { key: "circle_joined", label: "Circle joins" },
+  { key: "circle_joined", label: "Joins" },
   { key: "circle_top_up", label: "Top ups" },
   { key: "circle_milestone", label: "Milestones" },
   { key: "reminder", label: "Urgent reminders" },
@@ -85,7 +85,7 @@ const demoFeedItems = [
     id: "demo-feed-1",
     event_type: "friend_added",
     actor_name: "Maya",
-    title: "was added as a friend",
+    title: "was added as a contact",
     body: "You’ve started building your gifting network.",
     created_at: new Date().toISOString(),
     comments: [
@@ -135,9 +135,9 @@ const eventTypeConfig = {
     chip: "bg-[#fff3ee] text-[#e07c54]",
     border: "border-[#f6ddd2]",
     icon: "👋",
-    badge: "Friend",
-    actionText: "View contact",
-    actionHref: null,
+    badge: "Contact",
+    actionText: "See Hints",
+    actionHref: "/hints",
     avatarColors: "from-[#efcdbf] to-[#c88c73]",
   },
   hint_added: {
@@ -145,17 +145,17 @@ const eventTypeConfig = {
     border: "border-[#e5defa]",
     icon: "🎁",
     badge: "Hint",
-    actionText: "View hint",
-    actionHref: "/shop",
+    actionText: "See Hints",
+    actionHref: "/hints",
     avatarColors: "from-[#e7cab8] to-[#b97d66]",
   },
   circle_joined: {
     chip: "bg-[#edf6eb] text-[#4a7a3a]",
     border: "border-[#deebda]",
-    icon: "💍",
-    badge: "Circle",
-    actionText: "Open circle",
-    actionHref: "/circles",
+    icon: "👋",
+    badge: "Contact",
+    actionText: "See Hints",
+    actionHref: "/hints",
     avatarColors: "from-[#98a47d] to-[#5f7046]",
   },
   circle_top_up: {
@@ -181,8 +181,8 @@ const eventTypeConfig = {
     border: "border-[#f6ddd2]",
     icon: "🗓️",
     badge: "Reminder",
-    actionText: "Shop",
-    actionHref: "/shop",
+    actionText: "View",
+    actionHref: null,
     avatarColors: "from-[#efcdbf] to-[#c88c73]",
   },
 };
@@ -1263,6 +1263,8 @@ function MiniCalendar({
 }
 
 function FeedAction({ text, href }) {
+  if (!text) return null;
+
   if (href) {
     return (
       <Link
@@ -1318,7 +1320,7 @@ function FeedItem({
                 </span>
                 {item.isDemo ? (
                   <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                    Demo data
+                    Demo
                   </span>
                 ) : null}
               </div>
@@ -1418,9 +1420,11 @@ function FeedItem({
               ) : null}
             </>
           ) : (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <FeedAction text={config.actionText} href={config.actionHref} />
-            </div>
+            config.actionText ? (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <FeedAction text={config.actionText} href={config.actionHref} />
+              </div>
+            ) : null
           )}
         </div>
       </div>
@@ -1463,6 +1467,8 @@ export default function FeedClient() {
   const [activeComposerId, setActiveComposerId] = useState(null);
   const [draftComment, setDraftComment] = useState("");
   const [feedActionLoading, setFeedActionLoading] = useState(false);
+
+  const [demoFeedState, setDemoFeedState] = useState(demoFeedItems);
 
   const loadProfile = useCallback(
     async (userId) => {
@@ -1535,8 +1541,16 @@ export default function FeedClient() {
   );
 
   const transformFeedItem = useCallback((item, userId) => {
-    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
-    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
+    const comments = Array.isArray(item.feed_comments)
+      ? item.feed_comments
+      : Array.isArray(item.comments)
+        ? item.comments
+        : [];
+    const reactions = Array.isArray(item.feed_reactions)
+      ? item.feed_reactions
+      : Array.isArray(item.reactions)
+        ? item.reactions
+        : [];
 
     const reactionCounts = reactions.reduce((acc, reaction) => {
       const key = reaction.emoji;
@@ -1782,7 +1796,7 @@ export default function FeedClient() {
     await createFeedEvent({
       event_type: "friend_added",
       actor_name: contactPayload.name,
-      title: "was added as a friend",
+      title: "was added as a contact",
       body: cleanedEmail,
       entity_type: "profile_connection",
       entity_id: data?.id || null,
@@ -1903,10 +1917,10 @@ export default function FeedClient() {
 
     if (sessionUser?.id && nextStatus === "accepted") {
       await createFeedEvent({
-        event_type: "circle_joined",
+        event_type: "friend_added",
         actor_name: data?.invite_name || data?.invite_email || "Someone",
-        title: "joined a circle",
-        body: data?.invite_email || "A circle invite was accepted.",
+        title: "accepted your invitation to join Hinted",
+        body: data?.invite_email || "A contact joined Hinted.",
         entity_type: "circle_invite",
         entity_id: data?.id || null,
       });
@@ -1924,6 +1938,30 @@ export default function FeedClient() {
   async function handleSubmitComment(item) {
     if (!sessionUser?.id) return;
     if (!draftComment.trim()) return;
+
+    if (item.isDemo) {
+      const newComment = {
+        id: `demo-comment-${Date.now()}`,
+        user_id: sessionUser.id,
+        body: draftComment.trim(),
+        author_name: profile?.full_name || "You",
+        created_at: new Date().toISOString(),
+      };
+
+      setDemoFeedState((current) =>
+        current.map((feedItem) =>
+          feedItem.id === item.id
+            ? {
+                ...feedItem,
+                comments: [...(feedItem.comments || []), newComment],
+              }
+            : feedItem
+        )
+      );
+      setDraftComment("");
+      setActiveComposerId(null);
+      return;
+    }
 
     setFeedActionLoading(true);
     setFeedError("");
@@ -1971,6 +2009,42 @@ export default function FeedClient() {
   async function handleReact(item, emoji) {
     if (!sessionUser?.id) return;
     if (!item.allowEngagement) return;
+
+    if (item.isDemo) {
+      setDemoFeedState((current) =>
+        current.map((feedItem) => {
+          if (feedItem.id !== item.id) return feedItem;
+
+          const reactions = [...(feedItem.reactions || [])];
+          const existing = reactions.find((reaction) => reaction.user_id === sessionUser.id) || null;
+
+          let nextReactions = reactions;
+
+          if (existing && existing.emoji === emoji) {
+            nextReactions = reactions.filter((reaction) => reaction.user_id !== sessionUser.id);
+          } else if (existing) {
+            nextReactions = reactions.map((reaction) =>
+              reaction.user_id === sessionUser.id ? { ...reaction, emoji } : reaction
+            );
+          } else {
+            nextReactions = [
+              ...reactions,
+              {
+                id: `demo-reaction-${Date.now()}`,
+                user_id: sessionUser.id,
+                emoji,
+              },
+            ];
+          }
+
+          return {
+            ...feedItem,
+            reactions: nextReactions,
+          };
+        })
+      );
+      return;
+    }
 
     setFeedActionLoading(true);
     setFeedError("");
@@ -2118,9 +2192,9 @@ export default function FeedClient() {
   const displayContacts = hasRealContacts ? contacts : demoContacts;
 
   const singleDemoFeedCard = useMemo(() => {
-    const demoItem = demoFeedItems[0];
-    return demoItem ? transformFeedItem(demoItem, sessionUser?.id || "demo") : null;
-  }, [sessionUser?.id, transformFeedItem]);
+    const demoItem = demoFeedState[0];
+    return demoItem ? transformFeedItem(demoItem, sessionUser?.id || "demo-viewer") : null;
+  }, [demoFeedState, sessionUser?.id, transformFeedItem]);
 
   const combinedFeedItems = useMemo(() => {
     const socialItems = [...feedItems];
@@ -2231,12 +2305,6 @@ export default function FeedClient() {
                     Activity
                   </h1>
                 </div>
-
-                {shouldShowSingleDemoFeedCard || shouldShowFirstLook ? (
-                  <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
-                    Demo
-                  </span>
-                ) : null}
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
@@ -2374,7 +2442,7 @@ export default function FeedClient() {
 
                   {shouldShowSingleDemoFeedCard ? (
                     <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      A demo social card is showing until real friend, hint, or circle activity begins.
+                      A demo social card is showing until real contact, hint, or circle activity begins.
                     </div>
                   ) : null}
                 </div>
@@ -2617,15 +2685,6 @@ export default function FeedClient() {
                         <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e77756]">
                           {reminder.distanceLabel}
                         </span>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <Link
-                          href="/shop"
-                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                        >
-                          Shop
-                        </Link>
                       </div>
                     </article>
                   ))}
