@@ -1,12 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
 const demoMode = true;
-const hasContacts = false;
+const hasContactsDemoFallback = false;
+
+const relationshipOptions = [
+  "Partner",
+  "Spouse",
+  "Family",
+  "Friend",
+  "Parent",
+  "Child",
+  "Sibling",
+  "Cousin",
+  "Colleague",
+  "Roommate",
+  "Best friend",
+  "Other",
+];
 
 const initialFilters = [
   { key: "all", label: "All activity" },
@@ -34,7 +49,7 @@ const onboardingSteps = [
   },
 ];
 
-const initialContacts = [
+const demoContacts = [
   {
     id: 1,
     name: "Maya",
@@ -187,7 +202,7 @@ const eventTypeStyles = {
 };
 
 function getInitials(name) {
-  return name
+  return String(name || "")
     .trim()
     .split(/\s+/)
     .slice(0, 2)
@@ -195,11 +210,82 @@ function getInitials(name) {
     .join("");
 }
 
-function getContactGradient(role) {
-  if (role === "Family") return "from-[#eac8b8] to-[#9d6957]";
-  if (role === "Partner") return "from-[#e8b9a7] to-[#bf755f]";
-  if (role === "Brother") return "from-[#4e596d] to-[#212a3c]";
+function getRelationshipGradient(role) {
+  const normalized = String(role || "").toLowerCase();
+
+  if (normalized.includes("partner") || normalized.includes("spouse")) {
+    return "from-[#e8b9a7] to-[#bf755f]";
+  }
+
+  if (
+    normalized.includes("family") ||
+    normalized.includes("parent") ||
+    normalized.includes("child") ||
+    normalized.includes("sibling") ||
+    normalized.includes("cousin")
+  ) {
+    return "from-[#eac8b8] to-[#9d6957]";
+  }
+
+  if (normalized.includes("colleague")) {
+    return "from-[#b7c8db] to-[#6b88a7]";
+  }
+
+  if (normalized.includes("brother")) {
+    return "from-[#4e596d] to-[#212a3c]";
+  }
+
   return "from-[#efcdbf] to-[#bb8168]";
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
+}
+
+function getPrimaryContactField(person, field) {
+  const items = person?.[field];
+  if (!Array.isArray(items) || items.length === 0) return "";
+  return items[0]?.value || items[0]?.displayName || "";
+}
+
+function getGoogleName(metadata = {}) {
+  return (
+    metadata.full_name ||
+    metadata.name ||
+    [metadata.given_name, metadata.family_name].filter(Boolean).join(" ") ||
+    ""
+  ).trim();
+}
+
+function normalizeSupabaseError(error, fallback) {
+  if (!error) return fallback;
+  const parts = [error.message, error.details, error.hint].filter(Boolean);
+  return parts.length ? parts.join(" — ") : fallback;
+}
+
+function relationshipLabelFromArray(relationshipTypes) {
+  if (!Array.isArray(relationshipTypes) || relationshipTypes.length === 0) return "Friend";
+  return relationshipTypes[0] || "Friend";
+}
+
+function buildContactRecordFromRow(row) {
+  const relationship = relationshipLabelFromArray(row?.relationship_types);
+  const safeName = row?.name || row?.email || "Unnamed contact";
+
+  return {
+    id: row.id,
+    type: "contact",
+    profileConnectionId: row.id,
+    name: safeName,
+    role: relationship,
+    note: "Saved to contacts",
+    initials: getInitials(safeName),
+    colors: getRelationshipGradient(relationship),
+    email: row?.email || "",
+    phone: "",
+    birthday: "",
+    raw: row,
+  };
 }
 
 function LogoMark() {
@@ -210,7 +296,7 @@ function LogoMark() {
   );
 }
 
-function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[720px]" }) {
+function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[720px]", hideHeaderBorder = false }) {
   if (!open) return null;
 
   return (
@@ -218,7 +304,11 @@ function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w
       <div
         className={`max-h-[92vh] w-full overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] ${maxWidth}`}
       >
-        <div className="flex items-center justify-between border-b border-[#efe0d7] px-6 py-5">
+        <div
+          className={`flex items-center justify-between px-6 py-5 ${
+            hideHeaderBorder ? "" : "border-b border-[#efe0d7]"
+          }`}
+        >
           <div>
             {eyebrow ? (
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
@@ -246,86 +336,368 @@ function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w
   );
 }
 
-function AddContactModal({ open, onClose, onSave, form, setForm }) {
-  if (!open) return null;
+function AddContactModal({ open, onClose, onSave, supabase }) {
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactResults, setContactResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [contactsMessage, setContactsMessage] = useState("");
+  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) return;
-    onSave();
-  };
+  useEffect(() => {
+    if (!open) {
+      setContactSearch("");
+      setContactResults([]);
+      setSearchingContacts(false);
+      setContactsMessage("");
+      setSelectedRelationships(["Friend"]);
+      setForm({ name: "", email: "" });
+      setSaving(false);
+      setSaveError("");
+    }
+  }, [open]);
+
+  async function searchGoogleContacts(query) {
+    setContactSearch(query);
+    setContactsMessage("");
+    setSaveError("");
+
+    if (!query.trim()) {
+      setContactResults([]);
+      return;
+    }
+
+    setSearchingContacts(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const providerToken = session?.provider_token;
+
+      if (!providerToken) {
+        setContactResults([]);
+        setContactsMessage(
+          "We couldn’t access your linked Google contacts right now because the Google provider token is missing."
+        );
+        return;
+      }
+
+      const warmupResponse = await fetch(
+        "https://people.googleapis.com/v1/people:searchContacts?query=&pageSize=1&readMask=names,emailAddresses",
+        {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        }
+      );
+
+      if (!warmupResponse.ok) {
+        setContactResults([]);
+        setContactsMessage("We couldn’t access your linked Google contacts right now.");
+        return;
+      }
+
+      const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
+      url.searchParams.set("query", query);
+      url.searchParams.set("pageSize", "8");
+      url.searchParams.set("readMask", "names,emailAddresses");
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${providerToken}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setContactResults([]);
+        setContactsMessage(result?.error?.message || "We couldn’t search Google contacts right now.");
+        return;
+      }
+
+      const people = Array.isArray(result.results) ? result.results : [];
+      const mapped = people
+        .map((item) => item.person)
+        .filter(Boolean)
+        .map((person, index) => ({
+          id: person.resourceName || String(index),
+          name: getPrimaryContactField(person, "names"),
+          email: getPrimaryContactField(person, "emailAddresses"),
+        }))
+        .filter((person) => person.name || person.email);
+
+      setContactResults(mapped);
+
+      if (mapped.length === 0) {
+        setContactsMessage("No matching Google contacts found. You can still type their email manually.");
+      }
+    } catch (error) {
+      setContactResults([]);
+      setContactsMessage(error?.message || "We couldn’t search Google contacts right now.");
+    } finally {
+      setSearchingContacts(false);
+    }
+  }
+
+  function selectContact(contact) {
+    setForm({
+      name: contact.name || "",
+      email: contact.email || "",
+    });
+    setContactSearch(contact.name || contact.email || "");
+    setContactResults([]);
+    setContactsMessage("");
+    setSaveError("");
+  }
+
+  function toggleRelationship(relationship) {
+    setSelectedRelationships((prev) => {
+      if (prev.includes(relationship)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== relationship);
+      }
+      return [...prev, relationship];
+    });
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) {
+      setSaveError("Contact name is required.");
+      return;
+    }
+
+    const cleanedEmail = form.email.trim().toLowerCase();
+
+    if (!cleanedEmail) {
+      setSaveError("Email is required.");
+      return;
+    }
+
+    if (!isValidEmail(cleanedEmail)) {
+      setSaveError("Enter a valid email address.");
+      return;
+    }
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await onSave({
+        name: form.name.trim(),
+        email: cleanedEmail,
+        relationshipTypes: selectedRelationships.length ? selectedRelationships : ["Friend"],
+      });
+      setSaving(false);
+      onClose();
+    } catch (error) {
+      setSaveError(error?.message || "Failed to save contact.");
+      setSaving(false);
+    }
+  }
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
-      eyebrow="New contact"
-      title="Add a new contact"
-      maxWidth="max-w-[720px]"
+      eyebrow="Contact"
+      title="Add a contact"
+      maxWidth="max-w-[760px]"
+      hideHeaderBorder
     >
-      <form onSubmit={handleSubmit} className="p-6">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 sm:col-span-2">
-            <span className="text-sm font-medium text-slate-700">Name</span>
+      <div className="border-t border-[#efe0d7] px-6 py-6">
+        <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Bring someone in quickly
+          </p>
+          <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
+            Add from Gmail or type their email
+          </h3>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
+            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => searchGoogleContacts(e.target.value)}
+              placeholder="Search Gmail contacts"
+              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </div>
+
+          {searchingContacts ? (
+            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
+          ) : null}
+
+          {contactResults.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
+              {contactResults.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => selectContact(contact)}
+                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
+                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {contactsMessage ? (
+            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
+          ) : null}
+        </div>
+
+        <div className="mt-6 space-y-5">
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Name</span>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Jane Smith"
-              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-              required
+              placeholder="Maya"
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
             />
           </label>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Email address</span>
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Email</span>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="jane@example.com"
-              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+              placeholder="maya@example.com"
+              required
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
             />
           </label>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Phone number</span>
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-              placeholder="07123 456789"
-              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-            />
-          </label>
+          <div>
+            <span className="block text-sm font-medium text-slate-900">Relationship</span>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {relationshipOptions.map((relationship) => {
+                const selected = selectedRelationships.includes(relationship);
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Relationship</span>
-            <select
-              value={form.role}
-              onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value }))}
-              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-            >
-              <option value="">Select relationship</option>
-              <option value="Friend">Friend</option>
-              <option value="Family">Family</option>
-              <option value="Partner">Partner</option>
-              <option value="Brother">Brother</option>
-            </select>
-          </label>
+                return (
+                  <button
+                    key={relationship}
+                    type="button"
+                    onClick={() => toggleRelationship(relationship)}
+                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
+                      selected
+                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
+                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {relationship}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-          <label className="space-y-2">
-            <span className="text-sm font-medium text-slate-700">Birthday</span>
-            <input
-              type="date"
-              value={form.birthday}
-              onChange={(e) => setForm((prev) => ({ ...prev, birthday: e.target.value }))}
-              className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-            />
-          </label>
+          {saveError ? (
+            <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+              {saveError}
+            </div>
+          ) : null}
         </div>
 
-        <div className="mt-6 flex gap-3">
+        <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !form.name.trim() || !form.email.trim()}
+            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
+              saving || !form.name.trim() || !form.email.trim()
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+            }`}
+          >
+            {saving ? "Saving..." : "Save contact"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function DeleteContactModal({
+  open,
+  onClose,
+  onConfirm,
+  contact,
+  isDeleting,
+  errorMessage,
+}) {
+  const [typedName, setTypedName] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      setTypedName("");
+    }
+  }, [open]);
+
+  if (!open || !contact) return null;
+
+  const expectedName = String(contact.name || "").trim();
+  const matches = typedName.trim() === expectedName;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Delete contact"
+      title={`Delete ${contact.name}`}
+      maxWidth="max-w-[620px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently remove the contact.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            Type <span className="font-semibold text-slate-900">{expectedName}</span> to confirm.
+          </p>
+        </div>
+
+        <label className="block">
+          <span className="block text-sm font-medium text-slate-900">Type the contact name</span>
+          <input
+            type="text"
+            value={typedName}
+            onChange={(e) => setTypedName(e.target.value)}
+            placeholder={expectedName}
+            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+          />
+        </label>
+
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={onClose}
@@ -334,14 +706,53 @@ function AddContactModal({ open, onClose, onSave, form, setForm }) {
             Cancel
           </button>
           <button
-            type="submit"
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+            type="button"
+            disabled={isDeleting || !matches}
+            onClick={() => onConfirm(contact)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting || !matches
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
+            }`}
           >
-            Save contact
+            {isDeleting ? "Deleting..." : "Delete contact"}
           </button>
         </div>
-      </form>
+      </div>
     </ModalShell>
+  );
+}
+
+function ContactCard({ contact, onDeleteClick }) {
+  return (
+    <article
+      className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      aria-label={`Manage ${contact.name}`}
+    >
+      <div className="flex items-center gap-3">
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
+        >
+          {contact.initials}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          <p className="text-xs text-slate-500">
+            {contact.role}
+            {contact.note ? ` · ${contact.note}` : ""}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onDeleteClick(contact)}
+          className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
+        >
+          Delete
+        </button>
+      </div>
+    </article>
   );
 }
 
@@ -563,9 +974,7 @@ function CalendarPopover({
                       ) : null}
                     </div>
                     <p className="mt-2 text-sm font-semibold text-slate-900">{event.title}</p>
-                    {event.time ? (
-                      <p className="mt-1 text-xs text-slate-500">{event.time}</p>
-                    ) : null}
+                    {event.time ? <p className="mt-1 text-xs text-slate-500">{event.time}</p> : null}
                   </div>
                 </div>
               </div>
@@ -590,18 +999,16 @@ function CalendarPopover({
             className="h-11 w-full rounded-[16px] border border-[#eaded6] bg-white px-4 text-sm outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
           />
 
-          <div className="grid grid-cols-1 gap-3">
-            <select
-              value={draft.type}
-              onChange={(e) => setDraft((prev) => ({ ...prev, type: e.target.value }))}
-              className="h-11 w-full rounded-[16px] border border-[#eaded6] bg-white px-4 text-sm outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
-            >
-              <option value="birthday">Birthday</option>
-              <option value="anniversary">Anniversary</option>
-              <option value="celebration">Celebration</option>
-              <option value="christmas">Christmas</option>
-            </select>
-          </div>
+          <select
+            value={draft.type}
+            onChange={(e) => setDraft((prev) => ({ ...prev, type: e.target.value }))}
+            className="h-11 w-full rounded-[16px] border border-[#eaded6] bg-white px-4 text-sm outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+          >
+            <option value="birthday">Birthday</option>
+            <option value="anniversary">Anniversary</option>
+            <option value="celebration">Celebration</option>
+            <option value="christmas">Christmas</option>
+          </select>
 
           <button
             type="button"
@@ -618,8 +1025,11 @@ function CalendarPopover({
 }
 
 function MiniCalendar() {
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 6, 1));
-  const [selectedDate, setSelectedDate] = useState(new Date(2026, 6, 16));
+  const today = useMemo(() => new Date(), []);
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+  const [selectedDate, setSelectedDate] = useState(today);
   const [openPopover, setOpenPopover] = useState(true);
   const [eventsByDate, setEventsByDate] = useState({});
   const [draft, setDraft] = useState({
@@ -647,6 +1057,8 @@ function MiniCalendar() {
     const d = String(date.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
+
+  const todayKey = toKey(today);
 
   const groupEventsByDate = (rows) => {
     return rows.reduce((acc, row) => {
@@ -781,7 +1193,7 @@ function MiniCalendar() {
 
   return (
     <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
             Planner
@@ -795,6 +1207,18 @@ function MiniCalendar() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+              setSelectedDate(now);
+              setOpenPopover(true);
+            }}
+            className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Today
+          </button>
           <button
             type="button"
             onClick={() => goMonth(-1)}
@@ -840,6 +1264,7 @@ function MiniCalendar() {
         {days.map((item) => {
           const key = toKey(item.date);
           const selected = key === selectedKey;
+          const isToday = key === todayKey;
           const dayEvents = eventsByDate[key] || [];
           const leadType = dayEvents[0]?.type;
           const dotClass = leadType ? (eventTypeStyles[leadType] || eventTypeStyles.celebration).dot : null;
@@ -858,11 +1283,23 @@ function MiniCalendar() {
               aria-pressed={selected}
               className={`min-h-[58px] rounded-[16px] border p-2 text-left transition ${
                 selected
-                  ? "border-[#f2b39a] bg-[#fff2ea]"
-                  : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6] hover:bg-[#fff7f2]"
+                  ? "border-[#f2b39a] bg-[#fff2ea] shadow-[inset_0_0_0_1px_rgba(242,179,154,0.35)]"
+                  : isToday
+                    ? "border-[#f3c8b7] bg-[#fff8f4]"
+                    : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6] hover:bg-[#fff7f2]"
               }`}
             >
-              <div className={`text-[13px] font-semibold ${item.currentMonth ? "text-slate-700" : "text-slate-300"}`}>
+              <div
+                className={`text-[13px] font-semibold ${
+                  selected
+                    ? "text-[#d96d4f]"
+                    : isToday
+                      ? "text-slate-900"
+                      : item.currentMonth
+                        ? "text-slate-700"
+                        : "text-slate-300"
+                }`}
+              >
                 {item.day}
               </div>
 
@@ -895,16 +1332,23 @@ function MiniCalendar() {
 }
 
 export default function FeedClient() {
+  const supabase = createClient();
+
   const [activeFilter, setActiveFilter] = useState("all");
-  const [contacts, setContacts] = useState(initialContacts);
+  const [sessionUser, setSessionUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  const [contacts, setContacts] = useState([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
+  const [pageError, setPageError] = useState("");
+  const [contactError, setContactError] = useState("");
+  const [contactSuccess, setContactSuccess] = useState("");
+
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    name: "",
-    email: "",
-    role: "",
-    birthday: "",
-    phone: "",
-  });
+  const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
+  const [selectedContactToDelete, setSelectedContactToDelete] = useState(null);
+  const [isDeletingContact, setIsDeletingContact] = useState(false);
+  const [deleteContactError, setDeleteContactError] = useState("");
 
   const [pendingInvites, setPendingInvites] = useState([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
@@ -912,11 +1356,54 @@ export default function FeedClient() {
   const [activeInvite, setActiveInvite] = useState(null);
   const [inviteActionId, setInviteActionId] = useState(null);
 
+  const loadProfile = useCallback(
+    async (userId) => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (error) {
+        throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
+      }
+
+      setProfile(data || null);
+      return data || null;
+    },
+    [supabase]
+  );
+
+  const loadContacts = useCallback(
+    async (userId) => {
+      setIsLoadingContacts(true);
+      setContactError("");
+
+      const { data, error } = await supabase
+        .from("profile_connections")
+        .select("*")
+        .eq("profile_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setContacts([]);
+        setIsLoadingContacts(false);
+        throw new Error(
+          normalizeSupabaseError(error, "Failed to load contacts from profile_connections.")
+        );
+      }
+
+      const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
+      setContacts(mapped);
+      setIsLoadingContacts(false);
+      return mapped;
+    },
+    [supabase]
+  );
+
   async function loadPendingInvites() {
     setInvitesLoading(true);
     setInvitesError("");
-
-    const supabase = createClient();
 
     const { data, error } = await supabase
       .from("circle_invites")
@@ -943,11 +1430,129 @@ export default function FeedClient() {
     setInvitesLoading(false);
   }
 
+  useEffect(() => {
+    let active = true;
+
+    async function bootstrap() {
+      try {
+        setPageError("");
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) {
+          throw new Error(normalizeSupabaseError(userError, "Failed to get logged-in user."));
+        }
+
+        if (!user) {
+          throw new Error("You must be signed in to view the feed.");
+        }
+
+        if (!active) return;
+        setSessionUser(user);
+
+        await loadProfile(user.id);
+        if (!active) return;
+
+        await loadContacts(user.id);
+        if (!active) return;
+
+        await loadPendingInvites();
+      } catch (error) {
+        if (active) {
+          setPageError(error?.message || "Failed to load the feed page.");
+          setIsLoadingContacts(false);
+          setInvitesLoading(false);
+        }
+      }
+    }
+
+    bootstrap();
+
+    return () => {
+      active = false;
+    };
+  }, [supabase, loadProfile, loadContacts]);
+
+  async function handleSaveContact(contactPayload) {
+    setContactError("");
+    setContactSuccess("");
+
+    if (!sessionUser?.id) {
+      throw new Error("You must be signed in to save contacts.");
+    }
+
+    const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
+
+    if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
+      throw new Error("A valid email address is required.");
+    }
+
+    const insertPayload = {
+      profile_id: sessionUser.id,
+      name: contactPayload.name,
+      email: cleanedEmail,
+      relationship_types: contactPayload.relationshipTypes || ["Friend"],
+    };
+
+    const { error } = await supabase.from("profile_connections").insert(insertPayload);
+
+    if (error) {
+      throw new Error(
+        normalizeSupabaseError(error, "Failed to save contact to profile_connections.")
+      );
+    }
+
+    await loadContacts(sessionUser.id);
+    setContactSuccess("Contact saved successfully.");
+  }
+
+  function openDeleteContactModal(contact) {
+    setDeleteContactError("");
+    setSelectedContactToDelete(contact);
+    setIsDeleteContactOpen(true);
+  }
+
+  async function handleConfirmDeleteContact(contact) {
+    setDeleteContactError("");
+    setContactError("");
+    setContactSuccess("");
+
+    if (!contact?.id) {
+      setDeleteContactError("Missing contact id.");
+      return;
+    }
+
+    setIsDeletingContact(true);
+
+    try {
+      const { error } = await supabase
+        .from("profile_connections")
+        .delete()
+        .eq("id", contact.id);
+
+      if (error) {
+        throw new Error(
+          normalizeSupabaseError(error, "Failed to delete contact from profile_connections.")
+        );
+      }
+
+      setContacts((prev) => prev.filter((item) => item.id !== contact.id));
+      setIsDeleteContactOpen(false);
+      setSelectedContactToDelete(null);
+      setContactSuccess("Contact deleted successfully.");
+    } catch (error) {
+      setDeleteContactError(error?.message || "Failed to delete contact.");
+    } finally {
+      setIsDeletingContact(false);
+    }
+  }
+
   async function handleInviteDecision(inviteId, nextStatus) {
     setInviteActionId(inviteId);
     setInvitesError("");
-
-    const supabase = createClient();
 
     const { error } = await supabase
       .from("circle_invites")
@@ -970,48 +1575,15 @@ export default function FeedClient() {
     setInviteActionId(null);
   }
 
-  useEffect(() => {
-    loadPendingInvites();
-  }, []);
-
-  const showDemoGuide = demoMode && !hasContacts;
+  const showDemoGuide = demoMode && !(contacts.length > 0 || hasContactsDemoFallback);
 
   const visibleFeedItems = useMemo(() => {
     if (activeFilter === "all") return feedItems;
     return feedItems.filter((item) => item.type === activeFilter);
   }, [activeFilter]);
 
-  const resetContactForm = () => {
-    setContactForm({
-      name: "",
-      email: "",
-      role: "",
-      birthday: "",
-      phone: "",
-    });
-  };
-
-  const handleSaveContact = () => {
-    const trimmedName = contactForm.name.trim();
-    if (!trimmedName) return;
-
-    const role = contactForm.role || "Friend";
-    const newContact = {
-      id: Date.now(),
-      name: trimmedName,
-      role,
-      note: "New contact",
-      initials: getInitials(trimmedName),
-      colors: getContactGradient(role),
-      email: contactForm.email.trim(),
-      phone: contactForm.phone.trim(),
-      birthday: contactForm.birthday,
-    };
-
-    setContacts((prev) => [newContact, ...prev]);
-    resetContactForm();
-    setIsAddContactOpen(false);
-  };
+  const displayContacts = contacts.length > 0 ? contacts : demoContacts;
+  const displayContactsAreDemo = contacts.length === 0 && demoMode;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -1058,7 +1630,29 @@ export default function FeedClient() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
-        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+        {pageError || contactError || contactSuccess ? (
+          <div className="mb-5 space-y-3">
+            {pageError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {pageError}
+              </div>
+            ) : null}
+
+            {contactError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {contactError}
+              </div>
+            ) : null}
+
+            {contactSuccess ? (
+              <div className="rounded-[22px] border border-[#d8e8d3] bg-[#f3fbf1] px-4 py-3 text-sm text-[#4a7a3a]">
+                {contactSuccess}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="space-y-5">
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
@@ -1133,36 +1727,64 @@ export default function FeedClient() {
 
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base font-semibold text-slate-900">People added</h2>
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Contacts</h2>
+                  <p className="mt-1 text-xs text-slate-500">Manage people from the same source as Circles.</p>
+                </div>
+
                 <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {contacts.length}
+                  {contacts.length > 0 ? contacts.length : displayContacts.length}
                 </span>
               </div>
 
               <div className="mt-4 space-y-3">
-                {contacts.map((contact) => (
-                  <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                      >
-                        {contact.initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
-                        <p className="text-xs text-slate-500">{contact.role}</p>
-                      </div>
-                    </div>
+                {isLoadingContacts ? (
+                  <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                    Loading contacts...
                   </div>
-                ))}
+                ) : displayContacts.length ? (
+                  displayContacts.map((contact) =>
+                    contacts.length > 0 ? (
+                      <ContactCard
+                        key={contact.id}
+                        contact={contact}
+                        onDeleteClick={openDeleteContactModal}
+                      />
+                    ) : (
+                      <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+                          >
+                            {contact.initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
+                            <p className="text-xs text-slate-500">{contact.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                    No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
+                  </div>
+                )}
               </div>
+
+              {displayContactsAreDemo ? (
+                <p className="mt-4 text-[12px] leading-5 text-slate-400">
+                  These are demo contacts until you add real ones.
+                </p>
+              ) : null}
 
               <button
                 type="button"
                 onClick={() => setIsAddContactOpen(true)}
                 className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
               >
-                Add contact
+                Add or import contact
               </button>
             </section>
           </aside>
@@ -1427,13 +2049,29 @@ export default function FeedClient() {
 
       <AddContactModal
         open={isAddContactOpen}
-        onClose={() => {
-          resetContactForm();
-          setIsAddContactOpen(false);
+        onClose={() => setIsAddContactOpen(false)}
+        onSave={async (payload) => {
+          try {
+            await handleSaveContact(payload);
+          } catch (error) {
+            setContactError(error?.message || "Failed to save contact.");
+            throw error;
+          }
         }}
-        onSave={handleSaveContact}
-        form={contactForm}
-        setForm={setContactForm}
+        supabase={supabase}
+      />
+
+      <DeleteContactModal
+        open={isDeleteContactOpen}
+        onClose={() => {
+          setIsDeleteContactOpen(false);
+          setSelectedContactToDelete(null);
+          setDeleteContactError("");
+        }}
+        onConfirm={handleConfirmDeleteContact}
+        contact={selectedContactToDelete}
+        isDeleting={isDeletingContact}
+        errorMessage={deleteContactError}
       />
     </main>
   );
