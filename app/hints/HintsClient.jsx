@@ -827,44 +827,46 @@ function HintCard({
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-5 sm:p-6">
+        <div className="flex flex-col items-start gap-3">
           <span className="rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
             {hint.priceLabel}
           </span>
-        </div>
 
-        <h2
-          className="mt-3 overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.24)]"
-          style={{
-            display: "-webkit-box",
-            WebkitBoxOrient: "vertical",
-            WebkitLineClamp: 2,
-            lineClamp: 2,
-          }}
-        >
-          {hint.title}
-        </h2>
+          <div>
+            <h2
+              className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.24)]"
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                lineClamp: 2,
+              }}
+            >
+              {hint.title}
+            </h2>
 
-        <p className="mt-1 truncate text-[13px] text-white/78">{hint.retailer}</p>
+            <p className="mt-1 truncate text-[13px] text-white/78">{hint.retailer}</p>
+          </div>
 
-        <div className="pointer-events-auto mt-4 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => onTogglePrivate(hint)}
-            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
-          >
-            {hint.private ? "🔒 Private" : "🔓 Public"}
-          </button>
+          <div className="pointer-events-auto mt-1 flex items-center justify-end gap-2 self-end">
+            <button
+              type="button"
+              onClick={() => onTogglePrivate(hint)}
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
+            >
+              {hint.private ? "🔒 Private" : "🔓 Public"}
+            </button>
 
-          <a
-            href={hint.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
-          >
-            Open
-          </a>
+            <a
+              href={hint.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
+            >
+              Open
+            </a>
+          </div>
         </div>
       </div>
     </article>
