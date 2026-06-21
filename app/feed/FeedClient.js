@@ -153,21 +153,6 @@ const reminders = [
   },
 ];
 
-const startingEvents = {
-  "2026-07-10": [
-    { id: 1, title: "Mum & Dad Anniversary", type: "anniversary", time: "All day" },
-  ],
-  "2026-07-16": [
-    { id: 2, title: "James Promotion", type: "circle", time: "7:00 PM" },
-  ],
-  "2026-07-24": [
-    { id: 3, title: "Christmas planning note", type: "christmas", time: "6:30 PM" },
-  ],
-  "2026-07-29": [
-    { id: 4, title: "Sarah Birthday", type: "birthday", time: "All day" },
-  ],
-};
-
 const eventTypeStyles = {
   birthday: {
     dot: "bg-[#efb39a]",
@@ -193,6 +178,11 @@ const eventTypeStyles = {
     dot: "bg-[#bca7de]",
     pill: "bg-[#f5f0ff] text-[#7f62b2]",
     label: "Reminder",
+  },
+  celebration: {
+    dot: "bg-[#e6aa54]",
+    pill: "bg-[#fff7e8] text-[#af7b14]",
+    label: "Celebration",
   },
 };
 
@@ -519,6 +509,7 @@ function CalendarPopover({
   onAddEvent,
   draft,
   setDraft,
+  isSaving,
 }) {
   if (!selectedDate) return null;
 
@@ -565,6 +556,11 @@ function CalendarPopover({
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${style.pill}`}>
                         {style.label}
                       </span>
+                      {event.source === "system" ? (
+                        <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                          Seasonal
+                        </span>
+                      ) : null}
                     </div>
                     <p className="mt-2 text-sm font-semibold text-slate-900">{event.title}</p>
                     <p className="mt-1 text-xs text-slate-500">{event.time}</p>
@@ -611,15 +607,17 @@ function CalendarPopover({
               <option value="anniversary">Anniversary</option>
               <option value="circle">Circle gift</option>
               <option value="reminder">Reminder</option>
+              <option value="celebration">Celebration</option>
             </select>
           </div>
 
           <button
             type="button"
             onClick={onAddEvent}
-            className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-semibold text-white shadow-lg"
+            disabled={isSaving}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
           >
-            Save event
+            {isSaving ? "Saving..." : "Save event"}
           </button>
         </div>
       </div>
@@ -631,12 +629,15 @@ function MiniCalendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date(2026, 6, 1));
   const [selectedDate, setSelectedDate] = useState(new Date(2026, 6, 16));
   const [openPopover, setOpenPopover] = useState(true);
-  const [eventsByDate, setEventsByDate] = useState(startingEvents);
+  const [eventsByDate, setEventsByDate] = useState({});
   const [draft, setDraft] = useState({
     title: "",
     time: "",
     type: "birthday",
   });
+  const [calendarLoading, setCalendarLoading] = useState(true);
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [calendarError, setCalendarError] = useState("");
 
   const monthLabel = useMemo(
     () =>
@@ -656,6 +657,61 @@ function MiniCalendar() {
     return `${y}-${m}-${d}`;
   };
 
+  const groupEventsByDate = (rows) => {
+    return rows.reduce((acc, row) => {
+      const key = row.event_date;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push({
+        id: row.id,
+        title: row.title,
+        type: row.type,
+        time: row.event_time || "All day",
+        source: row.source || "user",
+      });
+      return acc;
+    }, {});
+  };
+
+  const loadEvents = async () => {
+    setCalendarLoading(true);
+    setCalendarError("");
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setCalendarError("You need to be signed in to view calendar events.");
+      setEventsByDate({});
+      setCalendarLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("id, user_id, title, event_date, event_time, type, source, slug, is_recurring, created_at")
+      .or(`source.eq.system,user_id.eq.${user.id}`)
+      .order("event_date", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setCalendarError(error.message || "Could not load calendar events.");
+      setEventsByDate({});
+      setCalendarLoading(false);
+      return;
+    }
+
+    setEventsByDate(groupEventsByDate(data || []));
+    setCalendarLoading(false);
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
   const selectedKey = selectedDate ? toKey(selectedDate) : null;
   const selectedEvents = selectedKey ? eventsByDate[selectedKey] || [] : [];
 
@@ -669,19 +725,59 @@ function MiniCalendar() {
     setOpenPopover(true);
   };
 
-  const handleAddEvent = () => {
+  const handleAddEvent = async () => {
     if (!selectedKey || !draft.title.trim()) return;
 
-    const newEvent = {
-      id: Date.now(),
+    setCalendarSaving(true);
+    setCalendarError("");
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setCalendarError("You need to be signed in to save calendar events.");
+      setCalendarSaving(false);
+      return;
+    }
+
+    const payload = {
+      user_id: user.id,
       title: draft.title.trim(),
-      time: draft.time.trim() || "All day",
+      event_date: selectedKey,
+      event_time: draft.time.trim() || null,
       type: draft.type,
+      source: "user",
+      slug: null,
+      is_recurring: false,
+    };
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      setCalendarError(error.message || "Could not save event.");
+      setCalendarSaving(false);
+      return;
+    }
+
+    const savedEvent = {
+      id: data.id,
+      title: data.title,
+      type: data.type,
+      time: data.event_time || "All day",
+      source: data.source || "user",
     };
 
     setEventsByDate((prev) => ({
       ...prev,
-      [selectedKey]: [...(prev[selectedKey] || []), newEvent],
+      [selectedKey]: [...(prev[selectedKey] || []), savedEvent],
     }));
 
     setDraft({
@@ -689,6 +785,8 @@ function MiniCalendar() {
       time: "",
       type: "birthday",
     });
+
+    setCalendarSaving(false);
   };
 
   return (
@@ -726,6 +824,18 @@ function MiniCalendar() {
         </div>
       </div>
 
+      {calendarError ? (
+        <div className="mt-4 rounded-[18px] border border-[#f3d7cc] bg-[#fff4ef] px-4 py-3 text-sm text-[#c46545]">
+          {calendarError}
+        </div>
+      ) : null}
+
+      {calendarLoading ? (
+        <div className="mt-4 rounded-[18px] bg-[#faf7f4] px-4 py-3 text-sm text-slate-500">
+          Loading calendar...
+        </div>
+      ) : null}
+
       <div className="mt-4 grid grid-cols-7 gap-2 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
         <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
       </div>
@@ -736,7 +846,7 @@ function MiniCalendar() {
           const selected = key === selectedKey;
           const dayEvents = eventsByDate[key] || [];
           const leadType = dayEvents[0]?.type;
-          const dotClass = leadType ? eventTypeStyles[leadType].dot : null;
+          const dotClass = leadType ? (eventTypeStyles[leadType] || eventTypeStyles.reminder).dot : null;
 
           return (
             <button
@@ -781,6 +891,7 @@ function MiniCalendar() {
           onAddEvent={handleAddEvent}
           draft={draft}
           setDraft={setDraft}
+          isSaving={calendarSaving}
         />
       ) : null}
     </section>
