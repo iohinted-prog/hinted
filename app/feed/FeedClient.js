@@ -909,8 +909,8 @@ export default function FeedClient() {
   const [pendingInvites, setPendingInvites] = useState([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [invitesError, setInvitesError] = useState("");
-  const [hiddenInviteIds, setHiddenInviteIds] = useState([]);
   const [activeInvite, setActiveInvite] = useState(null);
+  const [inviteActionId, setInviteActionId] = useState(null);
 
   async function loadPendingInvites() {
     setInvitesLoading(true);
@@ -943,6 +943,33 @@ export default function FeedClient() {
     setInvitesLoading(false);
   }
 
+  async function handleInviteDecision(inviteId, nextStatus) {
+    setInviteActionId(inviteId);
+    setInvitesError("");
+
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("circle_invites")
+      .update({ status: nextStatus })
+      .eq("id", inviteId)
+      .select()
+      .single();
+
+    if (error) {
+      setInvitesError(error.message || "Could not update invite.");
+      setInviteActionId(null);
+      return;
+    }
+
+    setPendingInvites((current) => current.filter((invite) => invite.id !== inviteId));
+    setActiveInvite((current) => {
+      if (!current) return null;
+      return current.id === inviteId ? null : current;
+    });
+    setInviteActionId(null);
+  }
+
   useEffect(() => {
     loadPendingInvites();
   }, []);
@@ -953,11 +980,6 @@ export default function FeedClient() {
     if (activeFilter === "all") return feedItems;
     return feedItems.filter((item) => item.type === activeFilter);
   }, [activeFilter]);
-
-  const visiblePendingInvites = useMemo(
-    () => pendingInvites.filter((invite) => !hiddenInviteIds.includes(invite.id)),
-    [pendingInvites, hiddenInviteIds]
-  );
 
   const resetContactForm = () => {
     setContactForm({
@@ -1214,7 +1236,7 @@ export default function FeedClient() {
                 </div>
 
                 <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {visiblePendingInvites.length}
+                  {pendingInvites.length}
                 </span>
               </div>
 
@@ -1222,7 +1244,7 @@ export default function FeedClient() {
                 <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
               ) : invitesError ? (
                 <p className="mt-4 text-sm text-[#c46545]">{invitesError}</p>
-              ) : visiblePendingInvites.length === 0 ? (
+              ) : pendingInvites.length === 0 ? (
                 <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
                   <p className="text-sm font-medium text-slate-700">
                     No invites need a response right now.
@@ -1233,7 +1255,7 @@ export default function FeedClient() {
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {visiblePendingInvites.map((invite) => (
+                  {pendingInvites.map((invite) => (
                     <article
                       key={invite.id}
                       className="rounded-[22px] border border-[#ecd9cf] bg-[#fcf8f5] p-4"
@@ -1257,25 +1279,32 @@ export default function FeedClient() {
                         You’ve been invited to join a circle.
                       </p>
 
-                      <div className="mt-4 flex gap-2">
+                      <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
                           onClick={() => setActiveInvite(invite)}
-                          className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
                         >
-                          View invite
+                          {inviteActionId === invite.id ? "Working..." : "View invite"}
                         </button>
 
                         <button
                           type="button"
-                          onClick={() =>
-                            setHiddenInviteIds((current) =>
-                              current.includes(invite.id) ? current : [...current, invite.id]
-                            )
-                          }
-                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                          onClick={() => handleInviteDecision(invite.id, "accepted")}
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
                         >
-                          Not now
+                          {inviteActionId === invite.id ? "Working..." : "Accept"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleInviteDecision(invite.id, "declined")}
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                        >
+                          {inviteActionId === invite.id ? "Working..." : "Decline"}
                         </button>
                       </div>
                     </article>
@@ -1309,6 +1338,26 @@ export default function FeedClient() {
                   <p>Email: {activeInvite.invite_email || "No email attached"}</p>
                   <p>Status: {activeInvite.status}</p>
                   <p>Circle ID: {activeInvite.circle_id}</p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleInviteDecision(activeInvite.id, "accepted")}
+                    disabled={inviteActionId === activeInvite.id}
+                    className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
+                  >
+                    {inviteActionId === activeInvite.id ? "Working..." : "Accept invite"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInviteDecision(activeInvite.id, "declined")}
+                    disabled={inviteActionId === activeInvite.id}
+                    className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  >
+                    {inviteActionId === activeInvite.id ? "Working..." : "Decline invite"}
+                  </button>
                 </div>
               </section>
             ) : null}
