@@ -5,327 +5,544 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-const ACTIVE_CURRENCY = "GBP";
+const HTML_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  Accept:
+    "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+  "Accept-Language": "en-GB,en;q=0.9",
+  "Cache-Control": "no-cache",
+  Pragma: "no-cache",
+};
 
-function json(data, init) {
-  return NextResponse.json(data, init);
-}
+const PRICE_REGEX =
+  /(?:A\$|NZ\$|C\$|£|\$|€)\s?\d[\d,]*(?:\.\d{1,2})?|\b\d[\d,]*(?:\.\d{1,2})?\s?(?:GBP|USD|EUR|AUD|NZD|CAD)\b/gi;
 
-function normaliseUrl(input = "") {
-  const trimmed = String(input).trim();
-  if (!trimmed) return "";
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  return `https://${trimmed}`;
-}
-
-function detectCurrency(raw = "") {
-  const text = String(raw || "").trim();
-  if (!text) return null;
-  if (text.includes("£")) return "GBP";
-  if (text.includes("€")) return "EUR";
-  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) {
-    return "USD";
-  }
-  if (/\bR\s?\d/i.test(text) || /\bZAR\b/i.test(text)) return "ZAR";
-  return null;
-}
-
-function extractNumericPrice(value) {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (!value || typeof value !== "string") return null;
-
-  const cleaned = value.replace(/,/g, "");
-  const match =
-    cleaned.match(/(?:£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
-    cleaned.match(/\bR\s?(\d+(?:\.\d{1,2})?)/i) ||
-    cleaned.match(/(\d+(?:\.\d{1,2})?)/);
-
-  if (!match) return null;
-  const parsed = Number(match[1]);
-  return Number.isFinite(parsed) ? parsed : null;
-}
+const BLOCK_WORDS = [
+  "access denied",
+  "blocked",
+  "captcha",
+  "robot check",
+  "verify you are human",
+  "security check",
+  "service unavailable",
+  "unusual traffic",
+  "automated access",
+  "enable cookies",
+  "cloudflare",
+  "please enable js",
+];
 
 function cleanText(value = "") {
-  return String(value || "").replace(/\s+/g, " ").trim();
+  return String(value)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function pickFirst(...values) {
-  for (const value of values) {
-    const cleaned = cleanText(value);
-    if (cleaned) return cleaned;
-  }
-  return "";
-}
+function ensureHttpUrl(raw = "") {
+  const trimmed = String(raw).trim();
+  if (!trimmed) return "";
 
-function absolutifyUrl(src, baseUrl) {
-  if (!src) return "";
+  const withProtocol =
+    trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`;
+
   try {
-    return new URL(src, baseUrl).toString();
+    const parsed = new URL(withProtocol);
+    return ["http:", "https:"].includes(parsed.protocol) ? parsed.toString() : "";
   } catch {
     return "";
   }
 }
 
-function getMeta($, keys) {
-  for (const key of keys) {
-    const byProperty = $(`meta[property="${key}"]`).attr("content");
-    if (byProperty && cleanText(byProperty)) return cleanText(byProperty);
+function cleanCanonicalUrl(inputUrl = "") {
+  try {
+    const url = new URL(inputUrl);
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return inputUrl;
+  }
+}
 
-    const byName = $(`meta[name="${key}"]`).attr("content");
-    if (byName && cleanText(byName)) return cleanText(byName);
+function makeAbsolute(url = "", base = "") {
+  if (!url) return "";
+  try {
+    return new URL(url, base).toString();
+  } catch {
+    return "";
+  }
+}
+
+function hostname(url = "") {
+  try {
+    return new URL(url).hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
+}
+
+function detectCurrency(val = "") {
+  if (!val) return null;
+  if (val.includes("£")) return "GBP";
+  if (val.includes("A$")) return "AUD";
+  if (val.includes("NZ$")) return "NZD";
+  if (val.includes("C$")) return "CAD";
+  if (val.includes("$")) return "USD";
+  if (val.includes("€")) return "EUR";
+  return null;
+}
+
+function extractNumericPrice(val = "") {
+  const cleaned = String(val).replace(/,/g, "");
+  const match =
+    cleaned.match(/(?:A\$|NZ\$|C\$|£|\$|€)\s?(\d+(?:\.\d{1,2})?)/) ||
+    cleaned.match(/(\d+(?:\.\d{1,2})?)/);
+
+  if (!match) return null;
+  const num = Number(match[1]);
+  return Number.isFinite(num) ? num : null;
+}
+
+function includesBlockedText(value = "") {
+  const text = String(value).toLowerCase();
+  return BLOCK_WORDS.some((word) => text.includes(word));
+}
+
+function getMeta($, selectors = []) {
+  for (const sel of selectors) {
+    const val = cleanText($(sel).attr("content") || "");
+    if (val) return val;
   }
   return "";
 }
 
-function getTitle($) {
-  return pickFirst(
-    getMeta($, ["og:title", "twitter:title"]),
-    $("title").first().text(),
-    $("h1").first().text()
-  );
-}
-
-function getImage($, baseUrl) {
-  const image = pickFirst(
-    getMeta($, ["og:image", "twitter:image"]),
-    $('meta[itemprop="image"]').attr("content"),
-    $('img[src]').first().attr("src")
-  );
-
-  return absolutifyUrl(image, baseUrl);
-}
-
-function getSiteName($, url) {
-  const metaSite = pickFirst(
-    getMeta($, ["og:site_name", "application-name"]),
-    $('meta[name="publisher"]').attr("content")
-  );
-
-  if (metaSite) return metaSite;
-
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return "Saved link";
+function getText($, selectors = []) {
+  for (const sel of selectors) {
+    const val = cleanText($(sel).first().text() || "");
+    if (val) return val;
   }
+  return "";
 }
 
-function getCanonicalUrl($, url) {
-  const canonical = $('link[rel="canonical"]').attr("href");
-  return absolutifyUrl(canonical, url) || url;
-}
-
-function extractPriceCandidates($) {
-  const candidates = new Set();
-
-  const metaKeys = [
-    "product:price:amount",
-    "og:price:amount",
-    "price",
-    "twitter:data1",
-  ];
-
-  for (const key of metaKeys) {
-    const content = getMeta($, [key]);
-    if (content) candidates.add(content);
+function getAttrValue($, selectors = [], attr = "content") {
+  for (const sel of selectors) {
+    const val = String($(sel).first().attr(attr) || "").trim();
+    if (val) return val;
   }
-
-  const selectors = [
-    '[itemprop="price"]',
-    '[data-price]',
-    '[class*="price"]',
-    '[id*="price"]',
-    'meta[property="product:price:amount"]',
-  ];
-
-  for (const selector of selectors) {
-    $(selector).each((_, el) => {
-      const node = $(el);
-      const content =
-        node.attr("content") ||
-        node.attr("data-price") ||
-        node.text();
-
-      const cleaned = cleanText(content);
-      if (cleaned && /(?:£|\$|€|\bR\s?\d|\d+\.\d{2}|\d{2,})/.test(cleaned)) {
-        candidates.add(cleaned);
-      }
-    });
-  }
-
-  return Array.from(candidates);
+  return "";
 }
 
-function chooseBestPrice(candidates, preferredCurrency = ACTIVE_CURRENCY) {
-  let best = null;
+function getImage($, base = "") {
+  const candidates = [
+    getMeta($, ['meta[property="og:image"]', 'meta[name="twitter:image"]']),
+    getAttrValue($, ['link[rel="image_src"]'], "href"),
+    getAttrValue($, ["img[src]"], "src"),
+  ].filter(Boolean);
 
   for (const candidate of candidates) {
-    const currency = detectCurrency(candidate);
-    const numeric = extractNumericPrice(candidate);
-    if (!numeric) continue;
-
-    const score =
-      (currency === preferredCurrency ? 3 : 0) +
-      (/[£$€R]/.test(candidate) ? 2 : 0) +
-      (candidate.length < 32 ? 1 : 0);
-
-    if (!best || score > best.score) {
-      best = {
-        raw: candidate,
-        numeric,
-        currency,
-        score,
-      };
-    }
+    const abs = makeAbsolute(candidate, base);
+    if (abs) return abs;
   }
 
-  return best;
+  return "";
 }
 
-function shortenTitle(title = "", retailer = "") {
-  const source = String(title || "").trim();
-  if (!source) return "Saved hint";
+function extractDomPrice($) {
+  const selectors = [
+    '[itemprop="price"]',
+    'meta[property="product:price:amount"]',
+    'meta[property="og:price:amount"]',
+    '[data-testid*="price"]',
+    '[class*="price"]',
+    '[id*="price"]',
+  ];
 
-  const cleanRetailer = String(retailer || "")
-    .replace(/^www\./i, "")
-    .replace(/\.(co\.uk|com|co|net|org)$/i, "")
-    .trim()
-    .toLowerCase();
+  for (const sel of selectors) {
+    const el = $(sel).first();
+    if (!el.length) continue;
 
-  const stopWords = new Set([
-    "the",
-    "and",
-    "with",
-    "for",
-    "from",
-    "new",
-    "latest",
-    "edition",
-    "model",
-    "official",
-    "amazon",
-    "uk",
-    "black",
-    "white",
-    "silver",
-    "blue",
-    "green",
-    "pink",
-    "grey",
-    "gray",
-    "wireless",
-    "bluetooth",
-  ]);
+    const val =
+      cleanText(el.attr("content") || "") ||
+      cleanText(el.attr("value") || "") ||
+      cleanText(el.text() || "");
 
-  let cleaned = source
-    .replace(/\([^)]*\)/g, " ")
-    .replace(/\[[^\]]*\]/g, " ")
-    .replace(/[|:;,/]/g, " ")
-    .replace(/\b[A-Z0-9-]{6,}\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    if (!val) continue;
 
-  let words = cleaned.split(" ").filter(Boolean);
-  words = words.filter((word) => {
-    const lower = word.toLowerCase();
-    if (stopWords.has(lower)) return false;
-    if (lower === cleanRetailer) return false;
-    if (/^\d+$/.test(lower)) return false;
-    return true;
-  });
+    const match = val.match(PRICE_REGEX);
+    if (match && match[0]) return cleanText(match[0]);
+  }
 
-  if (!words.length) return "Saved hint";
-  const result = words.slice(0, 2).join(" ").trim();
-  return result.charAt(0).toUpperCase() + result.slice(1);
+  const bodyText = cleanText($("body").text() || "");
+  const bodyMatch = bodyText.match(PRICE_REGEX);
+  return bodyMatch && bodyMatch[0] ? cleanText(bodyMatch[0]) : "";
 }
 
-async function fetchHtml(url) {
-  const response = await fetch(url, {
-    headers: {
-      "user-agent":
-        "Mozilla/5.0 (compatible; HintedBot/1.0; +https://hinted.io)",
-      accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-      "accept-language": "en-GB,en;q=0.9",
+function buildManualReviewResponse(inputUrl = "", message = "") {
+  const safeUrl = cleanCanonicalUrl(inputUrl);
+  const host = hostname(safeUrl);
+
+  return {
+    url: safeUrl,
+    title: "",
+    titleShort: "",
+    description: message || "Please fill out this hint manually.",
+    siteName: host,
+    image: "",
+    selectedImage: "",
+    imageCandidates: [],
+    priceText: "",
+    numericPrice: null,
+    detectedCurrency: null,
+    brand: "",
+    confidence: "low",
+    needsReview: true,
+    blocked: false,
+    blockReason: "manual-review",
+    blockMessage: message || "Manual review required.",
+    source: "fallback",
+    debug: {
+      hostname: host,
+      fallback: "manual-review",
+      error: message || "",
     },
-    redirect: "follow",
-    cache: "no-store",
-  });
+  };
+}
 
-  if (!response.ok) {
-    throw new Error(`Preview request failed with status ${response.status}`);
+function isUsablePreview(result) {
+  if (!result || result.blocked) return false;
+
+  const hasTitle = Boolean(result.title && result.title !== "Shared item");
+  const hasImage = Boolean(result.image);
+  const hasPrice = Boolean(result.priceText);
+
+  return (hasTitle && hasImage) || (hasTitle && hasPrice);
+}
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      cache: "no-store",
+    });
+  } finally {
+    clearTimeout(timer);
   }
+}
 
-  const contentType = response.headers.get("content-type") || "";
+function parseHtmlPreview({ html, finalUrl, status, preferredCurrency }) {
+  const $ = cheerio.load(html);
+
+  const canonicalUrl =
+    cleanCanonicalUrl(
+      makeAbsolute(getAttrValue($, ['link[rel="canonical"]'], "href") || "", finalUrl) || finalUrl
+    );
+
+  const bodyText = cleanText($("body").text() || "");
+  const titleTag = cleanText($("title").first().text() || "");
+  const h1 = cleanText($("h1").first().text() || "");
+
+  const title =
+    getMeta($, ['meta[property="og:title"]', 'meta[name="twitter:title"]']) ||
+    getText($, ["h1", "title"]) ||
+    "";
+
+  const description =
+    getMeta($, [
+      'meta[property="og:description"]',
+      'meta[name="description"]',
+      'meta[name="twitter:description"]',
+    ]) || "";
+
+  const siteName =
+    getMeta($, ['meta[property="og:site_name"]']) ||
+    hostname(canonicalUrl);
+
+  const image = getImage($, finalUrl);
+  const priceText = extractDomPrice($);
+
+  const detectedCurrency = detectCurrency(priceText);
+  const numericPrice =
+    detectedCurrency === preferredCurrency ? extractNumericPrice(priceText) : null;
+
+  const blocked =
+    status === 403 ||
+    status === 429 ||
+    status === 500 ||
+    status === 503 ||
+    includesBlockedText(titleTag) ||
+    includesBlockedText(h1) ||
+    includesBlockedText(bodyText);
+
+  const hasTitle = Boolean(title);
+  const hasImage = Boolean(image);
+  const hasPrice = Boolean(priceText);
+
+  const confidence =
+    hasTitle && hasImage && hasPrice
+      ? "high"
+      : hasTitle && (hasImage || hasPrice)
+        ? "medium"
+        : "low";
+
+  return {
+    url: canonicalUrl,
+    title: title || "Shared item",
+    titleShort: title || "Shared item",
+    description: blocked ? "Retailer returned a blocked or challenge page." : description,
+    siteName,
+    image: blocked ? "" : image,
+    selectedImage: blocked ? "" : image,
+    imageCandidates: !blocked && image ? [image] : [],
+    priceText:
+      !blocked && detectedCurrency === preferredCurrency ? priceText : "",
+    numericPrice,
+    detectedCurrency:
+      !blocked && detectedCurrency === preferredCurrency ? detectedCurrency : null,
+    brand: "",
+    confidence: blocked ? "low" : confidence,
+    needsReview: blocked ? true : !(hasTitle && hasImage),
+    blocked,
+    blockReason: blocked ? "html-blocked" : null,
+    blockMessage: blocked ? "Retailer returned a blocked or challenge page." : "",
+    source: "html",
+    debug: {
+      provider: "html",
+      status,
+      finalUrl,
+      canonicalUrl,
+      hostname: hostname(canonicalUrl),
+      titleTag,
+      h1,
+      bodySnippet: bodyText.slice(0, 1000),
+      extractedTitle: title,
+      extractedDescription: description,
+      extractedImage: image,
+      extractedPrice: priceText,
+      productSignals: {
+        hasTitle,
+        hasImage,
+        hasPrice,
+      },
+    },
+  };
+}
+
+async function tryHtmlPreview(inputUrl, preferredCurrency) {
+  const res = await fetchWithTimeout(
+    inputUrl,
+    {
+      method: "GET",
+      headers: HTML_HEADERS,
+      redirect: "follow",
+    },
+    3500
+  );
+
+  const contentType = res.headers.get("content-type") || "";
   if (!contentType.includes("text/html")) {
-    throw new Error("This URL did not return an HTML page.");
+    throw new Error("URL did not return HTML.");
   }
 
-  return response.text();
+  const html = await res.text();
+  if (!html.trim()) {
+    throw new Error("Empty HTML response.");
+  }
+
+  return parseHtmlPreview({
+    html,
+    finalUrl: res.url || inputUrl,
+    status: res.status,
+    preferredCurrency,
+  });
+}
+
+async function fetchLinkPreview(inputUrl) {
+  const apiKey = process.env.LINKPREVIEW_API_KEY;
+
+  if (!apiKey) {
+    throw new Error("Missing LINKPREVIEW_API_KEY");
+  }
+
+  const apiUrl = new URL("https://api.linkpreview.net/");
+  apiUrl.searchParams.set("q", inputUrl);
+
+  const res = await fetchWithTimeout(
+    apiUrl.toString(),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "X-Linkpreview-Api-Key": apiKey,
+      },
+    },
+    2500
+  );
+
+  const raw = await res.text();
+  let data = null;
+
+  try {
+    data = raw ? JSON.parse(raw) : null;
+  } catch {
+    throw new Error("LinkPreview returned invalid JSON.");
+  }
+
+  if (!res.ok) {
+    throw new Error(
+      data?.error ||
+        data?.message ||
+        data?.msg ||
+        `LinkPreview request failed with status ${res.status}`
+    );
+  }
+
+  return data;
+}
+
+function mapLinkPreviewResult(inputUrl, payload, preferredCurrency = "GBP") {
+  const finalUrl = cleanCanonicalUrl(payload?.url || inputUrl);
+  const title = cleanText(payload?.title || "");
+  const description = cleanText(payload?.description || "");
+  const image = String(payload?.image || "").trim();
+  const siteName =
+    cleanText(payload?.site_name || payload?.siteName || "") ||
+    hostname(finalUrl);
+
+  const rawPrice =
+    String(payload?.price || "").trim() ||
+    String(payload?.priceText || "").trim() ||
+    String(payload?.amount || "").trim();
+
+  const detectedCurrency = detectCurrency(rawPrice);
+  const numericPrice =
+    detectedCurrency === preferredCurrency ? extractNumericPrice(rawPrice) : null;
+
+  const hasTitle = Boolean(title);
+  const hasImage = Boolean(image);
+  const hasPrice = Boolean(rawPrice);
+
+  const confidence =
+    hasTitle && hasImage
+      ? "high"
+      : hasTitle || hasImage
+        ? "medium"
+        : "low";
+
+  return {
+    url: finalUrl,
+    title: title || "Shared item",
+    titleShort: title || "Shared item",
+    description: description || "",
+    siteName,
+    image,
+    selectedImage: image,
+    imageCandidates: image ? [image] : [],
+    priceText:
+      detectedCurrency === preferredCurrency ? rawPrice : "",
+    numericPrice,
+    detectedCurrency:
+      detectedCurrency === preferredCurrency ? detectedCurrency : null,
+    brand: "",
+    confidence,
+    needsReview: !(hasTitle && hasImage),
+    blocked: false,
+    blockReason: null,
+    blockMessage: "",
+    source: "linkpreview",
+    debug: {
+      provider: "linkpreview",
+      finalUrl,
+      hostname: hostname(finalUrl),
+      rawPayload: payload,
+      productSignals: {
+        hasTitle,
+        hasImage,
+        hasPrice,
+      },
+    },
+  };
 }
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const url = normaliseUrl(body?.url || "");
-    const currency = body?.currency || ACTIVE_CURRENCY;
+    const body = await request.json().catch(() => null);
+    const inputUrl = ensureHttpUrl(body?.url || "");
+    const preferredCurrency = String(body?.currency || "GBP").toUpperCase();
 
-    if (!url) {
-      return json({ error: "A URL is required." }, { status: 400 });
+    if (!inputUrl) {
+      return NextResponse.json(
+        { error: "Please provide a valid URL." },
+        { status: 400 }
+      );
     }
 
-    let parsed;
+    let htmlResult = null;
+    let htmlError = null;
+
     try {
-      parsed = new URL(url);
-      if (!["http:", "https:"].includes(parsed.protocol)) {
-        return json({ error: "Only http and https URLs are supported." }, { status: 400 });
+      htmlResult = await tryHtmlPreview(inputUrl, preferredCurrency);
+
+      if (isUsablePreview(htmlResult)) {
+        return NextResponse.json(htmlResult, { status: 200 });
       }
-    } catch {
-      return json({ error: "Please provide a valid URL." }, { status: 400 });
+    } catch (err) {
+      htmlError = err;
     }
 
-    const html = await fetchHtml(url);
-    const $ = cheerio.load(html);
+    try {
+      const linkPreviewPayload = await fetchLinkPreview(inputUrl);
+      const linkPreviewResult = mapLinkPreviewResult(
+        inputUrl,
+        linkPreviewPayload,
+        preferredCurrency
+      );
 
-    const siteName = getSiteName($, url);
-    const rawTitle = getTitle($);
-    const title = shortenTitle(rawTitle, siteName);
-    const image = getImage($, url);
-    const finalUrl = getCanonicalUrl($, url);
+      if (isUsablePreview(linkPreviewResult)) {
+        linkPreviewResult.debug.htmlAttempt = htmlResult || null;
+        linkPreviewResult.debug.htmlError = htmlError?.message || null;
+        return NextResponse.json(linkPreviewResult, { status: 200 });
+      }
 
-    const priceCandidates = extractPriceCandidates($);
-    const chosenPrice = chooseBestPrice(priceCandidates, currency);
+      const manual = buildManualReviewResponse(
+        inputUrl,
+        "We couldn’t fill this automatically. Please review and save it manually."
+      );
 
-    const hasSupportedCurrency =
-      chosenPrice?.currency == null || chosenPrice.currency === currency;
+      manual.debug.htmlAttempt = htmlResult || null;
+      manual.debug.htmlError = htmlError?.message || null;
+      manual.debug.linkPreviewPayload = linkPreviewPayload || null;
 
-    const numericPrice = hasSupportedCurrency ? chosenPrice?.numeric ?? null : null;
-    const priceText = hasSupportedCurrency ? chosenPrice?.raw || "" : "";
-    const blocked = !rawTitle && !image && !chosenPrice;
-    const needsReview = !title || !image || numericPrice == null;
+      return NextResponse.json(manual, { status: 200 });
+    } catch (linkPreviewError) {
+      const manual = buildManualReviewResponse(
+        inputUrl,
+        linkPreviewError?.message ||
+          htmlError?.message ||
+          "We couldn’t fill this automatically. Please review and save it manually."
+      );
 
-    return json({
-      ok: true,
-      url: finalUrl,
-      siteName,
-      title,
-      rawTitle,
-      image,
-      priceText,
-      numericPrice,
-      currency: hasSupportedCurrency ? currency : chosenPrice?.currency || null,
-      blocked,
-      needsReview,
-      source: "preview",
-    });
-  } catch (error) {
-    return json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Could not fetch this link preview.",
-      },
+      manual.debug.htmlAttempt = htmlResult || null;
+      manual.debug.htmlError = htmlError?.message || null;
+      manual.debug.linkPreviewError = linkPreviewError?.message || null;
+
+      return NextResponse.json(manual, { status: 200 });
+    }
+  } catch (err) {
+    return NextResponse.json(
+      { error: err?.message || "Unexpected error." },
       { status: 500 }
     );
   }
