@@ -29,6 +29,7 @@ const initialFilters = [
   { key: "circle_joined", label: "Circle joins" },
   { key: "circle_top_up", label: "Top ups" },
   { key: "circle_milestone", label: "Milestones" },
+  { key: "reminder", label: "Urgent reminders" },
 ];
 
 const onboardingSteps = [
@@ -84,7 +85,7 @@ const demoFeedItems = [
     id: "demo-feed-1",
     event_type: "friend_added",
     actor_name: "Maya",
-    title: "Maya was added as a friend",
+    title: "was added as a friend",
     body: "You’ve started building your gifting network.",
     created_at: new Date().toISOString(),
     comments: [
@@ -106,7 +107,7 @@ const demoFeedItems = [
     id: "demo-feed-2",
     event_type: "hint_added",
     actor_name: "Mum",
-    title: "A new hint was added",
+    title: "added a new hint",
     body: "Silk pillowcase set · Around £45.",
     created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     comments: [],
@@ -117,7 +118,7 @@ const demoFeedItems = [
     id: "demo-feed-3",
     event_type: "circle_milestone",
     actor_name: "Max & Fiona",
-    title: "A circle reached 80%",
+    title: "reached a circle milestone",
     body: "£320 of £400 raised · 4 contributors.",
     created_at: new Date(Date.now() - 1000 * 60 * 56).toISOString(),
     comments: [],
@@ -314,6 +315,44 @@ function formatRelativeFromDate(dateString) {
     day: "numeric",
     month: "short",
   });
+}
+
+function parseDateOnly(dateString) {
+  if (!dateString) return null;
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+}
+
+function startOfDay(date) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  return value;
+}
+
+function diffInDaysFromToday(dateString) {
+  const target = parseDateOnly(dateString);
+  if (!target) return null;
+
+  const today = startOfDay(new Date());
+  const targetDay = startOfDay(target);
+  const diffMs = targetDay.getTime() - today.getTime();
+  return Math.round(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function formatReminderDistance(diffDays) {
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Tomorrow";
+  if (diffDays < 7) return `In ${diffDays} days`;
+  if (diffDays === 7) return "In 1 week";
+
+  if (diffDays < 31) {
+    const weeks = Math.round(diffDays / 7);
+    return `In ${weeks} week${weeks === 1 ? "" : "s"}`;
+  }
+
+  const months = Math.round(diffDays / 30);
+  return `In ${months} month${months === 1 ? "" : "s"}`;
 }
 
 function getMonthData(date) {
@@ -1260,13 +1299,16 @@ function FeedItem({
                 <span className="font-semibold text-slate-900">{item.actor_name || "Activity"}</span>{" "}
                 {item.title}
               </p>
+
               {item.body ? (
                 <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.body}</p>
               ) : null}
             </div>
 
             <span className="shrink-0 text-[12px] text-slate-400">
-              {formatRelativeFromDate(item.created_at)}
+              {item.event_type === "reminder" && item.reminderLabel
+                ? item.reminderLabel
+                : formatRelativeFromDate(item.created_at)}
             </span>
           </div>
 
@@ -1474,75 +1516,110 @@ export default function FeedClient() {
     [supabase]
   );
 
-  const transformFeedItem = useCallback(
-    (item, userId) => {
-      const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
-      const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
+  const transformFeedItem = useCallback((item, userId) => {
+    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
+    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
 
-      const reactionCounts = reactions.reduce((acc, reaction) => {
-        const key = reaction.emoji;
-        if (!key) return acc;
-        acc[key] = (acc[key] || 0) + 1;
-        return acc;
-      }, {});
+    const reactionCounts = reactions.reduce((acc, reaction) => {
+      const key = reaction.emoji;
+      if (!key) return acc;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
 
-      const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
-      const allowEngagement = [
-        "friend_added",
-        "hint_added",
-        "circle_joined",
-        "circle_top_up",
-        "circle_milestone",
-      ].includes(item.event_type);
+    const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
 
-      return {
-        ...item,
-        comments,
-        reactions,
-        reactionCounts,
-        viewerReaction,
-        allowEngagement,
-      };
-    },
-    []
-  );
+    const allowEngagement = [
+      "friend_added",
+      "hint_added",
+      "circle_joined",
+      "circle_top_up",
+      "circle_milestone",
+    ].includes(item.event_type);
+
+    return {
+      ...item,
+      comments,
+      reactions,
+      reactionCounts,
+      viewerReaction,
+      allowEngagement,
+    };
+  }, []);
 
   const loadFeed = useCallback(
     async (userId) => {
       setFeedLoading(true);
       setFeedError("");
 
-      const { data, error } = await supabase
+      const { data: events, error: eventsError } = await supabase
         .from("feed_events")
-        .select(`
-          *,
-          feed_comments (
-            id,
-            feed_item_id,
-            user_id,
-            body,
-            created_at
-          ),
-          feed_reactions (
-            id,
-            feed_item_id,
-            user_id,
-            emoji,
-            created_at
-          )
-        `)
+        .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      if (error) {
+      if (eventsError) {
         setFeedItems([]);
         setFeedLoading(false);
-        throw new Error(error.message || "Could not load feed.");
+        throw new Error(eventsError.message || "Could not load feed events.");
       }
 
-      const mapped = Array.isArray(data)
-        ? data.map((item) => transformFeedItem(item, userId))
-        : [];
+      const eventIds = Array.isArray(events) ? events.map((item) => item.id).filter(Boolean) : [];
+
+      let comments = [];
+      let reactions = [];
+
+      if (eventIds.length > 0) {
+        const { data: commentsData, error: commentsError } = await supabase
+          .from("feed_comments")
+          .select("id, feed_item_id, user_id, body, created_at")
+          .in("feed_item_id", eventIds)
+          .order("created_at", { ascending: true });
+
+        if (commentsError) {
+          setFeedItems([]);
+          setFeedLoading(false);
+          throw new Error(commentsError.message || "Could not load feed comments.");
+        }
+
+        comments = commentsData || [];
+
+        const { data: reactionsData, error: reactionsError } = await supabase
+          .from("feed_reactions")
+          .select("id, feed_item_id, user_id, emoji, created_at")
+          .in("feed_item_id", eventIds);
+
+        if (reactionsError) {
+          setFeedItems([]);
+          setFeedLoading(false);
+          throw new Error(reactionsError.message || "Could not load feed reactions.");
+        }
+
+        reactions = reactionsData || [];
+      }
+
+      const commentsByItem = comments.reduce((acc, comment) => {
+        if (!acc[comment.feed_item_id]) acc[comment.feed_item_id] = [];
+        acc[comment.feed_item_id].push(comment);
+        return acc;
+      }, {});
+
+      const reactionsByItem = reactions.reduce((acc, reaction) => {
+        if (!acc[reaction.feed_item_id]) acc[reaction.feed_item_id] = [];
+        acc[reaction.feed_item_id].push(reaction);
+        return acc;
+      }, {});
+
+      const mapped = (events || []).map((item) =>
+        transformFeedItem(
+          {
+            ...item,
+            feed_comments: commentsByItem[item.id] || [],
+            feed_reactions: reactionsByItem[item.id] || [],
+          },
+          userId
+        )
+      );
 
       setFeedItems(mapped);
       setFeedLoading(false);
@@ -1551,7 +1628,7 @@ export default function FeedClient() {
     [supabase, transformFeedItem]
   );
 
-  async function loadPendingInvites() {
+  const loadPendingInvites = useCallback(async () => {
     setInvitesLoading(true);
     setInvitesError("");
 
@@ -1578,7 +1655,7 @@ export default function FeedClient() {
 
     setPendingInvites(data || []);
     setInvitesLoading(false);
-  }
+  }, [supabase]);
 
   useEffect(() => {
     let active = true;
@@ -1628,7 +1705,7 @@ export default function FeedClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadFeed]);
+  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadFeed, loadPendingInvites]);
 
   async function createFeedEvent(payload) {
     if (!sessionUser?.id) return;
@@ -1941,46 +2018,57 @@ export default function FeedClient() {
     }, {});
   }, [calendarEvents]);
 
-  const upcomingReminders = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
+  const sidebarReminders = useMemo(() => {
     return (calendarEvents || [])
-      .filter((event) => {
-        if (!event?.event_date) return false;
-        const eventDate = new Date(`${event.event_date}T00:00:00`);
-        return eventDate >= today;
-      })
-      .sort((a, b) => {
-        return new Date(`${a.event_date}T00:00:00`) - new Date(`${b.event_date}T00:00:00`);
-      })
-      .slice(0, 3)
       .map((event) => {
-        const eventDate = new Date(`${event.event_date}T00:00:00`);
-        const diffMs = eventDate.getTime() - today.getTime();
-        const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+        const diffDays = diffInDaysFromToday(event.event_date);
+        if (diffDays === null || diffDays < 0) return null;
 
-        let subtitle = "Coming up soon";
-        if (diffDays === 0) subtitle = "Today";
-        else if (diffDays === 1) subtitle = "Tomorrow";
-        else if (diffDays < 7) subtitle = `In ${diffDays} days`;
-        else if (diffDays < 31) {
-          const weeks = Math.round(diffDays / 7);
-          subtitle = `In ${weeks} week${weeks === 1 ? "" : "s"}`;
-        } else {
-          const months = Math.round(diffDays / 30);
-          subtitle = `In ${months} month${months === 1 ? "" : "s"}`;
-        }
+        const eventDate = parseDateOnly(event.event_date);
+        if (!eventDate) return null;
 
         return {
-          id: `reminder-${event.id}`,
+          id: `sidebar-reminder-${event.id}`,
+          eventId: event.id,
+          title: event.title,
+          type: event.type,
+          eventDate: event.event_date,
+          prettyDate: eventDate.toLocaleDateString("en-GB", {
+            day: "numeric",
+            month: "long",
+          }),
+          distanceLabel: formatReminderDistance(diffDays),
+          diffDays,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.diffDays - b.diffDays)
+      .slice(0, 6);
+  }, [calendarEvents]);
+
+  const feedReminderItems = useMemo(() => {
+    return (calendarEvents || [])
+      .map((event) => {
+        const diffDays = diffInDaysFromToday(event.event_date);
+        if (diffDays === null || diffDays < 0 || diffDays > 7) return null;
+
+        const eventDate = parseDateOnly(event.event_date);
+        if (!eventDate) return null;
+
+        return {
+          id: `feed-reminder-${event.id}`,
           event_type: "reminder",
           actor_name: event.title,
-          title: "is coming up soon",
+          title:
+            diffDays === 0
+              ? "is happening today"
+              : diffDays === 1
+                ? "is tomorrow"
+                : "is coming up soon",
           body: `${eventDate.toLocaleDateString("en-GB", {
             day: "numeric",
             month: "long",
-          })} · ${subtitle}`,
+          })} · ${formatReminderDistance(diffDays)}`,
           created_at: event.created_at || new Date().toISOString(),
           comments: [],
           reactions: [],
@@ -1988,31 +2076,39 @@ export default function FeedClient() {
           viewerReaction: null,
           allowEngagement: false,
           isReminder: true,
+          reminderLabel: formatReminderDistance(diffDays),
+          reminderDiffDays: diffDays,
         };
-      });
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.reminderDiffDays - b.reminderDiffDays);
   }, [calendarEvents]);
 
-  const showDemoGuide = demoMode && contacts.length === 0 && feedItems.length === 0;
+  const hasLiveFeedContent = feedItems.length > 0;
+  const hasLiveReminderContent = sidebarReminders.length > 0;
+  const shouldUseDemoFeed = demoMode && !hasLiveFeedContent && !hasLiveReminderContent;
+  const shouldUseDemoContacts = demoMode && contacts.length === 0;
 
   const displayContacts = contacts.length > 0 ? contacts : demoContacts;
-  const displayContactsAreDemo = contacts.length === 0 && demoMode;
+  const sourceFeedItems = shouldUseDemoFeed
+    ? demoFeedItems.map((item) => transformFeedItem(item, sessionUser?.id || "demo"))
+    : feedItems;
 
-  const sourceFeedItems =
-    feedItems.length > 0
-      ? feedItems
-      : demoFeedItems.map((item) =>
-          transformFeedItem(item, sessionUser?.id || "demo")
-        );
+  const combinedFeedItems = useMemo(() => {
+    if (shouldUseDemoFeed) {
+      return [...sourceFeedItems];
+    }
 
-  const feedWithReminders = useMemo(() => {
-    const combined = [...sourceFeedItems, ...upcomingReminders];
+    const combined = [...sourceFeedItems, ...feedReminderItems];
     return combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [sourceFeedItems, upcomingReminders]);
+  }, [shouldUseDemoFeed, sourceFeedItems, feedReminderItems]);
 
   const visibleFeedItems = useMemo(() => {
-    if (activeFilter === "all") return feedWithReminders;
-    return feedWithReminders.filter((item) => item.event_type === activeFilter);
-  }, [activeFilter, feedWithReminders]);
+    if (activeFilter === "all") return combinedFeedItems;
+    return combinedFeedItems.filter((item) => item.event_type === activeFilter);
+  }, [activeFilter, combinedFeedItems]);
+
+  const showDemoGuide = shouldUseDemoFeed && contacts.length === 0;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -2100,7 +2196,7 @@ export default function FeedClient() {
                   </h1>
                 </div>
 
-                {demoMode && feedItems.length === 0 ? (
+                {shouldUseDemoFeed ? (
                   <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
                     Demo
                   </span>
@@ -2139,7 +2235,7 @@ export default function FeedClient() {
                   How this feed will work
                 </h2>
                 <p className="mt-2 text-[14px] leading-6 text-slate-600">
-                  You’re seeing a demo version of your feed so you can understand the layout before real activity starts appearing.
+                  You’re seeing a demo version of your feed only because there are no live feed events and no live reminders yet.
                 </p>
 
                 <div className="mt-5 space-y-3">
@@ -2208,7 +2304,7 @@ export default function FeedClient() {
                 )}
               </div>
 
-              {displayContactsAreDemo ? (
+              {shouldUseDemoContacts ? (
                 <p className="mt-4 text-[12px] leading-5 text-slate-400">
                   These are demo contacts until you add real ones.
                 </p>
@@ -2236,13 +2332,13 @@ export default function FeedClient() {
                       Your people, moments, and nudges.
                     </h2>
                     <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
-                      Reminders stay personal and quiet. Reactions and comments only appear on social updates like new friends, hints, and circle activity.
+                      Reminders stay quiet unless they are close. Only today, tomorrow, and within-the-week reminders appear in the main feed, while longer-range reminders stay on the right-hand side.
                     </p>
                   </div>
 
-                  {demoMode && feedItems.length === 0 ? (
+                  {shouldUseDemoFeed ? (
                     <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      Demo mode is on now. Once contacts and social activity are added, this area will switch to real feed events.
+                      Demo mode is showing because there are no live feed events and no live reminders yet.
                     </div>
                   ) : null}
                 </div>
@@ -2456,7 +2552,7 @@ export default function FeedClient() {
               <div className="flex items-center justify-between gap-3">
                 <h2 className="text-base font-semibold text-slate-900">Upcoming reminders</h2>
                 <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {upcomingReminders.length} soon
+                  {sidebarReminders.length} soon
                 </span>
               </div>
 
@@ -2468,23 +2564,23 @@ export default function FeedClient() {
                 <div className="mt-4 rounded-[18px] border border-[#f3d7cc] bg-[#fff4ef] px-4 py-3 text-sm text-[#c46545]">
                   {calendarError}
                 </div>
-              ) : upcomingReminders.length === 0 ? (
+              ) : sidebarReminders.length === 0 ? (
                 <div className="mt-4 rounded-[18px] bg-[#faf7f4] px-4 py-3 text-sm text-slate-500">
                   No upcoming reminders yet.
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {upcomingReminders.map((item) => {
-                    const style = eventTypeStyles.reminder;
+                  {sidebarReminders.map((item) => {
+                    const style = eventTypeStyles[item.type] || eventTypeStyles.reminder;
 
                     return (
                       <div key={item.id} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
                         <div className="flex items-start gap-3">
                           <div className={`mt-1 h-3 w-3 shrink-0 rounded-full ${style.dot}`} />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-800">{item.actor_name}</p>
-                            <p className="mt-1 text-xs text-slate-500">{item.body?.split(" · ")[0]}</p>
-                            <p className="mt-1 text-xs text-slate-400">{item.body?.split(" · ")[1] || ""}</p>
+                            <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                            <p className="mt-1 text-xs text-slate-500">{item.prettyDate}</p>
+                            <p className="mt-1 text-xs text-slate-400">{item.distanceLabel}</p>
                           </div>
                         </div>
                       </div>
