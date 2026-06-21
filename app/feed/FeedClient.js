@@ -7,6 +7,18 @@ import AvatarMenu from "../components/AvatarMenu";
 
 const demoMode = true;
 
+const reactionOptions = ["❤️", "🎉", "👏"];
+
+const feedFilters = [
+  { key: "all", label: "All activity" },
+  { key: "friend_added", label: "Contacts" },
+  { key: "hint_added", label: "Hints" },
+  { key: "circle_joined", label: "Joins" },
+  { key: "circle_top_up", label: "Contributions" },
+  { key: "circle_milestone", label: "Milestones" },
+  { key: "reminder_week", label: "1 week reminders" },
+];
+
 const relationshipOptions = [
   "Partner",
   "Spouse",
@@ -22,150 +34,108 @@ const relationshipOptions = [
   "Other",
 ];
 
-const initialFilters = [
-  { key: "all", label: "All activity" },
-  { key: "friend_added", label: "Contacts" },
-  { key: "hint_added", label: "Hints" },
-  { key: "circle_joined", label: "Joins" },
-  { key: "circle_top_up", label: "Top ups" },
-  { key: "circle_milestone", label: "Milestones" },
-  { key: "reminder", label: "Urgent reminders" },
-];
-
 const onboardingSteps = [
   {
     id: 1,
     title: "Add your people",
-    text: "Start by adding contacts so Hinted can turn birthdays, plans, and gift moments into useful updates.",
+    text: "Add contacts and mark who already uses Hinted versus who is still invited.",
   },
   {
     id: 2,
-    title: "Save hints as you go",
-    text: "Hints you save for friends and family will begin to shape this feed automatically.",
+    title: "Let the system post for you",
+    text: "Hints, circle joins, contributions, milestones, and 1-week reminders appear automatically.",
   },
   {
     id: 3,
-    title: "Watch the feed fill itself",
-    text: "Once contacts are added, demo activity is replaced by real reminders, shared circle updates, and reactions.",
+    title: "Use the right rail for planning",
+    text: "Calendar and long-range reminders stay separate from the social feed.",
   },
 ];
 
 const demoContacts = [
   {
-    id: "demo-1",
+    id: "demo-user-1",
     name: "Maya",
     role: "Friend",
-    note: "Saved 8 hints",
+    contactState: "user",
+    note: "Hinted user",
     initials: "M",
-    colors: "from-[#efc3af] to-[#ae6e57]",
-    email: "",
+    avatarVariant: "user",
+    email: "maya@example.com",
   },
   {
-    id: "demo-2",
+    id: "demo-invitee-1",
     name: "James",
     role: "Brother",
-    note: "Saved 5 hints",
+    contactState: "invitee",
+    note: "Invite sent",
     initials: "J",
-    colors: "from-[#4e596d] to-[#212a3c]",
-    email: "",
+    avatarVariant: "invitee",
+    email: "james@example.com",
   },
   {
-    id: "demo-3",
+    id: "demo-user-2",
     name: "Fiona",
     role: "Friend",
-    note: "Saved 4 hints",
+    contactState: "user",
+    note: "Hinted user",
     initials: "F",
-    colors: "from-[#809168] to-[#41512e]",
-    email: "",
+    avatarVariant: "user",
+    email: "fiona@example.com",
   },
 ];
 
 const demoFeedItems = [
   {
     id: "demo-feed-1",
-    event_type: "friend_added",
-    actor_name: "Maya",
-    title: "was added as a contact",
-    body: "You’ve started building your gifting network.",
-    created_at: new Date().toISOString(),
-    comments: [
-      {
-        id: "comment-1",
-        user_id: "demo",
-        body: "Nice start.",
-        author_name: "You",
-        created_at: new Date().toISOString(),
-      },
-    ],
-    reactions: [
-      { id: "reaction-1", user_id: "demo-1", emoji: "❤️" },
-      { id: "reaction-2", user_id: "demo-2", emoji: "🎉" },
-    ],
-    isDemo: true,
-  },
-  {
-    id: "demo-feed-2",
     event_type: "hint_added",
-    actor_name: "Mum",
-    title: "added a new hint",
-    body: "Silk pillowcase set · Around £45.",
-    created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
+    actor_name: "Maya",
+    title: "added 4 new hints",
+    body: "Grouped from one session so your feed stays tidy.",
+    created_at: new Date().toISOString(),
     comments: [],
-    reactions: [{ id: "reaction-3", user_id: "demo-3", emoji: "👏" }],
-    isDemo: true,
-  },
-  {
-    id: "demo-feed-3",
-    event_type: "circle_milestone",
-    actor_name: "Max & Fiona",
-    title: "reached a circle milestone",
-    body: "£320 of £400 raised · 4 contributors.",
-    created_at: new Date(Date.now() - 1000 * 60 * 56).toISOString(),
-    comments: [],
-    reactions: [
-      { id: "reaction-4", user_id: "demo-1", emoji: "🎉" },
-      { id: "reaction-5", user_id: "demo-2", emoji: "💚" },
-    ],
+    reactions: [{ id: "demo-r-1", user_id: "demo-2", emoji: "🎉" }],
+    allow_engagement: true,
     isDemo: true,
   },
 ];
 
-const eventTypeConfig = {
+const feedTypeConfig = {
   friend_added: {
     chip: "bg-[#fff3ee] text-[#e07c54]",
     border: "border-[#f6ddd2]",
     icon: "👋",
     badge: "Contact",
-    actionText: "See Hints",
+    actionText: "See hints",
     actionHref: "/hints",
-    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+    avatarGradient: "from-[#efcdbf] to-[#c88c73]",
   },
   hint_added: {
     chip: "bg-[#f5f3ff] text-[#7c5cbf]",
     border: "border-[#e5defa]",
     icon: "🎁",
     badge: "Hint",
-    actionText: "See Hints",
+    actionText: "See hints",
     actionHref: "/hints",
-    avatarColors: "from-[#e7cab8] to-[#b97d66]",
+    avatarGradient: "from-[#e7cab8] to-[#b97d66]",
   },
   circle_joined: {
-    chip: "bg-[#edf6eb] text-[#4a7a3a]",
-    border: "border-[#deebda]",
-    icon: "👋",
-    badge: "Contact",
-    actionText: "See Hints",
-    actionHref: "/hints",
-    avatarColors: "from-[#98a47d] to-[#5f7046]",
+    chip: "bg-[#eef6ea] text-[#5b7a3c]",
+    border: "border-[#dcead4]",
+    icon: "⭕",
+    badge: "Circle",
+    actionText: "Open circle",
+    actionHref: "/circles",
+    avatarGradient: "from-[#aab88f] to-[#687a4e]",
   },
   circle_top_up: {
     chip: "bg-[#eef6ea] text-[#5b7a3c]",
     border: "border-[#dcead4]",
     icon: "💸",
-    badge: "Top up",
+    badge: "Contribution",
     actionText: "Open circle",
     actionHref: "/circles",
-    avatarColors: "from-[#aab88f] to-[#687a4e]",
+    avatarGradient: "from-[#aab88f] to-[#687a4e]",
   },
   circle_milestone: {
     chip: "bg-[#fff7e8] text-[#af7b14]",
@@ -174,20 +144,18 @@ const eventTypeConfig = {
     badge: "Milestone",
     actionText: "Open circle",
     actionHref: "/circles",
-    avatarColors: "from-[#dcc4b5] to-[#b78972]",
+    avatarGradient: "from-[#dcc4b5] to-[#b78972]",
   },
-  reminder: {
+  reminder_week: {
     chip: "bg-[#fff3ee] text-[#e07c54]",
     border: "border-[#f6ddd2]",
     icon: "🗓️",
     badge: "Reminder",
-    actionText: "View",
+    actionText: null,
     actionHref: null,
-    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+    avatarGradient: "from-[#efcdbf] to-[#c88c73]",
   },
 };
-
-const reactionOptions = ["❤️", "🎉", "👏"];
 
 const eventTypeStyles = {
   birthday: {
@@ -210,16 +178,6 @@ const eventTypeStyles = {
     pill: "bg-[#fff7e8] text-[#af7b14]",
     label: "Celebration",
   },
-  reminder: {
-    dot: "bg-[#bca7de]",
-    pill: "bg-[#f5f0ff] text-[#7f62b2]",
-    label: "Reminder",
-  },
-  circle: {
-    dot: "bg-[#87986f]",
-    pill: "bg-[#eef5ea] text-[#5d7243]",
-    label: "Circle",
-  },
 };
 
 function getInitials(name) {
@@ -231,42 +189,8 @@ function getInitials(name) {
     .join("");
 }
 
-function getRelationshipGradient(role) {
-  const normalized = String(role || "").toLowerCase();
-
-  if (normalized.includes("partner") || normalized.includes("spouse")) {
-    return "from-[#e8b9a7] to-[#bf755f]";
-  }
-
-  if (
-    normalized.includes("family") ||
-    normalized.includes("parent") ||
-    normalized.includes("child") ||
-    normalized.includes("sibling") ||
-    normalized.includes("cousin")
-  ) {
-    return "from-[#eac8b8] to-[#9d6957]";
-  }
-
-  if (normalized.includes("colleague")) {
-    return "from-[#b7c8db] to-[#6b88a7]";
-  }
-
-  if (normalized.includes("brother")) {
-    return "from-[#4e596d] to-[#212a3c]";
-  }
-
-  return "from-[#efcdbf] to-[#bb8168]";
-}
-
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
-}
-
-function getPrimaryContactField(person, field) {
-  const items = person?.[field];
-  if (!Array.isArray(items) || items.length === 0) return "";
-  return items[0]?.value || items[0]?.displayName || "";
 }
 
 function normalizeSupabaseError(error, fallback) {
@@ -278,49 +202,6 @@ function normalizeSupabaseError(error, fallback) {
 function relationshipLabelFromArray(relationshipTypes) {
   if (!Array.isArray(relationshipTypes) || relationshipTypes.length === 0) return "Friend";
   return relationshipTypes[0] || "Friend";
-}
-
-function buildContactRecordFromRow(row) {
-  const relationship = relationshipLabelFromArray(row?.relationship_types);
-  const safeName = row?.name || row?.email || "Unnamed contact";
-
-  return {
-    id: row.id,
-    type: "contact",
-    profileConnectionId: row.id,
-    name: safeName,
-    role: relationship,
-    note: "Saved to contacts",
-    initials: getInitials(safeName),
-    colors: getRelationshipGradient(relationship),
-    email: row?.email || "",
-    raw: row,
-  };
-}
-
-function formatRelativeFromDate(dateString) {
-  if (!dateString) return "Recently";
-
-  const now = new Date();
-  const value = new Date(dateString);
-  const diffMs = now.getTime() - value.getTime();
-
-  if (Number.isNaN(diffMs)) return "Recently";
-
-  const minutes = Math.floor(diffMs / (1000 * 60));
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (days < 7) return `${days}d ago`;
-
-  return value.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
 }
 
 function parseDateOnly(dateString) {
@@ -339,23 +220,43 @@ function startOfDay(date) {
 function diffInDaysFromToday(dateString) {
   const target = parseDateOnly(dateString);
   if (!target) return null;
-
   const today = startOfDay(new Date());
   const targetDay = startOfDay(target);
   const diffMs = targetDay.getTime() - today.getTime();
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
+function formatRelativeFromDate(dateString) {
+  if (!dateString) return "Recently";
+  const now = new Date();
+  const value = new Date(dateString);
+  const diffMs = now.getTime() - value.getTime();
+  if (Number.isNaN(diffMs)) return "Recently";
+
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (days < 7) return `${days}d ago`;
+
+  return value.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
 function formatReminderDistance(diffDays) {
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
-  if (diffDays < 7) return `In ${diffDays} days`;
   if (diffDays === 7) return "In 1 week";
+  if (diffDays < 7) return `In ${diffDays} days`;
 
-  if (diffDays < 31) {
-    const weeks = Math.round(diffDays / 7);
-    return `In ${weeks} week${weeks === 1 ? "" : "s"}`;
-  }
+  const weeks = Math.round(diffDays / 7);
+  if (diffDays < 31) return `In ${weeks} week${weeks === 1 ? "" : "s"}`;
 
   const months = Math.round(diffDays / 30);
   return `In ${months} month${months === 1 ? "" : "s"}`;
@@ -400,6 +301,25 @@ function getMonthData(date) {
   }
 
   return cells;
+}
+
+function buildContactRecordFromRow(row) {
+  const relationship = relationshipLabelFromArray(row?.relationship_types);
+  const safeName = row?.name || row?.email || "Unnamed contact";
+  const contactState = row?.contact_state === "user" ? "user" : "invitee";
+
+  return {
+    id: row.id,
+    profileConnectionId: row.id,
+    name: safeName,
+    role: relationship,
+    contactState,
+    note: contactState === "user" ? "Hinted user" : "Invite sent",
+    initials: getInitials(safeName),
+    avatarVariant: contactState,
+    email: row?.email || "",
+    raw: row,
+  };
 }
 
 function LogoMark() {
@@ -458,11 +378,7 @@ function ModalShell({
   );
 }
 
-function AddContactModal({ open, onClose, onSave, supabase }) {
-  const [contactSearch, setContactSearch] = useState("");
-  const [contactResults, setContactResults] = useState([]);
-  const [searchingContacts, setSearchingContacts] = useState(false);
-  const [contactsMessage, setContactsMessage] = useState("");
+function AddContactModal({ open, onClose, onSave }) {
   const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
   const [form, setForm] = useState({
     name: "",
@@ -473,97 +389,12 @@ function AddContactModal({ open, onClose, onSave, supabase }) {
 
   useEffect(() => {
     if (!open) {
-      setContactSearch("");
-      setContactResults([]);
-      setSearchingContacts(false);
-      setContactsMessage("");
       setSelectedRelationships(["Friend"]);
       setForm({ name: "", email: "" });
       setSaving(false);
       setSaveError("");
     }
   }, [open]);
-
-  async function searchGoogleContacts(query) {
-    setContactSearch(query);
-    setContactsMessage("");
-    setSaveError("");
-
-    if (!query.trim()) {
-      setContactResults([]);
-      return;
-    }
-
-    setSearchingContacts(true);
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const providerToken = session?.provider_token;
-
-      if (!providerToken) {
-        setContactResults([]);
-        setContactsMessage(
-          "We couldn’t access your linked Google contacts right now because the Google provider token is missing."
-        );
-        return;
-      }
-
-      const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
-      url.searchParams.set("query", query);
-      url.searchParams.set("pageSize", "8");
-      url.searchParams.set("readMask", "names,emailAddresses");
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${providerToken}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setContactResults([]);
-        setContactsMessage(result?.error?.message || "We couldn’t search Google contacts right now.");
-        return;
-      }
-
-      const people = Array.isArray(result.results) ? result.results : [];
-      const mapped = people
-        .map((item) => item.person)
-        .filter(Boolean)
-        .map((person, index) => ({
-          id: person.resourceName || String(index),
-          name: getPrimaryContactField(person, "names"),
-          email: getPrimaryContactField(person, "emailAddresses"),
-        }))
-        .filter((person) => person.name || person.email);
-
-      setContactResults(mapped);
-
-      if (mapped.length === 0) {
-        setContactsMessage("No matching Google contacts found. You can still type their email manually.");
-      }
-    } catch (error) {
-      setContactResults([]);
-      setContactsMessage(error?.message || "We couldn’t search Google contacts right now.");
-    } finally {
-      setSearchingContacts(false);
-    }
-  }
-
-  function selectContact(contact) {
-    setForm({
-      name: contact.name || "",
-      email: contact.email || "",
-    });
-    setContactSearch(contact.name || contact.email || "");
-    setContactResults([]);
-    setContactsMessage("");
-    setSaveError("");
-  }
 
   function toggleRelationship(relationship) {
     setSelectedRelationships((prev) => {
@@ -622,51 +453,14 @@ function AddContactModal({ open, onClose, onSave, supabase }) {
       <div className="border-t border-[#efe0d7] px-6 py-6">
         <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Bring someone in quickly
+            Contacts
           </p>
           <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
-            Add from Gmail or type their email
+            Add someone by email
           </h3>
           <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
-            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
+            If they already have a Hinted account they should resolve as a user. Otherwise they stay as an invitee until accepted.
           </p>
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={contactSearch}
-              onChange={(e) => searchGoogleContacts(e.target.value)}
-              placeholder="Search Gmail contacts"
-              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
-            />
-          </div>
-
-          {searchingContacts ? (
-            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
-          ) : null}
-
-          {contactResults.length > 0 ? (
-            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
-              {contactResults.map((contact) => (
-                <button
-                  key={contact.id}
-                  type="button"
-                  onClick={() => selectContact(contact)}
-                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
-                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          {contactsMessage ? (
-            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
-          ) : null}
         </div>
 
         <div className="mt-6 space-y-5">
@@ -830,21 +624,41 @@ function DeleteContactModal({
   );
 }
 
+function ContactAvatar({ contact }) {
+  const isUser = contact.contactState === "user";
+
+  return (
+    <div
+      className={`relative flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${
+        isUser
+          ? "bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-white"
+          : "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
+      }`}
+    >
+      {contact.initials}
+      <span
+        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
+          isUser
+            ? "bg-[#2f3b2d] text-white"
+            : "bg-[#fff0e8] text-[#c87150] border border-[#e6c5b6]"
+        }`}
+      >
+        {isUser ? "U" : "I"}
+      </span>
+    </div>
+  );
+}
+
 function ContactCard({ contact, onDeleteClick }) {
   return (
     <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center gap-3">
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
-        >
-          {contact.initials}
-        </div>
+        <ContactAvatar contact={contact} />
 
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
           <p className="text-xs text-slate-500">
-            {contact.role}
-            {contact.note ? ` · ${contact.note}` : ""}
+            {contact.role} · {contact.note}
           </p>
         </div>
 
@@ -916,7 +730,6 @@ function CalendarPopover({
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${style.pill}`}>
                         {style.label}
                       </span>
-
                       {event.source === "system" ? (
                         <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
                           Seasonal
@@ -1124,6 +937,7 @@ function MiniCalendar({
               className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
             >
               →
+
             </button>
           </div>
         </div>
@@ -1276,14 +1090,7 @@ function FeedAction({ text, href }) {
     );
   }
 
-  return (
-    <button
-      type="button"
-      className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
-    >
-      {text}
-    </button>
-  );
+  return null;
 }
 
 function FeedItem({
@@ -1297,16 +1104,16 @@ function FeedItem({
   onSubmitComment,
   onReact,
 }) {
-  const config = eventTypeConfig[item.event_type] || eventTypeConfig.friend_added;
+  const config = feedTypeConfig[item.event_type] || feedTypeConfig.friend_added;
   const reactionCounts = item.reactionCounts || {};
   const viewerReaction = item.viewerReaction || null;
-  const allowEngagement = item.allowEngagement;
+  const allowEngagement = !!item.allow_engagement;
 
   return (
     <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${config.border}`}>
       <div className="flex items-start gap-4">
         <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${config.avatarColors}`}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${config.avatarGradient}`}
         >
           {getInitials(item.actor_name || item.title || "H")}
         </div>
@@ -1336,9 +1143,7 @@ function FeedItem({
             </div>
 
             <span className="shrink-0 text-[12px] text-slate-400">
-              {item.event_type === "reminder" && item.reminderLabel
-                ? item.reminderLabel
-                : formatRelativeFromDate(item.created_at)}
+              {formatRelativeFromDate(item.created_at)}
             </span>
           </div>
 
@@ -1478,10 +1283,7 @@ export default function FeedClient() {
         .eq("id", userId)
         .maybeSingle();
 
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
-      }
-
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
       setProfile(data || null);
       return data || null;
     },
@@ -1502,9 +1304,7 @@ export default function FeedClient() {
       if (error) {
         setContacts([]);
         setIsLoadingContacts(false);
-        throw new Error(
-          normalizeSupabaseError(error, "Failed to load contacts from profile_connections.")
-        );
+        throw new Error(normalizeSupabaseError(error, "Failed to load contacts."));
       }
 
       const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
@@ -1541,16 +1341,8 @@ export default function FeedClient() {
   );
 
   const transformFeedItem = useCallback((item, userId) => {
-    const comments = Array.isArray(item.feed_comments)
-      ? item.feed_comments
-      : Array.isArray(item.comments)
-        ? item.comments
-        : [];
-    const reactions = Array.isArray(item.feed_reactions)
-      ? item.feed_reactions
-      : Array.isArray(item.reactions)
-        ? item.reactions
-        : [];
+    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
+    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
 
     const reactionCounts = reactions.reduce((acc, reaction) => {
       const key = reaction.emoji;
@@ -1561,21 +1353,13 @@ export default function FeedClient() {
 
     const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
 
-    const allowEngagement = [
-      "friend_added",
-      "hint_added",
-      "circle_joined",
-      "circle_top_up",
-      "circle_milestone",
-    ].includes(item.event_type);
-
     return {
       ...item,
       comments,
       reactions,
       reactionCounts,
       viewerReaction,
-      allowEngagement,
+      allow_engagement: !!item.allow_engagement,
     };
   }, []);
 
@@ -1588,6 +1372,14 @@ export default function FeedClient() {
         .from("feed_events")
         .select("*")
         .eq("user_id", userId)
+        .in("event_type", [
+          "friend_added",
+          "hint_added",
+          "circle_joined",
+          "circle_top_up",
+          "circle_milestone",
+          "reminder_week",
+        ])
         .order("created_at", { ascending: false });
 
       if (eventsError) {
@@ -1597,37 +1389,42 @@ export default function FeedClient() {
       }
 
       const eventIds = Array.isArray(events) ? events.map((item) => item.id).filter(Boolean) : [];
-
       let comments = [];
       let reactions = [];
 
       if (eventIds.length > 0) {
-        const { data: commentsData, error: commentsError } = await supabase
-          .from("feed_comments")
-          .select("id, feed_item_id, user_id, body, created_at")
-          .in("feed_item_id", eventIds)
-          .order("created_at", { ascending: true });
+        const engageableIds = (events || [])
+          .filter((item) => item.allow_engagement)
+          .map((item) => item.id);
 
-        if (commentsError) {
-          setFeedItems([]);
-          setFeedLoading(false);
-          throw new Error(commentsError.message || "Could not load feed comments.");
+        if (engageableIds.length > 0) {
+          const { data: commentsData, error: commentsError } = await supabase
+            .from("feed_comments")
+            .select("id, feed_item_id, user_id, body, created_at")
+            .in("feed_item_id", engageableIds)
+            .order("created_at", { ascending: true });
+
+          if (commentsError) {
+            setFeedItems([]);
+            setFeedLoading(false);
+            throw new Error(commentsError.message || "Could not load feed comments.");
+          }
+
+          comments = commentsData || [];
+
+          const { data: reactionsData, error: reactionsError } = await supabase
+            .from("feed_reactions")
+            .select("id, feed_item_id, user_id, emoji, created_at")
+            .in("feed_item_id", engageableIds);
+
+          if (reactionsError) {
+            setFeedItems([]);
+            setFeedLoading(false);
+            throw new Error(reactionsError.message || "Could not load feed reactions.");
+          }
+
+          reactions = reactionsData || [];
         }
-
-        comments = commentsData || [];
-
-        const { data: reactionsData, error: reactionsError } = await supabase
-          .from("feed_reactions")
-          .select("id, feed_item_id, user_id, emoji, created_at")
-          .in("feed_item_id", eventIds);
-
-        if (reactionsError) {
-          setFeedItems([]);
-          setFeedLoading(false);
-          throw new Error(reactionsError.message || "Could not load feed reactions.");
-        }
-
-        reactions = reactionsData || [];
       }
 
       const commentsByItem = comments.reduce((acc, comment) => {
@@ -1660,34 +1457,38 @@ export default function FeedClient() {
     [supabase, transformFeedItem]
   );
 
-  const loadPendingInvites = useCallback(async () => {
-    setInvitesLoading(true);
-    setInvitesError("");
+  const loadPendingInvites = useCallback(
+    async (userId) => {
+      setInvitesLoading(true);
+      setInvitesError("");
 
-    const { data, error } = await supabase
-      .from("circle_invites")
-      .select(`
-        id,
-        circle_id,
-        invite_name,
-        invite_email,
-        status,
-        created_at,
-        invited_user_id
-      `)
-      .in("status", ["pending", "viewed"])
-      .order("created_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("circle_invites")
+        .select(`
+          id,
+          circle_id,
+          invite_name,
+          invite_email,
+          status,
+          created_at,
+          invited_user_id
+        `)
+        .eq("invited_user_id", userId)
+        .in("status", ["pending", "viewed"])
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      setInvitesError(error.message || "Could not load invites.");
-      setPendingInvites([]);
+      if (error) {
+        setInvitesError(error.message || "Could not load invites.");
+        setPendingInvites([]);
+        setInvitesLoading(false);
+        return;
+      }
+
+      setPendingInvites(data || []);
       setInvitesLoading(false);
-      return;
-    }
-
-    setPendingInvites(data || []);
-    setInvitesLoading(false);
-  }, [supabase]);
+    },
+    [supabase]
+  );
 
   useEffect(() => {
     let active = true;
@@ -1719,7 +1520,7 @@ export default function FeedClient() {
           loadContacts(user.id),
           loadCalendarEvents(user.id),
           loadFeed(user.id),
-          loadPendingInvites(),
+          loadPendingInvites(user.id),
         ]);
       } catch (error) {
         if (active) {
@@ -1750,6 +1551,7 @@ export default function FeedClient() {
       body: payload.body,
       entity_type: payload.entity_type || null,
       entity_id: payload.entity_id || null,
+      allow_engagement: !!payload.allow_engagement,
       metadata: payload.metadata || {},
     };
 
@@ -1769,16 +1571,25 @@ export default function FeedClient() {
     }
 
     const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
-
     if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
       throw new Error("A valid email address is required.");
     }
+
+    const { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .eq("email", cleanedEmail)
+      .maybeSingle();
+
+    const contactState = existingProfile?.id ? "user" : "invitee";
 
     const insertPayload = {
       profile_id: sessionUser.id,
       name: contactPayload.name,
       email: cleanedEmail,
       relationship_types: contactPayload.relationshipTypes || ["Friend"],
+      contact_state: contactState,
+      connected_user_id: existingProfile?.id || null,
     };
 
     const { data, error } = await supabase
@@ -1788,20 +1599,23 @@ export default function FeedClient() {
       .single();
 
     if (error) {
-      throw new Error(
-        normalizeSupabaseError(error, "Failed to save contact to profile_connections.")
-      );
+      throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
     }
 
     await createFeedEvent({
       event_type: "friend_added",
       actor_name: contactPayload.name,
-      title: "was added as a contact",
+      title:
+        contactState === "user"
+          ? "is now one of your Hinted contacts"
+          : "was added as an invitee",
       body: cleanedEmail,
       entity_type: "profile_connection",
       entity_id: data?.id || null,
+      allow_engagement: false,
       metadata: {
         relationship_types: contactPayload.relationshipTypes || ["Friend"],
+        contact_state: contactState,
       },
     });
 
@@ -1828,15 +1642,10 @@ export default function FeedClient() {
     setIsDeletingContact(true);
 
     try {
-      const { error } = await supabase
-        .from("profile_connections")
-        .delete()
-        .eq("id", contact.id);
+      const { error } = await supabase.from("profile_connections").delete().eq("id", contact.id);
 
       if (error) {
-        throw new Error(
-          normalizeSupabaseError(error, "Failed to delete contact from profile_connections.")
-        );
+        throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
       }
 
       setContacts((prev) => prev.filter((item) => item.id !== contact.id));
@@ -1891,9 +1700,7 @@ export default function FeedClient() {
       .eq("id", eventToDelete.id)
       .eq("user_id", sessionUser.id);
 
-    if (error) {
-      throw new Error(error.message || "Could not delete event.");
-    }
+    if (error) throw new Error(error.message || "Could not delete event.");
 
     setCalendarEvents((prev) => prev.filter((item) => item.id !== eventToDelete.id));
   }
@@ -1917,27 +1724,26 @@ export default function FeedClient() {
 
     if (sessionUser?.id && nextStatus === "accepted") {
       await createFeedEvent({
-        event_type: "friend_added",
+        event_type: "circle_joined",
         actor_name: data?.invite_name || data?.invite_email || "Someone",
-        title: "accepted your invitation to join Hinted",
-        body: data?.invite_email || "A contact joined Hinted.",
+        title: "joined your circle",
+        body: data?.invite_email || "A contact joined your circle.",
         entity_type: "circle_invite",
         entity_id: data?.id || null,
+        allow_engagement: true,
       });
       await loadFeed(sessionUser.id);
     }
 
     setPendingInvites((current) => current.filter((invite) => invite.id !== inviteId));
-    setActiveInvite((current) => {
-      if (!current) return null;
-      return current.id === inviteId ? null : current;
-    });
+    setActiveInvite((current) => (current?.id === inviteId ? null : current));
     setInviteActionId(null);
   }
 
   async function handleSubmitComment(item) {
     if (!sessionUser?.id) return;
     if (!draftComment.trim()) return;
+    if (!item.allow_engagement) return;
 
     if (item.isDemo) {
       const newComment = {
@@ -1989,10 +1795,7 @@ export default function FeedClient() {
       setFeedItems((prev) =>
         prev.map((feedItem) =>
           feedItem.id === item.id
-            ? {
-                ...feedItem,
-                comments: [...(feedItem.comments || []), newComment],
-              }
+            ? { ...feedItem, comments: [...(feedItem.comments || []), newComment] }
             : feedItem
         )
       );
@@ -2008,7 +1811,7 @@ export default function FeedClient() {
 
   async function handleReact(item, emoji) {
     if (!sessionUser?.id) return;
-    if (!item.allowEngagement) return;
+    if (!item.allow_engagement) return;
 
     if (item.isDemo) {
       setDemoFeedState((current) =>
@@ -2029,18 +1832,11 @@ export default function FeedClient() {
           } else {
             nextReactions = [
               ...reactions,
-              {
-                id: `demo-reaction-${Date.now()}`,
-                user_id: sessionUser.id,
-                emoji,
-              },
+              { id: `demo-reaction-${Date.now()}`, user_id: sessionUser.id, emoji },
             ];
           }
 
-          return {
-            ...feedItem,
-            reactions: nextReactions,
-          };
+          return { ...feedItem, reactions: nextReactions };
         })
       );
       return;
@@ -2059,9 +1855,7 @@ export default function FeedClient() {
           .eq("id", existing.id)
           .eq("user_id", sessionUser.id);
 
-        if (error) {
-          throw new Error(error.message || "Could not remove reaction.");
-        }
+        if (error) throw new Error(error.message || "Could not remove reaction.");
       } else if (existing) {
         const { error } = await supabase
           .from("feed_reactions")
@@ -2069,9 +1863,7 @@ export default function FeedClient() {
           .eq("id", existing.id)
           .eq("user_id", sessionUser.id);
 
-        if (error) {
-          throw new Error(error.message || "Could not update reaction.");
-        }
+        if (error) throw new Error(error.message || "Could not update reaction.");
       } else {
         const { error } = await supabase
           .from("feed_reactions")
@@ -2081,9 +1873,7 @@ export default function FeedClient() {
             emoji,
           });
 
-        if (error) {
-          throw new Error(error.message || "Could not save reaction.");
-        }
+        if (error) throw new Error(error.message || "Could not save reaction.");
       }
 
       await loadFeed(sessionUser.id);
@@ -2093,10 +1883,6 @@ export default function FeedClient() {
       setFeedActionLoading(false);
     }
   }
-
-  const eventsByDate = useMemo(() => {
-    return (calendarEvents || []).reduce((acc) => acc, {}) || {};
-  }, [calendarEvents]);
 
   const safeEventsByDate = useMemo(() => {
     return (calendarEvents || []).reduce((acc, row) => {
@@ -2120,7 +1906,7 @@ export default function FeedClient() {
     return (calendarEvents || [])
       .map((event) => {
         const diffDays = diffInDaysFromToday(event.event_date);
-        if (diffDays === null || diffDays < 0) return null;
+        if (diffDays === null || diffDays < 8) return null;
 
         const eventDate = parseDateOnly(event.event_date);
         if (!eventDate) return null;
@@ -2144,81 +1930,53 @@ export default function FeedClient() {
       .slice(0, 3);
   }, [calendarEvents]);
 
-  const feedReminderItems = useMemo(() => {
-    return (calendarEvents || [])
-      .map((event) => {
-        const diffDays = diffInDaysFromToday(event.event_date);
-        if (diffDays === null || diffDays < 0 || diffDays > 7) return null;
-
-        const eventDate = parseDateOnly(event.event_date);
-        if (!eventDate) return null;
-
-        return {
-          id: `feed-reminder-${event.id}`,
-          event_type: "reminder",
-          actor_name: event.title,
-          title:
-            diffDays === 0
-              ? "is happening today"
-              : diffDays === 1
-                ? "is tomorrow"
-                : "is coming up soon",
-          body: `${eventDate.toLocaleDateString("en-GB", {
-            day: "numeric",
-            month: "long",
-          })} · ${formatReminderDistance(diffDays)}`,
-          created_at: event.created_at || new Date().toISOString(),
-          comments: [],
-          reactions: [],
-          reactionCounts: {},
-          viewerReaction: null,
-          allowEngagement: false,
-          isReminder: true,
-          reminderLabel: formatReminderDistance(diffDays),
-          reminderDiffDays: diffDays,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.reminderDiffDays - b.reminderDiffDays);
-  }, [calendarEvents]);
-
   const hasRealContacts = contacts.length > 0;
   const hasLiveSocialFeedContent = feedItems.length > 0;
 
   const shouldShowFirstLook = demoMode && !hasRealContacts;
   const shouldShowSingleDemoFeedCard = demoMode && !hasLiveSocialFeedContent;
-  const shouldUseDemoContacts = demoMode && !hasRealContacts;
-
   const displayContacts = hasRealContacts ? contacts : demoContacts;
 
   const singleDemoFeedCard = useMemo(() => {
     const demoItem = demoFeedState[0];
-    return demoItem ? transformFeedItem(demoItem, sessionUser?.id || "demo-viewer") : null;
-  }, [demoFeedState, sessionUser?.id, transformFeedItem]);
+    if (!demoItem) return null;
+
+    const comments = demoItem.comments || [];
+    const reactions = demoItem.reactions || [];
+    const reactionCounts = reactions.reduce((acc, reaction) => {
+      acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
+      return acc;
+    }, {});
+    const viewerReaction =
+      reactions.find((reaction) => reaction.user_id === (sessionUser?.id || "demo-viewer")) || null;
+
+    return {
+      ...demoItem,
+      comments,
+      reactions,
+      reactionCounts,
+      viewerReaction,
+      allow_engagement: true,
+    };
+  }, [demoFeedState, sessionUser?.id]);
 
   const combinedFeedItems = useMemo(() => {
     const socialItems = [...feedItems];
-    const reminderItems = [...feedReminderItems];
 
     if (shouldShowSingleDemoFeedCard && singleDemoFeedCard) {
       socialItems.unshift(singleDemoFeedCard);
     }
 
-    return [...socialItems, ...reminderItems].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
-    );
-  }, [feedItems, feedReminderItems, shouldShowSingleDemoFeedCard, singleDemoFeedCard]);
+    return socialItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [feedItems, shouldShowSingleDemoFeedCard, singleDemoFeedCard]);
 
   const visibleFeedItems = useMemo(() => {
     if (activeFilter === "all") return combinedFeedItems;
-
     return combinedFeedItems.filter((item) => {
       if (item.isDemo) return false;
       return item.event_type === activeFilter;
     });
   }, [activeFilter, combinedFeedItems]);
-
-  const showDemoGuide = shouldShowFirstLook;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -2308,7 +2066,7 @@ export default function FeedClient() {
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
-                {initialFilters.map((filter) => {
+                {feedFilters.map((filter) => {
                   const selected = activeFilter === filter.key;
 
                   return (
@@ -2330,13 +2088,13 @@ export default function FeedClient() {
               </div>
             </section>
 
-            {showDemoGuide ? (
+            {shouldShowFirstLook ? (
               <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
                   First look
                 </p>
                 <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-                  How this feed will work
+                  How this feed works
                 </h2>
                 <p className="mt-2 text-[14px] leading-6 text-slate-600">
                   You’re seeing onboarding guidance until you add your first real contact.
@@ -2364,12 +2122,8 @@ export default function FeedClient() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-base font-semibold text-slate-900">Contacts</h2>
-                  <p className="mt-1 text-xs text-slate-500">Manage people from the same source as Circles.</p>
+                  <p className="mt-1 text-xs text-slate-500">Invitees and Hinted users live here.</p>
                 </div>
-
-                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {contacts.length > 0 ? contacts.length : displayContacts.length}
-                </span>
               </div>
 
               <div className="mt-4 space-y-3">
@@ -2378,48 +2132,26 @@ export default function FeedClient() {
                     Loading contacts...
                   </div>
                 ) : displayContacts.length ? (
-                  displayContacts.map((contact) =>
-                    contacts.length > 0 ? (
-                      <ContactCard
-                        key={contact.id}
-                        contact={contact}
-                        onDeleteClick={openDeleteContactModal}
-                      />
-                    ) : (
-                      <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                          >
-                            {contact.initials}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
-                            <p className="text-xs text-slate-500">{contact.role}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  )
+                  displayContacts.map((contact) => (
+                    <ContactCard
+                      key={contact.id}
+                      contact={contact}
+                      onDeleteClick={openDeleteContactModal}
+                    />
+                  ))
                 ) : (
                   <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
-                    No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
+                    No contacts added yet.
                   </div>
                 )}
               </div>
-
-              {shouldUseDemoContacts ? (
-                <p className="mt-4 text-[12px] leading-5 text-slate-400">
-                  These are demo contacts until you add real ones.
-                </p>
-              ) : null}
 
               <button
                 type="button"
                 onClick={() => setIsAddContactOpen(true)}
                 className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
               >
-                Add or import contact
+                Add contact
               </button>
             </section>
           </aside>
@@ -2436,13 +2168,13 @@ export default function FeedClient() {
                       Your people, moments, and nudges.
                     </h2>
                     <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
-                      Reminders stay quiet unless they are close. Only today, tomorrow, and within-the-week reminders appear in the main feed, while longer-range reminders stay on the right-hand side.
+                      The feed shows automatic people-based updates plus short 1-week reminders. Longer reminders stay in the right-hand sidebar.
                     </p>
                   </div>
 
                   {shouldShowSingleDemoFeedCard ? (
                     <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      A demo social card is showing until real contact, hint, or circle activity begins.
+                      A demo social card is showing until real contact, hint, circle, or reminder-week activity begins.
                     </div>
                   ) : null}
                 </div>
@@ -2461,13 +2193,6 @@ export default function FeedClient() {
                     className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
                   >
                     Create circle
-                  </Link>
-
-                  <Link
-                    href="/shop"
-                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-                  >
-                    Open shop
                   </Link>
                 </div>
 
@@ -2516,10 +2241,6 @@ export default function FeedClient() {
                     Invites waiting for you
                   </h2>
                 </div>
-
-                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {pendingInvites.length}
-                </span>
               </div>
 
               {invitesLoading ? (
@@ -2621,28 +2342,16 @@ export default function FeedClient() {
                   <p>Status: {activeInvite.status}</p>
                   <p>Circle ID: {activeInvite.circle_id}</p>
                 </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleInviteDecision(activeInvite.id, "accepted")}
-                    disabled={inviteActionId === activeInvite.id}
-                    className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
-                  >
-                    {inviteActionId === activeInvite.id ? "Working..." : "Accept invite"}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleInviteDecision(activeInvite.id, "declined")}
-                    disabled={inviteActionId === activeInvite.id}
-                    className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
-                  >
-                    {inviteActionId === activeInvite.id ? "Working..." : "Decline invite"}
-                  </button>
-                </div>
               </section>
             ) : null}
+
+            <MiniCalendar
+              eventsByDate={safeEventsByDate}
+              calendarLoading={calendarLoading}
+              calendarError={calendarError}
+              onCreateEvent={handleCreateCalendarEvent}
+              onDeleteEvent={handleDeleteCalendarEvent}
+            />
 
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-start justify-between gap-3">
@@ -2651,22 +2360,18 @@ export default function FeedClient() {
                     Upcoming reminders
                   </p>
                   <h2 className="mt-1 text-base font-semibold text-slate-900">
-                    Your next 3 reminders
+                    Your next 3 long reminders
                   </h2>
                 </div>
-
-                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                  {sidebarReminders.length}
-                </span>
               </div>
 
               {sidebarReminders.length === 0 ? (
                 <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
                   <p className="text-sm font-medium text-slate-700">
-                    No upcoming reminders yet.
+                    No long reminders yet.
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
-                    Add a calendar event and it will appear here.
+                    Events more than a week away will appear here.
                   </p>
                 </div>
               ) : (
@@ -2691,14 +2396,6 @@ export default function FeedClient() {
                 </div>
               )}
             </section>
-
-            <MiniCalendar
-              eventsByDate={safeEventsByDate}
-              calendarLoading={calendarLoading}
-              calendarError={calendarError}
-              onCreateEvent={handleCreateCalendarEvent}
-              onDeleteEvent={handleDeleteCalendarEvent}
-            />
           </aside>
         </div>
       </div>
@@ -2707,7 +2404,6 @@ export default function FeedClient() {
         open={isAddContactOpen}
         onClose={() => setIsAddContactOpen(false)}
         onSave={handleSaveContact}
-        supabase={supabase}
       />
 
       <DeleteContactModal
