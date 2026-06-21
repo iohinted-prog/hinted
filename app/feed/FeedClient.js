@@ -6,7 +6,6 @@ import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
 const demoMode = true;
-const hasContactsDemoFallback = false;
 
 const relationshipOptions = [
   "Partner",
@@ -25,10 +24,11 @@ const relationshipOptions = [
 
 const initialFilters = [
   { key: "all", label: "All activity" },
-  { key: "reminder", label: "Reminders" },
-  { key: "hint", label: "Hints" },
-  { key: "circle", label: "Circles" },
-  { key: "celebration", label: "Celebrations" },
+  { key: "friend_added", label: "Friends" },
+  { key: "hint_added", label: "Hints" },
+  { key: "circle_joined", label: "Circle joins" },
+  { key: "circle_top_up", label: "Top ups" },
+  { key: "circle_milestone", label: "Milestones" },
 ];
 
 const onboardingSteps = [
@@ -51,101 +51,136 @@ const onboardingSteps = [
 
 const demoContacts = [
   {
-    id: 1,
+    id: "demo-1",
     name: "Maya",
     role: "Friend",
     note: "Saved 8 hints",
     initials: "M",
     colors: "from-[#efc3af] to-[#ae6e57]",
     email: "",
-    phone: "",
-    birthday: "",
   },
   {
-    id: 2,
+    id: "demo-2",
     name: "James",
     role: "Brother",
     note: "Saved 5 hints",
     initials: "J",
     colors: "from-[#4e596d] to-[#212a3c]",
     email: "",
-    phone: "",
-    birthday: "",
   },
   {
-    id: 3,
+    id: "demo-3",
     name: "Fiona",
     role: "Friend",
     note: "Saved 4 hints",
     initials: "F",
     colors: "from-[#809168] to-[#41512e]",
     email: "",
-    phone: "",
-    birthday: "",
   },
 ];
 
 const demoFeedItems = [
   {
-    id: 1,
-    type: "reminder",
-    avatar: "S",
-    avatarColors: "from-[#efcdbf] to-[#c88c73]",
-    name: "Sarah",
-    action: "has a birthday coming up in 2 weeks",
-    detail: "June 29 · She saved a ceramics workshop and linen bedding.",
-    time: "Just now",
-    icon: "🎂",
-    badge: "Reminder",
+    id: "demo-feed-1",
+    event_type: "friend_added",
+    actor_name: "Maya",
+    title: "Maya was added as a friend",
+    body: "You’ve started building your gifting network.",
+    created_at: new Date().toISOString(),
     comments: [
-      { id: 1, name: "You", text: "Need to sort this early this time." },
-      { id: 2, name: "Maya", text: "I can help with ideas if you want to split something." },
+      {
+        id: "comment-1",
+        user_id: "demo",
+        body: "Nice start.",
+        author_name: "You",
+        created_at: new Date().toISOString(),
+      },
     ],
-    reactions: ["🎉", "❤️", "👏"],
+    reactions: [
+      { id: "reaction-1", user_id: "demo-1", emoji: "❤️" },
+      { id: "reaction-2", user_id: "demo-2", emoji: "🎉" },
+    ],
+    isDemo: true,
   },
   {
-    id: 2,
-    type: "hint",
-    avatar: "M",
-    avatarColors: "from-[#e7cab8] to-[#b97d66]",
-    name: "Mum",
-    action: "saved a new hint",
-    detail: "Silk pillowcase set · From John Lewis · Around £45.",
-    time: "12m ago",
-    icon: "🎁",
-    badge: "Hint",
-    comments: [{ id: 1, name: "You", text: "This is actually a very solid option." }],
-    reactions: ["✨", "😍", "👏"],
-  },
-  {
-    id: 3,
-    type: "circle",
-    avatar: "MF",
-    avatarColors: "from-[#98a47d] to-[#5f7046]",
-    name: "Max & Fiona",
-    action: "have a wedding circle that is nearly funded",
-    detail: "£320 of £400 raised · 4 contributors · 80% full.",
-    time: "1h ago",
-    icon: "💍",
-    badge: "Circle",
-    comments: [{ id: 1, name: "James", text: "Nearly there — I’ll add the last bit tonight." }],
-    reactions: ["🥂", "💚", "🎉"],
-  },
-  {
-    id: 4,
-    type: "celebration",
-    avatar: "J",
-    avatarColors: "from-[#dcc4b5] to-[#b78972]",
-    name: "James",
-    action: "reacted to a shared hint in your circle",
-    detail: "Weekend cabin stay · Marked as a top pick.",
-    time: "3h ago",
-    icon: "⭐",
-    badge: "Celebration",
+    id: "demo-feed-2",
+    event_type: "hint_added",
+    actor_name: "Mum",
+    title: "A new hint was added",
+    body: "Silk pillowcase set · Around £45.",
+    created_at: new Date(Date.now() - 1000 * 60 * 18).toISOString(),
     comments: [],
-    reactions: ["🔥", "🙌", "💛"],
+    reactions: [{ id: "reaction-3", user_id: "demo-3", emoji: "👏" }],
+    isDemo: true,
+  },
+  {
+    id: "demo-feed-3",
+    event_type: "circle_milestone",
+    actor_name: "Max & Fiona",
+    title: "A circle reached 80%",
+    body: "£320 of £400 raised · 4 contributors.",
+    created_at: new Date(Date.now() - 1000 * 60 * 56).toISOString(),
+    comments: [],
+    reactions: [
+      { id: "reaction-4", user_id: "demo-1", emoji: "🎉" },
+      { id: "reaction-5", user_id: "demo-2", emoji: "💚" },
+    ],
+    isDemo: true,
   },
 ];
+
+const eventTypeConfig = {
+  friend_added: {
+    chip: "bg-[#fff3ee] text-[#e07c54]",
+    border: "border-[#f6ddd2]",
+    icon: "👋",
+    badge: "Friend",
+    actionText: "View contact",
+    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+  },
+  hint_added: {
+    chip: "bg-[#f5f3ff] text-[#7c5cbf]",
+    border: "border-[#e5defa]",
+    icon: "🎁",
+    badge: "Hint",
+    actionText: "View hint",
+    avatarColors: "from-[#e7cab8] to-[#b97d66]",
+  },
+  circle_joined: {
+    chip: "bg-[#edf6eb] text-[#4a7a3a]",
+    border: "border-[#deebda]",
+    icon: "💍",
+    badge: "Circle",
+    actionText: "Open circle",
+    avatarColors: "from-[#98a47d] to-[#5f7046]",
+  },
+  circle_top_up: {
+    chip: "bg-[#eef6ea] text-[#5b7a3c]",
+    border: "border-[#dcead4]",
+    icon: "💸",
+    badge: "Top up",
+    actionText: "Open circle",
+    avatarColors: "from-[#aab88f] to-[#687a4e]",
+  },
+  circle_milestone: {
+    chip: "bg-[#fff7e8] text-[#af7b14]",
+    border: "border-[#f3e3b8]",
+    icon: "⭐",
+    badge: "Milestone",
+    actionText: "Open circle",
+    avatarColors: "from-[#dcc4b5] to-[#b78972]",
+  },
+  reminder: {
+    chip: "bg-[#fff3ee] text-[#e07c54]",
+    border: "border-[#f6ddd2]",
+    icon: "🗓️",
+    badge: "Reminder",
+    actionText: "Open planner",
+    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+  },
+};
+
+const reactionOptions = ["❤️", "🎉", "👏"];
 
 const eventTypeStyles = {
   birthday: {
@@ -252,8 +287,6 @@ function buildContactRecordFromRow(row) {
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship),
     email: row?.email || "",
-    phone: "",
-    birthday: "",
     raw: row,
   };
 }
@@ -754,10 +787,7 @@ function DeleteContactModal({
 
 function ContactCard({ contact, onDeleteClick }) {
   return (
-    <article
-      className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-      aria-label={`Manage ${contact.name}`}
-    >
+    <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
       <div className="flex items-center gap-3">
         <div
           className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
@@ -780,124 +810,6 @@ function ContactCard({ contact, onDeleteClick }) {
         >
           Delete
         </button>
-      </div>
-    </article>
-  );
-}
-
-function FeedItem({ item }) {
-  const typeStyles =
-    item.type === "reminder"
-      ? {
-          chip: "bg-[#fff3ee] text-[#e07c54]",
-          border: "border-[#f6ddd2]",
-        }
-      : item.type === "circle"
-        ? {
-            chip: "bg-[#edf6eb] text-[#4a7a3a]",
-            border: "border-[#deebda]",
-          }
-        : item.type === "celebration"
-          ? {
-              chip: "bg-[#fff7e8] text-[#af7b14]",
-              border: "border-[#f3e3b8]",
-            }
-          : {
-              chip: "bg-[#f5f3ff] text-[#7c5cbf]",
-              border: "border-[#e5defa]",
-            };
-
-  const actionLabel =
-    item.type === "reminder"
-      ? "Open planner"
-      : item.type === "hint"
-        ? "View hint"
-        : item.type === "circle"
-          ? "Open circle"
-          : "View activity";
-
-  return (
-    <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${typeStyles.border}`}>
-      <div className="flex items-start gap-4">
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
-        >
-          {item.avatar}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeStyles.chip}`}>
-                  {item.icon} {item.badge}
-                </span>
-                {item.isDemo ? (
-                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                    Demo data
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="mt-3 text-[15px] leading-7 text-slate-700">
-                <span className="font-semibold text-slate-900">{item.name}</span> {item.action}
-              </p>
-              <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.detail}</p>
-            </div>
-
-            <span className="shrink-0 text-[12px] text-slate-400">{item.time}</span>
-          </div>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {(item.reactions || []).map((reaction) => (
-              <button
-                key={reaction}
-                type="button"
-                className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-[#fffaf7] px-3 text-sm text-slate-700 hover:bg-[#fff2eb]"
-                aria-label={`React with ${reaction}`}
-              >
-                {reaction}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              Comment
-            </button>
-
-            <button
-              type="button"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              {actionLabel}
-            </button>
-          </div>
-
-          {(item.comments || []).length > 0 ? (
-            <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-              {item.comments.map((comment) => (
-                <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
-                  <p className="text-[13px] leading-6 text-slate-600">
-                    <span className="font-semibold text-slate-900">{comment.name}</span> {comment.text}
-                  </p>
-                </div>
-              ))}
-
-              <div className="flex gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
-                  Y
-                </div>
-                <input
-                  type="text"
-                  placeholder="Write a comment..."
-                  className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
-                />
-              </div>
-            </div>
-          ) : null}
-        </div>
       </div>
     </article>
   );
@@ -1134,10 +1046,7 @@ function MiniCalendar({
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
               Planner
             </p>
-            <h2
-              className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900"
-              aria-live="polite"
-            >
+            <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
               {monthLabel}
             </h2>
           </div>
@@ -1308,6 +1217,157 @@ function MiniCalendar({
   );
 }
 
+function FeedItem({
+  item,
+  sessionUser,
+  profile,
+  activeComposerId,
+  setActiveComposerId,
+  draftComment,
+  setDraftComment,
+  onSubmitComment,
+  onReact,
+}) {
+  const config = eventTypeConfig[item.event_type] || eventTypeConfig.friend_added;
+  const reactionCounts = item.reactionCounts || {};
+  const viewerReaction = item.viewerReaction || null;
+  const allowEngagement = item.allowEngagement;
+
+  return (
+    <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${config.border}`}>
+      <div className="flex items-start gap-4">
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${config.avatarColors}`}
+        >
+          {getInitials(item.actor_name || item.title || "H")}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${config.chip}`}>
+                  {config.icon} {config.badge}
+                </span>
+                {item.isDemo ? (
+                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    Demo data
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="mt-3 text-[15px] leading-7 text-slate-700">
+                <span className="font-semibold text-slate-900">{item.actor_name || "Activity"}</span>{" "}
+                {item.title}
+              </p>
+              {item.body ? (
+                <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.body}</p>
+              ) : null}
+            </div>
+
+            <span className="shrink-0 text-[12px] text-slate-400">
+              {formatRelativeFromDate(item.created_at)}
+            </span>
+          </div>
+
+          {allowEngagement ? (
+            <>
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {reactionOptions.map((emoji) => {
+                  const count = reactionCounts[emoji] || 0;
+                  const active = viewerReaction?.emoji === emoji;
+
+                  return (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => onReact(item, emoji)}
+                      className={`inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm ${
+                        active
+                          ? "border-[#ee8d69] bg-[#fff1ea] text-[#d96d4f]"
+                          : "border-[#ebdfd8] bg-[#fffaf7] text-slate-700 hover:bg-[#fff2eb]"
+                      }`}
+                    >
+                      <span>{emoji}</span>
+                      <span className="ml-1 text-xs">{count}</span>
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveComposerId((current) => (current === item.id ? null : item.id))
+                  }
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Comment
+                </button>
+
+                <button
+                  type="button"
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  {config.actionText}
+                </button>
+              </div>
+
+              {(item.comments || []).length > 0 ? (
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  {item.comments.map((comment) => (
+                    <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
+                      <p className="text-[13px] leading-6 text-slate-600">
+                        <span className="font-semibold text-slate-900">
+                          {comment.author_name || "Someone"}
+                        </span>{" "}
+                        {comment.body}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {activeComposerId === item.id ? (
+                <div className="mt-4 flex gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
+                    {getInitials(profile?.full_name || sessionUser?.email || "Y") || "Y"}
+                  </div>
+
+                  <div className="flex w-full gap-2">
+                    <input
+                      type="text"
+                      value={draftComment}
+                      onChange={(e) => setDraftComment(e.target.value)}
+                      placeholder="Write a comment..."
+                      className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onSubmitComment(item)}
+                      className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-sm font-semibold text-white"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {config.actionText}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function FeedClient() {
   const supabase = createClient();
 
@@ -1336,6 +1396,13 @@ export default function FeedClient() {
   const [invitesError, setInvitesError] = useState("");
   const [activeInvite, setActiveInvite] = useState(null);
   const [inviteActionId, setInviteActionId] = useState(null);
+
+  const [feedItems, setFeedItems] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState("");
+  const [activeComposerId, setActiveComposerId] = useState(null);
+  const [draftComment, setDraftComment] = useState("");
+  const [feedActionLoading, setFeedActionLoading] = useState(false);
 
   const loadProfile = useCallback(
     async (userId) => {
@@ -1407,6 +1474,83 @@ export default function FeedClient() {
     [supabase]
   );
 
+  const transformFeedItem = useCallback(
+    (item, userId) => {
+      const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
+      const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
+
+      const reactionCounts = reactions.reduce((acc, reaction) => {
+        const key = reaction.emoji;
+        if (!key) return acc;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+      }, {});
+
+      const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
+      const allowEngagement = [
+        "friend_added",
+        "hint_added",
+        "circle_joined",
+        "circle_top_up",
+        "circle_milestone",
+      ].includes(item.event_type);
+
+      return {
+        ...item,
+        comments,
+        reactions,
+        reactionCounts,
+        viewerReaction,
+        allowEngagement,
+      };
+    },
+    []
+  );
+
+  const loadFeed = useCallback(
+    async (userId) => {
+      setFeedLoading(true);
+      setFeedError("");
+
+      const { data, error } = await supabase
+        .from("feed_events")
+        .select(`
+          *,
+          feed_comments (
+            id,
+            feed_item_id,
+            user_id,
+            body,
+            created_at
+          ),
+          feed_reactions (
+            id,
+            feed_item_id,
+            user_id,
+            emoji,
+            created_at
+          )
+        `)
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        setFeedItems([]);
+        setFeedLoading(false);
+        throw new Error(error.message || "Could not load feed.");
+      }
+
+      const mapped = Array.isArray(data)
+        ? data.map((item) => transformFeedItem(item, userId))
+        : [];
+
+      setFeedItems(mapped);
+      setFeedLoading(false);
+      return mapped;
+    },
+    [supabase, transformFeedItem]
+  );
+
   async function loadPendingInvites() {
     setInvitesLoading(true);
     setInvitesError("");
@@ -1462,18 +1606,18 @@ export default function FeedClient() {
         await loadProfile(user.id);
         if (!active) return;
 
-        await loadContacts(user.id);
-        if (!active) return;
-
-        await loadCalendarEvents(user.id);
-        if (!active) return;
-
-        await loadPendingInvites();
+        await Promise.all([
+          loadContacts(user.id),
+          loadCalendarEvents(user.id),
+          loadFeed(user.id),
+          loadPendingInvites(),
+        ]);
       } catch (error) {
         if (active) {
           setPageError(error?.message || "Failed to load the feed page.");
           setIsLoadingContacts(false);
           setCalendarLoading(false);
+          setFeedLoading(false);
           setInvitesLoading(false);
         }
       }
@@ -1484,7 +1628,26 @@ export default function FeedClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadCalendarEvents]);
+  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadFeed]);
+
+  async function createFeedEvent(payload) {
+    if (!sessionUser?.id) return;
+
+    const { error } = await supabase.from("feed_events").insert({
+      user_id: sessionUser.id,
+      event_type: payload.event_type,
+      actor_name: payload.actor_name,
+      title: payload.title,
+      body: payload.body,
+      entity_type: payload.entity_type || null,
+      entity_id: payload.entity_id || null,
+      metadata: payload.metadata || {},
+    });
+
+    if (error) {
+      throw new Error(error.message || "Could not create feed activity.");
+    }
+  }
 
   async function handleSaveContact(contactPayload) {
     setContactError("");
@@ -1507,7 +1670,11 @@ export default function FeedClient() {
       relationship_types: contactPayload.relationshipTypes || ["Friend"],
     };
 
-    const { error } = await supabase.from("profile_connections").insert(insertPayload);
+    const { data, error } = await supabase
+      .from("profile_connections")
+      .insert(insertPayload)
+      .select()
+      .single();
 
     if (error) {
       throw new Error(
@@ -1515,7 +1682,19 @@ export default function FeedClient() {
       );
     }
 
-    await loadContacts(sessionUser.id);
+    await createFeedEvent({
+      event_type: "friend_added",
+      actor_name: contactPayload.name,
+      title: "was added as a friend",
+      body: cleanedEmail,
+      entity_type: "profile_connection",
+      entity_id: data?.id || null,
+      metadata: {
+        relationship_types: contactPayload.relationshipTypes || ["Friend"],
+      },
+    });
+
+    await Promise.all([loadContacts(sessionUser.id), loadFeed(sessionUser.id)]);
     setContactSuccess("Contact saved successfully.");
   }
 
@@ -1612,7 +1791,7 @@ export default function FeedClient() {
     setInviteActionId(inviteId);
     setInvitesError("");
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("circle_invites")
       .update({ status: nextStatus })
       .eq("id", inviteId)
@@ -1625,6 +1804,18 @@ export default function FeedClient() {
       return;
     }
 
+    if (sessionUser?.id && nextStatus === "accepted") {
+      await createFeedEvent({
+        event_type: "circle_joined",
+        actor_name: data?.invite_name || data?.invite_email || "Someone",
+        title: "joined a circle",
+        body: data?.invite_email || "A circle invite was accepted.",
+        entity_type: "circle_invite",
+        entity_id: data?.id || null,
+      });
+      await loadFeed(sessionUser.id);
+    }
+
     setPendingInvites((current) => current.filter((invite) => invite.id !== inviteId));
     setActiveInvite((current) => {
       if (!current) return null;
@@ -1633,10 +1824,104 @@ export default function FeedClient() {
     setInviteActionId(null);
   }
 
-  const showDemoGuide = demoMode && !(contacts.length > 0 || hasContactsDemoFallback);
+  async function handleSubmitComment(item) {
+    if (!sessionUser?.id) return;
+    if (!draftComment.trim()) return;
 
-  const displayContacts = contacts.length > 0 ? contacts : demoContacts;
-  const displayContactsAreDemo = contacts.length === 0 && demoMode;
+    setFeedActionLoading(true);
+    setFeedError("");
+
+    try {
+      const { data, error } = await supabase
+        .from("feed_comments")
+        .insert({
+          feed_item_id: item.id,
+          user_id: sessionUser.id,
+          body: draftComment.trim(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        throw new Error(error.message || "Could not save comment.");
+      }
+
+      const newComment = {
+        ...data,
+        author_name: profile?.full_name || "You",
+      };
+
+      setFeedItems((prev) =>
+        prev.map((feedItem) =>
+          feedItem.id === item.id
+            ? {
+                ...feedItem,
+                comments: [...(feedItem.comments || []), newComment],
+              }
+            : feedItem
+        )
+      );
+
+      setDraftComment("");
+      setActiveComposerId(null);
+    } catch (error) {
+      setFeedError(error?.message || "Could not save comment.");
+    } finally {
+      setFeedActionLoading(false);
+    }
+  }
+
+  async function handleReact(item, emoji) {
+    if (!sessionUser?.id) return;
+    if (!item.allowEngagement) return;
+
+    setFeedActionLoading(true);
+    setFeedError("");
+
+    try {
+      const existing = item.viewerReaction || null;
+
+      if (existing && existing.emoji === emoji) {
+        const { error } = await supabase
+          .from("feed_reactions")
+          .delete()
+          .eq("id", existing.id)
+          .eq("user_id", sessionUser.id);
+
+        if (error) {
+          throw new Error(error.message || "Could not remove reaction.");
+        }
+      } else if (existing) {
+        const { error } = await supabase
+          .from("feed_reactions")
+          .update({ emoji })
+          .eq("id", existing.id)
+          .eq("user_id", sessionUser.id);
+
+        if (error) {
+          throw new Error(error.message || "Could not update reaction.");
+        }
+      } else {
+        const { error } = await supabase
+          .from("feed_reactions")
+          .insert({
+            feed_item_id: item.id,
+            user_id: sessionUser.id,
+            emoji,
+          });
+
+        if (error) {
+          throw new Error(error.message || "Could not save reaction.");
+        }
+      }
+
+      await loadFeed(sessionUser.id);
+    } catch (error) {
+      setFeedError(error?.message || "Could not save reaction.");
+    } finally {
+      setFeedActionLoading(false);
+    }
+  }
 
   const eventsByDate = useMemo(() => {
     return (calendarEvents || []).reduce((acc, row) => {
@@ -1688,62 +1973,46 @@ export default function FeedClient() {
         }
 
         return {
-          id: event.id,
-          title: event.title,
-          dateLabel: eventDate.toLocaleDateString("en-GB", {
+          id: `reminder-${event.id}`,
+          event_type: "reminder",
+          actor_name: event.title,
+          title: "is coming up soon",
+          body: `${eventDate.toLocaleDateString("en-GB", {
             day: "numeric",
             month: "long",
-          }),
-          subtitle,
-          type: event.type || "celebration",
+          })} · ${subtitle}`,
+          created_at: event.created_at || new Date().toISOString(),
+          comments: [],
+          reactions: [],
+          reactionCounts: {},
+          viewerReaction: null,
+          allowEngagement: false,
+          isReminder: true,
         };
       });
   }, [calendarEvents]);
 
-  const realFeedItems = useMemo(() => {
-    const reminderFeedItems = upcomingReminders.map((reminder) => ({
-      id: `reminder-${reminder.id}`,
-      type: "reminder",
-      avatar: "⏰",
-      avatarColors: "from-[#efcdbf] to-[#c88c73]",
-      name: reminder.title,
-      action: "is coming up soon",
-      detail: `${reminder.dateLabel} · ${reminder.subtitle}`,
-      time: "Upcoming",
-      icon: "🎂",
-      badge: "Reminder",
-      comments: [],
-      reactions: ["🎉", "❤️"],
-      isDemo: false,
-    }));
+  const showDemoGuide = demoMode && contacts.length === 0 && feedItems.length === 0;
 
-    const inviteFeedItems = pendingInvites.slice(0, 3).map((invite) => ({
-      id: `invite-${invite.id}`,
-      type: "circle",
-      avatar: "CI",
-      avatarColors: "from-[#98a47d] to-[#5f7046]",
-      name: invite.invite_name || invite.invite_email || "Someone",
-      action: "invited you to join a circle",
-      detail: invite.invite_email || "Invitation waiting for a response.",
-      time: formatRelativeFromDate(invite.created_at),
-      icon: "💍",
-      badge: "Circle",
-      comments: [],
-      reactions: ["💚", "🎉"],
-      isDemo: false,
-    }));
+  const displayContacts = contacts.length > 0 ? contacts : demoContacts;
+  const displayContactsAreDemo = contacts.length === 0 && demoMode;
 
-    return [...inviteFeedItems, ...reminderFeedItems];
-  }, [pendingInvites, upcomingReminders]);
+  const sourceFeedItems =
+    feedItems.length > 0
+      ? feedItems
+      : demoFeedItems.map((item) =>
+          transformFeedItem(item, sessionUser?.id || "demo")
+        );
 
-  const sourceFeedItems = realFeedItems.length > 0
-    ? realFeedItems
-    : demoFeedItems.map((item) => ({ ...item, isDemo: true }));
+  const feedWithReminders = useMemo(() => {
+    const combined = [...sourceFeedItems, ...upcomingReminders];
+    return combined.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [sourceFeedItems, upcomingReminders]);
 
   const visibleFeedItems = useMemo(() => {
-    if (activeFilter === "all") return sourceFeedItems;
-    return sourceFeedItems.filter((item) => item.type === activeFilter);
-  }, [activeFilter, sourceFeedItems]);
+    if (activeFilter === "all") return feedWithReminders;
+    return feedWithReminders.filter((item) => item.event_type === activeFilter);
+  }, [activeFilter, feedWithReminders]);
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -1790,7 +2059,7 @@ export default function FeedClient() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
-        {pageError || contactError || contactSuccess ? (
+        {pageError || contactError || contactSuccess || feedError ? (
           <div className="mb-5 space-y-3">
             {pageError ? (
               <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
@@ -1801,6 +2070,12 @@ export default function FeedClient() {
             {contactError ? (
               <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
                 {contactError}
+              </div>
+            ) : null}
+
+            {feedError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {feedError}
               </div>
             ) : null}
 
@@ -1825,7 +2100,7 @@ export default function FeedClient() {
                   </h1>
                 </div>
 
-                {demoMode && sourceFeedItems.some((item) => item.isDemo) ? (
+                {demoMode && feedItems.length === 0 ? (
                   <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
                     Demo
                   </span>
@@ -1961,13 +2236,13 @@ export default function FeedClient() {
                       Your people, moments, and nudges.
                     </h2>
                     <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
-                      This feed updates automatically as reminders get closer, hints are added, and shared gift moments start moving.
+                      Reminders stay personal and quiet. Reactions and comments only appear on social updates like new friends, hints, and circle activity.
                     </p>
                   </div>
 
-                  {sourceFeedItems.some((item) => item.isDemo) ? (
+                  {demoMode && feedItems.length === 0 ? (
                     <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      Demo mode is on now. Once contacts and events are added, this area will switch to real activity.
+                      Demo mode is on now. Once contacts and social activity are added, this area will switch to real feed events.
                     </div>
                   ) : null}
                 </div>
@@ -1997,14 +2272,35 @@ export default function FeedClient() {
                 </div>
 
                 <div className="mt-5 space-y-4">
-                  {visibleFeedItems.length > 0 ? (
-                    visibleFeedItems.map((item) => <FeedItem key={item.id} item={item} />)
+                  {feedLoading ? (
+                    <div className="rounded-[24px] border border-[#f0dfd6] bg-[#fffdfa] p-5 text-sm text-slate-500">
+                      Loading feed...
+                    </div>
+                  ) : visibleFeedItems.length > 0 ? (
+                    visibleFeedItems.map((item) => (
+                      <FeedItem
+                        key={item.id}
+                        item={item}
+                        sessionUser={sessionUser}
+                        profile={profile}
+                        activeComposerId={activeComposerId}
+                        setActiveComposerId={setActiveComposerId}
+                        draftComment={draftComment}
+                        setDraftComment={setDraftComment}
+                        onSubmitComment={handleSubmitComment}
+                        onReact={handleReact}
+                      />
+                    ))
                   ) : (
                     <div className="rounded-[24px] border border-[#f0dfd6] bg-[#fffdfa] p-5 text-sm text-slate-500">
                       No activity matches this filter yet.
                     </div>
                   )}
                 </div>
+
+                {feedActionLoading ? (
+                  <p className="mt-4 text-xs text-slate-400">Saving your update...</p>
+                ) : null}
               </div>
             </div>
           </section>
@@ -2179,16 +2475,16 @@ export default function FeedClient() {
               ) : (
                 <div className="mt-4 space-y-3">
                   {upcomingReminders.map((item) => {
-                    const style = eventTypeStyles[item.type] || eventTypeStyles.celebration;
+                    const style = eventTypeStyles.reminder;
 
                     return (
                       <div key={item.id} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
                         <div className="flex items-start gap-3">
                           <div className={`mt-1 h-3 w-3 shrink-0 rounded-full ${style.dot}`} />
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
-                            <p className="mt-1 text-xs text-slate-500">{item.dateLabel}</p>
-                            <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+                            <p className="truncate text-sm font-semibold text-slate-800">{item.actor_name}</p>
+                            <p className="mt-1 text-xs text-slate-500">{item.body?.split(" · ")[0]}</p>
+                            <p className="mt-1 text-xs text-slate-400">{item.body?.split(" · ")[1] || ""}</p>
                           </div>
                         </div>
                       </div>
@@ -2196,40 +2492,6 @@ export default function FeedClient() {
                   })}
                 </div>
               )}
-            </section>
-
-            <section className="rounded-[28px] border border-[#e6ddd7] bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Shop next
-              </p>
-              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-                A place for saved gift options
-              </h2>
-              <p className="mt-2 text-[14px] leading-6 text-slate-600">
-                Shop can become the home for linked products, saved retailer finds, and the items you might attach to circles later.
-              </p>
-
-              <Link
-                href="/shop"
-                className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-              >
-                Go to shop
-              </Link>
-            </section>
-
-            <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
-                Gift prompt
-              </p>
-              <p className="mt-3 text-sm leading-7 text-white/90">
-                Upcoming reminders and circle invites will eventually drive suggestions here, so the right rail starts to feel useful instead of decorative.
-              </p>
-              <button
-                type="button"
-                className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
-              >
-                View related hints
-              </button>
             </section>
           </aside>
         </div>
