@@ -1,22 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
-const HINTED_SERVICE_FEE_RATE = 0.02;
-const SELF_SELECTOR_ID = "__self__";
-
-const currencyOptions = [
-  { code: "GBP", symbol: "£", label: "British Pound" },
-  { code: "USD", symbol: "$", label: "US Dollar" },
-  { code: "EUR", symbol: "€", label: "Euro" },
-  { code: "AUD", symbol: "A$", label: "Australian Dollar" },
-  { code: "NZD", symbol: "NZ$", label: "New Zealand Dollar" },
-  { code: "ZAR", symbol: "R", label: "South African Rand" },
-  { code: "CAD", symbol: "C$", label: "Canadian Dollar" },
-];
+const demoMode = true;
+const hasContactsDemoFallback = false;
 
 const relationshipOptions = [
   "Partner",
@@ -33,59 +23,183 @@ const relationshipOptions = [
   "Other",
 ];
 
-const calendarEvents = [
-  { id: 1, title: "Sarah's Birthday", date: "2026-06-29", type: "Birthday" },
-  { id: 2, title: "Mum & Dad Anniversary", date: "2026-07-10", type: "Anniversary" },
-  { id: 3, title: "James Promotion Dinner", date: "2026-07-16", type: "Milestone" },
+const initialFilters = [
+  { key: "all", label: "All activity" },
+  { key: "reminder", label: "Reminders" },
+  { key: "hint", label: "Hints" },
+  { key: "circle", label: "Circles" },
+  { key: "celebration", label: "Celebrations" },
 ];
 
-const exampleCircle = {
-  id: "example-circle",
-  name: "Example pot",
-  subtitle: "Birthday · Example",
-  description:
-    "A simple example showing how one shared pot could look once a real contact and item have been added.",
-  members: [
-    {
-      name: "You",
-      initials: "Y",
-      contributed: true,
-      amount: 40,
-      colors: "from-[#4e596d] to-[#212a3c]",
-      status: "joined",
-    },
-    {
-      name: "Example friend",
-      initials: "E",
-      contributed: false,
-      amount: 0,
-      colors: "from-[#efcdbf] to-[#bb8168]",
-      status: "invited",
-    },
-  ],
-  pot: {
-    active: true,
-    item: "Example item",
-    fullItemTitle: "Example item",
-    source: "Example shared goal",
-    sourceUrl: "https://example.com/example-item",
-    previewImage:
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=800&q=80",
-    previewDescription:
-      "This is just a single example pot so the layout still demonstrates the feature without showing multiple fake pots.",
-    target: 122.4,
-    currency: "GBP",
-    raised: 40,
-    note: "Example only.",
-    fundingMode: "Flexible pot",
-    deadline: "2026-07-01",
-    goalType: "item",
+const onboardingSteps = [
+  {
+    id: 1,
+    title: "Add your people",
+    text: "Start by adding contacts so Hinted can turn birthdays, plans, and gift moments into useful updates.",
+  },
+  {
+    id: 2,
+    title: "Save hints as you go",
+    text: "Hints you save for friends and family will begin to shape this feed automatically.",
+  },
+  {
+    id: 3,
+    title: "Watch the feed fill itself",
+    text: "Once contacts are added, demo activity is replaced by real reminders, shared circle updates, and reactions.",
+  },
+];
+
+const demoContacts = [
+  {
+    id: 1,
+    name: "Maya",
+    role: "Friend",
+    note: "Saved 8 hints",
+    initials: "M",
+    colors: "from-[#efc3af] to-[#ae6e57]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+  {
+    id: 2,
+    name: "James",
+    role: "Brother",
+    note: "Saved 5 hints",
+    initials: "J",
+    colors: "from-[#4e596d] to-[#212a3c]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+  {
+    id: 3,
+    name: "Fiona",
+    role: "Friend",
+    note: "Saved 4 hints",
+    initials: "F",
+    colors: "from-[#809168] to-[#41512e]",
+    email: "",
+    phone: "",
+    birthday: "",
+  },
+];
+
+const feedItems = [
+  {
+    id: 1,
+    type: "reminder",
+    avatar: "S",
+    avatarColors: "from-[#efcdbf] to-[#c88c73]",
+    name: "Sarah",
+    action: "has a birthday coming up in 2 weeks",
+    detail: "June 29 · She saved a ceramics workshop and linen bedding.",
+    time: "Just now",
+    icon: "🎂",
+    badge: "Reminder",
+    comments: [
+      { id: 1, name: "You", text: "Need to sort this early this time." },
+      { id: 2, name: "Maya", text: "I can help with ideas if you want to split something." },
+    ],
+    reactions: ["🎉", "❤️", "👏"],
+  },
+  {
+    id: 2,
+    type: "hint",
+    avatar: "M",
+    avatarColors: "from-[#e7cab8] to-[#b97d66]",
+    name: "Mum",
+    action: "saved a new hint",
+    detail: "Silk pillowcase set · From John Lewis · Around £45.",
+    time: "12m ago",
+    icon: "🎁",
+    badge: "Hint",
+    comments: [{ id: 1, name: "You", text: "This is actually a very solid option." }],
+    reactions: ["✨", "😍", "👏"],
+  },
+  {
+    id: 3,
+    type: "circle",
+    avatar: "MF",
+    avatarColors: "from-[#98a47d] to-[#5f7046]",
+    name: "Max & Fiona",
+    action: "have a wedding circle that is nearly funded",
+    detail: "£320 of £400 raised · 4 contributors · 80% full.",
+    time: "1h ago",
+    icon: "💍",
+    badge: "Circle",
+    comments: [{ id: 1, name: "James", text: "Nearly there — I’ll add the last bit tonight." }],
+    reactions: ["🥂", "💚", "🎉"],
+  },
+  {
+    id: 4,
+    type: "celebration",
+    avatar: "J",
+    avatarColors: "from-[#dcc4b5] to-[#b78972]",
+    name: "James",
+    action: "reacted to a shared hint in your circle",
+    detail: "Weekend cabin stay · Marked as a top pick.",
+    time: "3h ago",
+    icon: "⭐",
+    badge: "Celebration",
+    comments: [],
+    reactions: ["🔥", "🙌", "💛"],
+  },
+];
+
+const reminders = [
+  {
+    title: "Sarah's Birthday",
+    date: "June 29",
+    subtitle: "2 weeks away",
+    colors: "from-[#efc3af] to-[#ae6e57]",
+  },
+  {
+    title: "Mum & Dad Anniversary",
+    date: "July 10",
+    subtitle: "Plan gift ideas",
+    colors: "from-[#eac8b8] to-[#9d6957]",
+  },
+  {
+    title: "James Promotion",
+    date: "July 16",
+    subtitle: "Congratulate him",
+    colors: "from-[#809168] to-[#41512e]",
+  },
+];
+
+const eventTypeStyles = {
+  birthday: {
+    dot: "bg-[#efb39a]",
+    pill: "bg-[#fff1ea] text-[#c96d4f]",
+    label: "Birthday",
+  },
+  christmas: {
+    dot: "bg-[#cf6a6a]",
+    pill: "bg-[#fff0f0] text-[#b04a4a]",
+    label: "Christmas",
+  },
+  anniversary: {
+    dot: "bg-[#d69aae]",
+    pill: "bg-[#fff2f6] text-[#b85c79]",
+    label: "Anniversary",
+  },
+  celebration: {
+    dot: "bg-[#e6aa54]",
+    pill: "bg-[#fff7e8] text-[#af7b14]",
+    label: "Celebration",
+  },
+  reminder: {
+    dot: "bg-[#bca7de]",
+    pill: "bg-[#f5f0ff] text-[#7f62b2]",
+    label: "Reminder",
+  },
+  circle: {
+    dot: "bg-[#87986f]",
+    pill: "bg-[#eef5ea] text-[#5d7243]",
+    label: "Circle",
   },
 };
-
-function roundCurrency(value) {
-  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
-}
 
 function getInitials(name) {
   return String(name || "")
@@ -117,41 +231,15 @@ function getRelationshipGradient(role) {
     return "from-[#b7c8db] to-[#6b88a7]";
   }
 
+  if (normalized.includes("brother")) {
+    return "from-[#4e596d] to-[#212a3c]";
+  }
+
   return "from-[#efcdbf] to-[#bb8168]";
 }
 
-function formatDateLabel(dateString) {
-  if (!dateString) return "No date";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "No date";
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-  });
-}
-
-function getCurrencyMeta(code) {
-  return currencyOptions.find((currency) => currency.code === code) || currencyOptions[0];
-}
-
-function formatMoney(amount, currency = "GBP") {
-  const safeAmount = Number(amount) || 0;
-  try {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: safeAmount % 1 === 0 ? 0 : 2,
-    }).format(safeAmount);
-  } catch {
-    const fallback = getCurrencyMeta(currency);
-    return `${fallback.symbol}${safeAmount}`;
-  }
-}
-
-function parseAmount(value) {
-  const cleaned = String(value || "").replace(/[^\d.]/g, "");
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : 0;
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
 }
 
 function getPrimaryContactField(person, field) {
@@ -173,31 +261,6 @@ function normalizeSupabaseError(error, fallback) {
   if (!error) return fallback;
   const parts = [error.message, error.details, error.hint].filter(Boolean);
   return parts.length ? parts.join(" — ") : fallback;
-}
-
-function safeIsoDate(value) {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().slice(0, 10);
-}
-
-function safeIsoTimestampEndOfDay(value) {
-  const dateOnly = safeIsoDate(value);
-  if (!dateOnly) return null;
-  return `${dateOnly}T23:59:59.000Z`;
-}
-
-function fundingModeToDb(value) {
-  if (value === "all_or_nothing" || value === "All-or-nothing") return "all_or_nothing";
-  if (value === "organiser_covers" || value === "Organizer covers gap") return "organiser_covers";
-  return "flexible";
-}
-
-function fundingModeToLabel(value) {
-  if (value === "all_or_nothing") return "All-or-nothing";
-  if (value === "organiser_covers") return "Organizer covers gap";
-  return "Flexible pot";
 }
 
 function relationshipLabelFromArray(relationshipTypes) {
@@ -225,202 +288,6 @@ function buildContactRecordFromRow(row) {
   };
 }
 
-function buildSelfRecord(profile) {
-  const safeName =
-    getGoogleName(profile || {}) ||
-    profile?.full_name ||
-    profile?.invite_name ||
-    "You";
-
-  return {
-    id: SELF_SELECTOR_ID,
-    type: "self",
-    name: safeName,
-    role: "You",
-    note: "Your hints",
-    initials: getInitials(safeName || "You"),
-    colors: "from-[#4e596d] to-[#212a3c]",
-    email: profile?.invite_email || "",
-    raw: profile || null,
-  };
-}
-
-function calculateHintedFee(itemAmount) {
-  return roundCurrency(itemAmount * HINTED_SERVICE_FEE_RATE);
-}
-
-function calculateCircleTotals(itemAmount) {
-  const safeItemAmount = roundCurrency(itemAmount);
-  const feeAmount = calculateHintedFee(safeItemAmount);
-  const totalAmount = roundCurrency(safeItemAmount + feeAmount);
-
-  return {
-    itemAmount: safeItemAmount,
-    feeAmount,
-    totalAmount,
-  };
-}
-
-function extractHintAmount(hint) {
-  const candidates = [hint?.amount, hint?.price, hint?.targetAmount, hint?.priceAmount];
-
-  for (const candidate of candidates) {
-    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
-    if (Number.isFinite(amount) && amount > 0) {
-      return roundCurrency(amount);
-    }
-  }
-
-  const textCandidates = [hint?.title, hint?.url];
-  for (const text of textCandidates) {
-    const match = String(text || "").match(/(?:£|\$|€|A\$|NZ\$|C\$|R)?\s*(\d+(?:\.\d{1,2})?)/);
-    if (match?.[1]) {
-      const amount = Number(match[1]);
-      if (Number.isFinite(amount) && amount > 0) {
-        return roundCurrency(amount);
-      }
-    }
-  }
-
-  return 0;
-}
-
-function extractPreviewAmount(preview) {
-  const directCandidates = [
-    preview?.price,
-    preview?.amount,
-    preview?.targetAmount,
-    preview?.priceAmount,
-  ];
-
-  for (const candidate of directCandidates) {
-    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
-    if (Number.isFinite(amount) && amount > 0) {
-      return roundCurrency(amount);
-    }
-  }
-
-  const textCandidates = [
-    preview?.priceText,
-    preview?.subtitle,
-    preview?.description,
-    preview?.title,
-  ];
-
-  for (const text of textCandidates) {
-    const match = String(text || "").match(/(?:£|\$|€|A\$|NZ\$|C\$|R)?\s*(\d+(?:\.\d{1,2})?)/);
-    if (match?.[1]) {
-      const amount = Number(match[1]);
-      if (Number.isFinite(amount) && amount > 0) {
-        return roundCurrency(amount);
-      }
-    }
-  }
-
-  return 0;
-}
-
-function toDisplayPotTitle(value) {
-  const text = String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!text) return "Shared gift";
-
-  const cleaned = text
-    .replace(/[|–—•,:;()[\]{}]+/g, " ")
-    .replace(
-      /\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi,
-      " "
-    )
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const words = cleaned.split(" ").filter(Boolean);
-  if (words.length === 0) return "Shared gift";
-
-  return words.slice(0, 2).join(" ");
-}
-
-function buildStoredItemTitle(value) {
-  const text = String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return text || "Shared gift";
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
-}
-
-function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You") {
-  const contributionTotal = 0;
-
-  const members = [
-    {
-      name: currentUserName || "You",
-      initials: getInitials(currentUserName || "You"),
-      contributed: contributionTotal > 0,
-      amount: contributionTotal,
-      colors: "from-[#4e596d] to-[#212a3c]",
-      status: "joined",
-    },
-    ...inviteRows.map((invite) => ({
-      name: invite.invite_name || invite.invite_email || "Invited person",
-      initials: getInitials(invite.invite_name || invite.invite_email || "Invited person"),
-      contributed: false,
-      amount: 0,
-      colors: "from-[#efcdbf] to-[#bb8168]",
-      status: invite.status === "paid" ? "joined" : "invited",
-    })),
-  ];
-
-  const totalTarget = Number(circleRow.total_target_amount || 0);
-  const fullItemTitle = circleRow.item_title || "Shared gift";
-
-  return {
-    id: circleRow.id,
-    name: circleRow.title || "Untitled circle",
-    subtitle: `${circleRow.occasion_type || "Event"} · ${formatDateLabel(circleRow.event_date)}`,
-    description: "",
-    members,
-    pot: {
-      active: totalTarget > 0,
-      item: toDisplayPotTitle(fullItemTitle),
-      fullItemTitle,
-      source:
-        circleRow.source_type === "external_link"
-          ? "From pasted link"
-          : circleRow.source_type === "recipient_public_hint"
-            ? "From public hints"
-            : circleRow.source_type === "organiser_private_hint"
-              ? "From your hints"
-              : "Shared goal",
-      sourceUrl: circleRow.item_url || "",
-      previewImage: circleRow.item_image_url || "",
-      previewDescription: circleRow.item_description || "",
-      target: totalTarget,
-      currency: circleRow.currency || "GBP",
-      raised: 0,
-      note:
-        circleRow.funding_mode === "all_or_nothing"
-          ? "This circle will only proceed if the group reaches the target by the deadline."
-          : circleRow.funding_mode === "organiser_covers"
-            ? "If the full target is not reached, the organiser can choose to cover the gap."
-            : "This circle can stay flexible if fewer people join than expected.",
-      fundingMode: fundingModeToLabel(circleRow.funding_mode),
-      deadline: circleRow.deadline_at || circleRow.event_date || "",
-      goalType:
-        totalTarget > 0 && fullItemTitle !== "Shared contribution pot"
-          ? "item"
-          : "amount",
-    },
-    raw: circleRow,
-    invites: inviteRows,
-  };
-}
-
 function LogoMark() {
   return (
     <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
@@ -429,15 +296,7 @@ function LogoMark() {
   );
 }
 
-function ModalShell({
-  open,
-  onClose,
-  title,
-  eyebrow,
-  children,
-  maxWidth = "max-w-[1120px]",
-  hideHeaderBorder = false,
-}) {
+function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[720px]", hideHeaderBorder = false }) {
   if (!open) return null;
 
   return (
@@ -474,1002 +333,6 @@ function ModalShell({
         {children}
       </div>
     </div>
-  );
-}
-
-function ContactCard({ contact, onDeleteClick }) {
-  return (
-    <article
-      className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-      aria-label={`Manage ${contact.name}`}
-    >
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
-        >
-          {contact.initials}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-          <p className="text-xs text-slate-500">
-            {contact.role}
-            {contact.note ? ` · ${contact.note}` : ""}
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => onDeleteClick(contact)}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
-        >
-          Delete
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function MemberPill({ member, currency = "GBP" }) {
-  const statusStyles =
-    member.status === "joined"
-      ? member.contributed
-        ? "bg-[#edf6eb] text-[#4a7a3a]"
-        : "bg-[#eef4ff] text-[#5676b3]"
-      : "bg-[#fff3ee] text-[#d57a58]";
-
-  const statusLabel =
-    member.status === "joined"
-      ? member.contributed
-        ? "Contributed"
-        : "Joined"
-      : "Invited";
-
-  return (
-    <div className="rounded-[20px] border border-[#eee1d9] bg-[#fffdfa] p-3">
-      <div className="flex items-center gap-3">
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${member.colors}`}
-        >
-          {member.initials}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">{member.name}</p>
-          <div className="mt-1 flex items-center gap-2">
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles}`}>
-              {statusLabel}
-            </span>
-            <span className="text-[11px] text-slate-400">
-              {member.contributed ? formatMoney(member.amount, currency) : "—"}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ContributionRing({ raised, target, ringId }) {
-  const percentage = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
-  const dash = circumference - (percentage / 100) * circumference;
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative flex h-[148px] w-[148px] items-center justify-center">
-        <svg className="h-[148px] w-[148px] -rotate-90" viewBox="0 0 140 140" aria-hidden="true">
-          <circle cx="70" cy="70" r={radius} stroke="#f1e3db" strokeWidth="12" fill="none" />
-          <circle
-            cx="70"
-            cy="70"
-            r={radius}
-            stroke={`url(#${ringId})`}
-            strokeWidth="12"
-            strokeLinecap="round"
-            fill="none"
-            strokeDasharray={circumference}
-            strokeDashoffset={dash}
-          />
-          <defs>
-            <linearGradient id={ringId} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#ff9b75" />
-              <stop offset="100%" stopColor="#f36f64" />
-            </linearGradient>
-          </defs>
-        </svg>
-
-        <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-white/80">
-          <span className="text-[28px] font-semibold tracking-[-0.06em] text-slate-900">
-            {Math.round(percentage)}%
-          </span>
-          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
-            funded
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PotPreviewCard({ image, title, url, compact = false }) {
-  if (!title && !url && !image) return null;
-
-  return (
-    <div
-      className={`overflow-hidden rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] ${
-        compact ? "p-3" : "p-4"
-      }`}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-        Linked item
-      </p>
-
-      <div className="mt-3 min-w-0">
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[18px] bg-[#f5ebe4]">
-          {image ? (
-            <img
-              src={image}
-              alt={title || "Linked item preview"}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-[#f5ebe4]" />
-          )}
-        </div>
-
-        <div className="mt-3 min-w-0">
-          <p className="truncate text-[13px] font-semibold text-slate-900">
-            {toDisplayPotTitle(title)}
-          </p>
-
-          {url ? (
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1 inline-block max-w-full truncate text-[12px] text-slate-500 underline decoration-[#e8b4a0] underline-offset-4"
-            >
-              View item
-            </a>
-          ) : null}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PotTypeGuide() {
-  const potTypes = [
-    {
-      title: "Flexible pot",
-      text: "Anyone invited can join and contribute what they want. If fewer people join, the group can still continue with a smaller total or switch to a simpler gift.",
-      colors: "bg-[#edf6eb] text-[#4a7a3a]",
-    },
-    {
-      title: "All-or-nothing",
-      text: "The circle only goes ahead if the target is reached by the deadline. This works best when the item only makes sense at the full amount.",
-      colors: "bg-[#fff3ee] text-[#d57a58]",
-    },
-    {
-      title: "Organizer covers gap",
-      text: "The organiser can choose to top up the missing amount if not everyone joins or contributes. Useful when the gift matters more than exact participation.",
-      colors: "bg-[#eef4ff] text-[#5676b3]",
-    },
-  ];
-
-  return (
-    <section className="rounded-[26px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-        Pot guide
-      </p>
-      <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-        How pot types work
-      </h2>
-      <p className="mt-2 text-[14px] leading-7 text-slate-600">
-        Choose the funding style that best fits the gift and how certain you are that everyone will join.
-      </p>
-
-      <div className="mt-5 space-y-3">
-        {potTypes.map((type) => (
-          <div key={type.title} className="rounded-[20px] bg-[#faf7f4] p-4">
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${type.colors}`}>
-              {type.title}
-            </span>
-            <p className="mt-3 text-[13px] leading-6 text-slate-600">{type.text}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CircleCard({ circle, onDeleteCircleClick, deletingCircleId }) {
-  const safeMembers = Array.isArray(circle?.members) ? circle.members : [];
-  const joinedCount = safeMembers.filter((member) => member.status === "joined").length;
-  const invitedCount = safeMembers.length;
-  const moneyLabel = formatMoney(circle?.pot?.target, circle?.pot?.currency);
-  const raisedLabel = formatMoney(circle?.pot?.raised, circle?.pot?.currency);
-  const showItemPreview =
-    circle?.pot?.active &&
-    circle?.pot?.goalType === "item" &&
-    (circle?.pot?.previewImage || circle?.pot?.sourceUrl);
-
-  return (
-    <article className="rounded-[30px] border border-[#f0dfd6] bg-white p-5 shadow-sm sm:p-6">
-      <div className="grid gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-        <div>
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                Circle
-              </p>
-              <h2 className="mt-1 text-[26px] font-semibold tracking-[-0.05em] text-slate-900">
-                {circle?.name || "Untitled circle"}
-              </h2>
-              <p className="mt-2 text-sm text-slate-500">{circle?.subtitle || "No subtitle"}</p>
-            </div>
-
-            <div className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-              {joinedCount} of {invitedCount} joined
-            </div>
-          </div>
-
-          {circle?.description ? (
-            <p className="mt-4 max-w-[60ch] text-[14px] leading-7 text-slate-600">
-              {circle.description}
-            </p>
-          ) : null}
-
-          <div className="mt-5 rounded-[24px] border border-dashed border-[#e6d7cd] bg-[#fffaf7] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Members</p>
-                <p className="mt-1 text-[13px] text-slate-500">
-                  People can be invited now and only become full members once they accept.
-                </p>
-              </div>
-
-              <div className="rounded-full bg-[#fff1ea] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-                Circle invite flow
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {safeMembers.map((member) => (
-                <MemberPill
-                  key={`${circle?.id}-${member.name}`}
-                  member={member}
-                  currency={circle?.pot?.currency}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-[30px] border border-[#eedfd6] bg-[radial-gradient(circle_at_top,_#fff7f2,_#fffdfa_62%)] p-5">
-          <div className="flex flex-col items-center text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Shared pot
-            </p>
-            <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-              {circle?.pot?.active ? circle.pot.item : "No pot created yet"}
-            </h3>
-            <p className="mt-2 max-w-[28ch] text-[13px] leading-6 text-slate-500">
-              {circle?.pot?.active ? circle?.pot?.source : circle?.pot?.note}
-            </p>
-
-            {circle?.pot?.active ? (
-              <>
-                <div className="mt-5">
-                  <ContributionRing
-                    raised={circle?.pot?.raised || 0}
-                    target={circle?.pot?.target || 0}
-                    ringId={`circle-gradient-${circle?.id}`}
-                  />
-                </div>
-
-                <p className="mt-3 text-sm text-slate-500">
-                  {raisedLabel} of {moneyLabel}
-                </p>
-
-                <div className="mt-4 flex -space-x-3">
-                  {safeMembers.map((member) => (
-                    <div
-                      key={`${circle?.id}-${member.name}-avatar`}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-gradient-to-b text-[11px] font-bold text-white shadow-sm ${member.colors}`}
-                      title={member.name}
-                    >
-                      {member.initials}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-                  <span className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-                    {circle?.pot?.fundingMode}
-                  </span>
-                  <span className="rounded-full bg-[#f3f6fb] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                    Deadline {formatDateLabel(circle?.pot?.deadline)}
-                  </span>
-                  <span className="rounded-full bg-[#edf3ff] px-3 py-1 text-[11px] font-semibold text-slate-600">
-                    {circle?.pot?.currency || "GBP"}
-                  </span>
-                </div>
-
-                {showItemPreview ? (
-                  <div className="mt-5 w-full min-w-0 text-left">
-                    <PotPreviewCard
-                      image={circle?.pot?.previewImage}
-                      title={circle?.pot?.fullItemTitle || circle?.pot?.item}
-                      url={circle?.pot?.sourceUrl}
-                      compact
-                    />
-                  </div>
-                ) : null}
-
-                <p className="mt-4 text-[14px] leading-7 text-slate-600">{circle?.pot?.note}</p>
-
-                {circle?.id !== "example-circle" ? (
-                  <div className="mt-5 flex flex-wrap justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCircleClick(circle)}
-                      disabled={deletingCircleId === circle.id}
-                      className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                        deletingCircleId === circle.id
-                          ? "cursor-not-allowed bg-[#f3d6d1] text-[#b14f43]"
-                          : "border border-[#efc0ba] bg-[#fff4f2] text-[#b14f43] hover:bg-[#ffe9e5]"
-                      }`}
-                    >
-                      {deletingCircleId === circle.id ? "Deleting..." : "Delete circle"}
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <div className="mt-6 rounded-[24px] border border-dashed border-[#e5d8cf] bg-white p-5 text-left">
-                  <p className="text-sm font-semibold text-slate-900">Choose from hints or links</p>
-                  <p className="mt-2 text-[14px] leading-7 text-slate-600">
-                    Pick the organiser or recipient on the left, then choose one hint or paste a product link.
-                  </p>
-                </div>
-
-                {circle?.id !== "example-circle" ? (
-                  <div className="mt-5 flex flex-wrap justify-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCircleClick(circle)}
-                      disabled={deletingCircleId === circle.id}
-                      className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                        deletingCircleId === circle.id
-                          ? "cursor-not-allowed bg-[#f3d6d1] text-[#b14f43]"
-                          : "border border-[#efc0ba] bg-[#fff4f2] text-[#b14f43] hover:bg-[#ffe9e5]"
-                      }`}
-                    >
-                      {deletingCircleId === circle.id ? "Deleting..." : "Delete circle"}
-                    </button>
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function CurrencyAmountInput({
-  currency,
-  amount,
-  onCurrencyChange,
-  onAmountChange,
-  label = "Target amount",
-}) {
-  return (
-    <div className="space-y-2">
-      <span className="text-sm font-medium text-slate-700">{label}</span>
-      <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
-        <select
-          value={currency}
-          onChange={(e) => onCurrencyChange(e.target.value)}
-          className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-        >
-          {currencyOptions.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.code} · {option.label}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => onAmountChange(e.target.value)}
-          placeholder="220"
-          className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-        />
-      </div>
-    </div>
-  );
-}
-
-function CreateCircleModal({
-  open,
-  onClose,
-  onSubmit,
-  contacts,
-  calendarEvents,
-  selectedPeople,
-  setSelectedPeople,
-  eventMode,
-  setEventMode,
-  selectedEventId,
-  setSelectedEventId,
-  form,
-  setForm,
-  linkPreview,
-  isFetchingPreview,
-  handleFetchPreview,
-  selectedHintOwnerId,
-  setSelectedHintOwnerId,
-  errorMessage,
-  isSubmitting,
-  ownHints,
-  selfProfile,
-}) {
-  if (!open) return null;
-
-  const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
-  const ownerOptions = [buildSelfRecord(selfProfile), ...contacts];
-  const selectedOwner =
-    ownerOptions.find((option) => String(option.id) === String(selectedHintOwnerId)) || null;
-  const isSelfSelected = String(selectedHintOwnerId) === SELF_SELECTOR_ID;
-  const visibleHints = isSelfSelected ? ownHints : [];
-  const amountMode = form.goalType === "amount";
-  const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
-
-  const liveBaseAmount =
-    form.goalType === "item"
-      ? form.itemSource === "hint"
-        ? extractHintAmount(selectedHint)
-        : extractPreviewAmount(linkPreview)
-      : parseAmount(form.goalValue);
-
-  const liveTotals = calculateCircleTotals(liveBaseAmount);
-
-  return (
-    <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
-      <div className="grid gap-0 lg:grid-cols-[1.06fr_0.94fr]">
-        <div className="max-h-[calc(92vh-90px)] space-y-6 overflow-y-auto p-6">
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">1. Choose the event</p>
-
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setEventMode("calendar")}
-                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                  eventMode === "calendar"
-                    ? "bg-[#2f3b2d] text-white"
-                    : "border border-[#ead8ce] bg-white text-slate-700"
-                }`}
-              >
-                From calendar
-              </button>
-              <button
-                type="button"
-                onClick={() => setEventMode("new")}
-                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                  eventMode === "new"
-                    ? "bg-[#2f3b2d] text-white"
-                    : "border border-[#ead8ce] bg-white text-slate-700"
-                }`}
-              >
-                New event
-              </button>
-            </div>
-
-            {eventMode === "calendar" ? (
-              <div className="mt-4 space-y-3">
-                {safeCalendarEvents.map((event) => (
-                  <label
-                    key={event.id}
-                    className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
-                      String(event.id) === String(selectedEventId)
-                        ? "border-[#f0a384] bg-[#fff4ee]"
-                        : "border-[#efe1d9] bg-[#fffdfa]"
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">{event.title}</p>
-                      <p className="mt-1 text-[13px] text-slate-500">
-                        {event.type} · {event.date}
-                      </p>
-                    </div>
-                    <input
-                      type="radio"
-                      name="calendarEvent"
-                      className="h-4 w-4 accent-[#f36f64]"
-                      checked={String(event.id) === String(selectedEventId)}
-                      onChange={() => {
-                        setSelectedEventId(String(event.id));
-                        setForm((prev) => ({
-                          ...prev,
-                          eventTitle: event.title,
-                          eventDate: event.date,
-                          deadline: event.date,
-                        }));
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <label className="space-y-2 sm:col-span-2">
-                  <span className="text-sm font-medium text-slate-700">Event title</span>
-                  <input
-                    type="text"
-                    value={form.eventTitle}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, eventTitle: e.target.value }))
-                    }
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    placeholder="Summer birthday dinner"
-                  />
-                </label>
-
-                <label className="space-y-2">
-                  <span className="text-sm font-medium text-slate-700">Event date</span>
-                  <input
-                    type="date"
-                    value={form.eventDate}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        eventDate: e.target.value,
-                        deadline: e.target.value,
-                      }))
-                    }
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">2. Circle details</p>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <span className="text-sm font-medium text-slate-700">Circle title</span>
-                <div className="flex h-12 w-full items-center rounded-[18px] border border-[#efe1d9] bg-[#faf7f5] px-4 text-sm font-medium text-slate-700">
-                  {form.eventTitle || "Select or create an event first"}
-                </div>
-              </div>
-
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">Contribution deadline</span>
-                <input
-                  type="date"
-                  value={form.deadline}
-                  onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                />
-                <p className="text-[12px] text-slate-400">
-                  Defaults to the event day, but you can close contributions earlier.
-                </p>
-              </label>
-
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">If people do not join</span>
-                <select
-                  value={form.fundingMode}
-                  onChange={(e) => setForm((prev) => ({ ...prev, fundingMode: e.target.value }))}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                >
-                  <option value="flexible">Flexible pot</option>
-                  <option value="all_or_nothing">All-or-nothing</option>
-                  <option value="organiser_covers">Organizer covers gap</option>
-                </select>
-              </label>
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">3. Goal type</p>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="space-y-2">
-                <span className="text-sm font-medium text-slate-700">What are you aiming for?</span>
-                <select
-                  value={form.goalType}
-                  onChange={(e) => {
-                    const nextValue = e.target.value;
-                    setForm((prev) => ({
-                      ...prev,
-                      goalType: nextValue,
-                      itemSource: nextValue === "amount" ? "" : prev.itemSource || "hint",
-                      selectedHintId: nextValue === "amount" ? "" : prev.selectedHintId,
-                      itemUrl: nextValue === "amount" ? "" : prev.itemUrl,
-                    }));
-                  }}
-                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                >
-                  <option value="item">Specific item</option>
-                  <option value="amount">Target amount</option>
-                </select>
-              </label>
-
-              {form.goalType === "amount" ? (
-                <CurrencyAmountInput
-                  currency={form.currency}
-                  amount={form.goalValue}
-                  onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
-                  onAmountChange={(value) => setForm((prev) => ({ ...prev, goalValue: value }))}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          {!amountMode ? (
-            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5 transition">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">4. Choose the item</p>
-                  <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                    Pick the person on the left, then choose one hint or paste a link.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      itemSource: "hint",
-                      itemUrl: "",
-                      selectedHintId: "",
-                    }))
-                  }
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    form.itemSource === "hint"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  From hints
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setForm((prev) => ({
-                      ...prev,
-                      itemSource: "url",
-                      selectedHintId: "",
-                    }))
-                  }
-                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                    form.itemSource === "url"
-                      ? "bg-[#2f3b2d] text-white"
-                      : "border border-[#ead8ce] bg-white text-slate-700"
-                  }`}
-                >
-                  Paste a link
-                </button>
-              </div>
-
-              {form.itemSource === "hint" ? (
-                <div className="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
-                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-3">
-                    <p className="px-2 pb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
-                      People
-                    </p>
-
-                    <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
-                      {ownerOptions.map((person) => {
-                        const selected = String(person.id) === String(selectedHintOwnerId);
-
-                        return (
-                          <button
-                            key={person.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedHintOwnerId(person.id);
-                              setForm((prev) => ({
-                                ...prev,
-                                selectedHintId: "",
-                              }));
-                            }}
-                            className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
-                              selected
-                                ? "border-[#f0a384] bg-[#fff4ee]"
-                                : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
-                            }`}
-                          >
-                            <div
-                              className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
-                            >
-                              {person.initials}
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-900">{person.name}</p>
-                              <p className="text-[12px] text-slate-500">{person.role}</p>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-4">
-                    {selectedOwner ? (
-                      <>
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${selectedOwner.colors}`}
-                          >
-                            {selectedOwner.initials}
-                          </div>
-                          <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                              {selectedOwner.type === "self" ? "Your hints" : `${selectedOwner.name}'s hints`}
-                            </p>
-                            <p className="text-[13px] text-slate-500">
-                              {selectedOwner.type === "self"
-                                ? "Private and public hints from your own account."
-                                : "This contact is not linked to a hinted account yet, so their public hints cannot be loaded."}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
-                          {selectedOwner.type === "self" ? (
-                            visibleHints.length ? (
-                              visibleHints.map((hint) => (
-                                <label
-                                  key={hint.id}
-                                  className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
-                                    form.selectedHintId === hint.id
-                                      ? "border-[#f0a384] bg-[#fff4ee]"
-                                      : "border-[#efe1d9] bg-white"
-                                  }`}
-                                >
-                                  <div className="min-w-0 pr-4">
-                                    <p className="text-sm font-semibold text-slate-900">
-                                      {hint.title}
-                                    </p>
-                                    <p className="mt-1 text-[13px] text-slate-500">
-                                      {hint.is_private ? "Private" : "Public"}
-                                    </p>
-                                    <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                                      {hint.url || "No link saved"}
-                                    </p>
-                                  </div>
-
-                                  <input
-                                    type="radio"
-                                    name="selectedHint"
-                                    className="mt-1 h-4 w-4 accent-[#f36f64]"
-                                    checked={form.selectedHintId === hint.id}
-                                    onChange={() =>
-                                      setForm((prev) => ({
-                                        ...prev,
-                                        selectedHintId: hint.id,
-                                      }))
-                                    }
-                                  />
-                                </label>
-                              ))
-                            ) : (
-                              <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
-                                No hints available yet.
-                              </div>
-                            )
-                          ) : (
-                            <div className="rounded-[18px] border border-dashed border-[#e5d8cf] bg-white p-5 text-sm leading-6 text-slate-500">
-                              This contact appears in your contacts list, but your current schema does not link contacts to a hinted user account. Because of that, Circles cannot load their public hints yet.
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex h-full min-h-[220px] items-center justify-center rounded-[18px] bg-white p-6 text-center text-sm text-slate-500">
-                        Select a person to continue.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <input
-                      type="url"
-                      value={form.itemUrl}
-                      onChange={(e) =>
-                        setForm((prev) => ({ ...prev, itemUrl: e.target.value }))
-                      }
-                      placeholder="Paste product or experience link"
-                      className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleFetchPreview}
-                      className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
-                    >
-                      {isFetchingPreview ? "Fetching..." : "Fetch preview"}
-                    </button>
-                  </div>
-
-                  {linkPreview ? (
-                    <PotPreviewCard
-                      image={linkPreview.image}
-                      title={linkPreview.title}
-                      url={linkPreview.url}
-                    />
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">Total target</p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-500">
-              This is the amount shown on the circle.
-            </p>
-
-            <div className="mt-4 rounded-[18px] bg-[#fff4ee] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
-                Total
-              </p>
-              <p className="mt-2 text-lg font-semibold text-slate-900">
-                {formatMoney(liveTotals.totalAmount, form.currency)}
-              </p>
-              <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                *includes our 2% service fee so you can avoid the awkward reminders
-              </p>
-            </div>
-          </div>
-
-          {errorMessage ? (
-            <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-              {errorMessage}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="max-h-[calc(92vh-90px)] overflow-y-auto border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
-          <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
-            <p className="text-sm font-semibold text-slate-900">5. Add people</p>
-            <p className="mt-1 text-[13px] leading-6 text-slate-500">
-              Invite people now. They only become full members after they accept.
-            </p>
-
-            <div className="mt-4 min-h-[120px] rounded-[20px] bg-[#fffaf7] p-4">
-              {selectedPeople.length ? (
-                <div className="flex flex-wrap gap-3">
-                  {selectedPeople.map((person) => (
-                    <div
-                      key={person.id}
-                      className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
-                    >
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
-                      >
-                        {person.initials}
-                      </div>
-                      <span className="text-sm font-medium text-slate-700">{person.name}</span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setSelectedPeople((prev) =>
-                            prev.filter((item) => item.id !== person.id)
-                          )
-                        }
-                        className="text-slate-400 hover:text-slate-600"
-                        aria-label={`Remove ${person.name}`}
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">No one added yet.</p>
-              )}
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {contacts.map((contact) => {
-                const alreadyAdded = selectedPeople.some((person) => person.id === contact.id);
-
-                return (
-                  <div
-                    key={contact.id}
-                    className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                      >
-                        {contact.initials}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-                        <p className="text-[12px] text-slate-500">
-                          {contact.role}
-                          {contact.email ? ` · ${contact.email}` : ""}
-                        </p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSelectedPeople((prev) =>
-                          alreadyAdded ? prev : [...prev, contact]
-                        )
-                      }
-                      className={`inline-flex h-9 items-center justify-center rounded-full px-3 text-[12px] font-semibold ${
-                        alreadyAdded
-                          ? "bg-[#edf6eb] text-[#4a7a3a]"
-                          : "border border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
-                      }`}
-                    >
-                      {alreadyAdded ? "Added" : "Invite"}
-                    </button>
-                  </div>
-                );
-              })}
-
-              {!contacts.length ? (
-                <div className="rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-4 text-sm text-slate-500">
-                  Add a contact first, then invite them into a circle here.
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-6 rounded-[20px] bg-[#fffaf7] p-4">
-              <p className="text-sm font-semibold text-slate-900">What happens if people do not join?</p>
-              <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                Your funding mode controls the fallback: keep the pot flexible, cancel if the goal is not met, or let the organiser cover the gap.
-              </p>
-            </div>
-
-            <div className="mt-6 flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onSubmit}
-                disabled={isSubmitting}
-                className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
-                  isSubmitting
-                    ? "cursor-not-allowed bg-[#e9a48d]"
-                    : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
-                }`}
-              >
-                {isSubmitting ? "Creating..." : "Create circle"}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </ModalShell>
   );
 }
 
@@ -1860,166 +723,638 @@ function DeleteContactModal({
   );
 }
 
-function DeleteCircleModal({
-  open,
-  onClose,
-  onConfirm,
-  circle,
-  isDeleting,
-  errorMessage,
-}) {
-  if (!open || !circle) return null;
-
+function ContactCard({ contact, onDeleteClick }) {
   return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      eyebrow="Delete circle"
-      title={`Delete ${circle.name}`}
-      maxWidth="max-w-[720px]"
+    <article
+      className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+      aria-label={`Manage ${contact.name}`}
     >
-      <div className="space-y-5 p-6">
-        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
-          <p className="text-sm font-semibold text-[#b14f43]">This will permanently delete the entire circle.</p>
-          <p className="mt-2 text-[13px] leading-6 text-slate-600">
-            This removes the circle itself and its invites.
+      <div className="flex items-center gap-3">
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
+        >
+          {contact.initials}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          <p className="text-xs text-slate-500">
+            {contact.role}
+            {contact.note ? ` · ${contact.note}` : ""}
           </p>
         </div>
 
-        <div className="rounded-[20px] bg-[#fffaf7] p-4">
-          <p className="text-sm font-semibold text-slate-900">Circle summary</p>
-          <p className="mt-2 text-[13px] text-slate-600">
-            {circle.name} · {circle.subtitle}
-          </p>
-          <p className="mt-2 text-[13px] text-slate-500">
-            Members and invitees shown on this circle will lose access once it is deleted.
-          </p>
-        </div>
-
-        {errorMessage ? (
-          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-            {errorMessage}
-          </div>
-        ) : null}
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isDeleting}
-            onClick={() => onConfirm(circle)}
-            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
-              isDeleting
-                ? "cursor-not-allowed bg-[#e9a48d]"
-                : "bg-[#b14f43]"
-            }`}
-          >
-            {isDeleting ? "Deleting..." : "Delete circle"}
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => onDeleteClick(contact)}
+          className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
+        >
+          Delete
+        </button>
       </div>
-    </ModalShell>
+    </article>
   );
 }
 
-export default function CirclesClient() {
-  const supabase = createClient();
+function FeedItem({ item }) {
+  const typeStyles =
+    item.type === "reminder"
+      ? {
+          chip: "bg-[#fff3ee] text-[#e07c54]",
+          border: "border-[#f6ddd2]",
+        }
+      : item.type === "circle"
+        ? {
+            chip: "bg-[#edf6eb] text-[#4a7a3a]",
+            border: "border-[#deebda]",
+          }
+        : item.type === "celebration"
+          ? {
+              chip: "bg-[#fff7e8] text-[#af7b14]",
+              border: "border-[#f3e3b8]",
+            }
+          : {
+              chip: "bg-[#f5f3ff] text-[#7c5cbf]",
+              border: "border-[#e5defa]",
+            };
 
-  const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
-  const safeDefaultEvent = safeCalendarEvents[0] || {
-    id: "",
+  const actionLabel =
+    item.type === "reminder"
+      ? "Start a circle"
+      : item.type === "hint"
+        ? "View hint"
+        : item.type === "circle"
+          ? "Open circle"
+          : "View activity";
+
+  return (
+    <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${typeStyles.border}`}>
+      <div className="flex items-start gap-4">
+        <div
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${item.avatarColors}`}
+        >
+          {item.avatar}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${typeStyles.chip}`}>
+                  {item.icon} {item.badge}
+                </span>
+                {demoMode && (
+                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    Demo data
+                  </span>
+                )}
+              </div>
+
+              <p className="mt-3 text-[15px] leading-7 text-slate-700">
+                <span className="font-semibold text-slate-900">{item.name}</span> {item.action}
+              </p>
+              <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.detail}</p>
+            </div>
+
+            <span className="shrink-0 text-[12px] text-slate-400">{item.time}</span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {item.reactions.map((reaction) => (
+              <button
+                key={reaction}
+                type="button"
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-[#fffaf7] px-3 text-sm text-slate-700 hover:bg-[#fff2eb]"
+                aria-label={`React with ${reaction}`}
+              >
+                {reaction}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              Comment
+            </button>
+
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+            >
+              {actionLabel}
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+            {item.comments.map((comment) => (
+              <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
+                <p className="text-[13px] leading-6 text-slate-600">
+                  <span className="font-semibold text-slate-900">{comment.name}</span> {comment.text}
+                </p>
+              </div>
+            ))}
+
+            <div className="flex gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
+                Y
+              </div>
+              <input
+                type="text"
+                placeholder="Write a comment..."
+                className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function getMonthData(date) {
+  const year = date.getFullYear();
+  const month = date.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const startDay = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  const cells = [];
+
+  for (let i = 0; i < startDay; i++) {
+    const day = daysInPrevMonth - startDay + i + 1;
+    cells.push({
+      key: `prev-${day}`,
+      day,
+      currentMonth: false,
+      date: new Date(year, month - 1, day),
+    });
+  }
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    cells.push({
+      key: `current-${day}`,
+      day,
+      currentMonth: true,
+      date: new Date(year, month, day),
+    });
+  }
+
+  while (cells.length < 35) {
+    const day = cells.length - (startDay + daysInMonth) + 1;
+    cells.push({
+      key: `next-${day}`,
+      day,
+      currentMonth: false,
+      date: new Date(year, month + 1, day),
+    });
+  }
+
+  return cells;
+}
+
+function CalendarPopover({
+  selectedDate,
+  events,
+  onClose,
+  onAddEvent,
+  draft,
+  setDraft,
+  isSaving,
+}) {
+  if (!selectedDate) return null;
+
+  const prettyDate = selectedDate.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="mt-4 rounded-[24px] border border-[#efdcd2] bg-[#fffaf7] p-4 shadow-[0_18px_45px_rgba(123,84,64,0.12)]">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Selected day
+          </p>
+          <h3 className="mt-1 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
+            {prettyDate}
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#eaded6] bg-white text-slate-500 hover:bg-slate-50"
+          aria-label="Close calendar event panel"
+        >
+          ×
+        </button>
+      </div>
+
+      <div className="mt-4 space-y-3">
+        {events.length > 0 ? (
+          events.map((event) => {
+            const style = eventTypeStyles[event.type] || eventTypeStyles.celebration;
+
+            return (
+              <div key={event.id} className="rounded-[18px] border border-[#eee1da] bg-white p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`h-2.5 w-2.5 rounded-full ${style.dot}`} />
+                      <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${style.pill}`}>
+                        {style.label}
+                      </span>
+                      {event.source === "system" ? (
+                        <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
+                          Seasonal
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-slate-900">{event.title}</p>
+                    {event.time ? <p className="mt-1 text-xs text-slate-500">{event.time}</p> : null}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
+            No events yet for this day.
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 rounded-[20px] border border-[#efe2db] bg-white p-4">
+        <p className="text-sm font-semibold text-slate-900">Create new event</p>
+
+        <div className="mt-3 space-y-3">
+          <input
+            type="text"
+            value={draft.title}
+            onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+            placeholder="Event title"
+            className="h-11 w-full rounded-[16px] border border-[#eaded6] bg-white px-4 text-sm outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+          />
+
+          <select
+            value={draft.type}
+            onChange={(e) => setDraft((prev) => ({ ...prev, type: e.target.value }))}
+            className="h-11 w-full rounded-[16px] border border-[#eaded6] bg-white px-4 text-sm outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+          >
+            <option value="birthday">Birthday</option>
+            <option value="anniversary">Anniversary</option>
+            <option value="celebration">Celebration</option>
+            <option value="christmas">Christmas</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={onAddEvent}
+            disabled={isSaving}
+            className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-semibold text-white shadow-lg disabled:opacity-60"
+          >
+            {isSaving ? "Saving..." : "Save event"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniCalendar() {
+  const today = useMemo(() => new Date(), []);
+  const [currentMonth, setCurrentMonth] = useState(
+    new Date(today.getFullYear(), today.getMonth(), 1)
+  );
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [openPopover, setOpenPopover] = useState(true);
+  const [eventsByDate, setEventsByDate] = useState({});
+  const [draft, setDraft] = useState({
     title: "",
-    date: "",
-    type: "Event",
+    type: "birthday",
+  });
+  const [calendarLoading, setCalendarLoading] = useState(true);
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [calendarError, setCalendarError] = useState("");
+
+  const monthLabel = useMemo(
+    () =>
+      currentMonth.toLocaleDateString("en-GB", {
+        month: "long",
+        year: "numeric",
+      }),
+    [currentMonth]
+  );
+
+  const days = useMemo(() => getMonthData(currentMonth), [currentMonth]);
+
+  const toKey = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   };
 
+  const todayKey = toKey(today);
+
+  const groupEventsByDate = (rows) => {
+    return rows.reduce((acc, row) => {
+      const key = row.event_date;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push({
+        id: row.id,
+        title: row.title,
+        type: row.type,
+        time: row.event_time || null,
+        source: row.source || "user",
+      });
+      return acc;
+    }, {});
+  };
+
+  const loadEvents = async () => {
+    setCalendarLoading(true);
+    setCalendarError("");
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setCalendarError("You need to be signed in to view calendar events.");
+      setEventsByDate({});
+      setCalendarLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("id, user_id, title, event_date, event_time, type, source, slug, is_recurring, created_at")
+      .or(`source.eq.system,user_id.eq.${user.id}`)
+      .order("event_date", { ascending: true })
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setCalendarError(error.message || "Could not load calendar events.");
+      setEventsByDate({});
+      setCalendarLoading(false);
+      return;
+    }
+
+    setEventsByDate(groupEventsByDate(data || []));
+    setCalendarLoading(false);
+  };
+
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const selectedKey = selectedDate ? toKey(selectedDate) : null;
+  const selectedEvents = selectedKey ? eventsByDate[selectedKey] || [] : [];
+
+  const goMonth = (direction) => {
+    setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
+    setOpenPopover(false);
+  };
+
+  const handleDayClick = (date) => {
+    setSelectedDate(date);
+    setOpenPopover(true);
+  };
+
+  const handleAddEvent = async () => {
+    if (!selectedKey || !draft.title.trim()) return;
+
+    setCalendarSaving(true);
+    setCalendarError("");
+
+    const supabase = createClient();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setCalendarError("You need to be signed in to save calendar events.");
+      setCalendarSaving(false);
+      return;
+    }
+
+    const payload = {
+      user_id: user.id,
+      title: draft.title.trim(),
+      event_date: selectedKey,
+      event_time: null,
+      type: draft.type,
+      source: "user",
+      slug: null,
+      is_recurring: false,
+    };
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      setCalendarError(error.message || "Could not save event.");
+      setCalendarSaving(false);
+      return;
+    }
+
+    const savedEvent = {
+      id: data.id,
+      title: data.title,
+      type: data.type,
+      time: data.event_time || null,
+      source: data.source || "user",
+    };
+
+    setEventsByDate((prev) => ({
+      ...prev,
+      [selectedKey]: [...(prev[selectedKey] || []), savedEvent],
+    }));
+
+    setDraft({
+      title: "",
+      type: "birthday",
+    });
+
+    setCalendarSaving(false);
+  };
+
+  return (
+    <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Planner
+          </p>
+          <h2
+            className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900"
+            aria-live="polite"
+          >
+            {monthLabel}
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const now = new Date();
+              setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+              setSelectedDate(now);
+              setOpenPopover(true);
+            }}
+            className="inline-flex h-9 items-center justify-center rounded-full border border-slate-200 px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => goMonth(-1)}
+            aria-label="Previous month"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
+          >
+            ←
+          </button>
+          <button
+            type="button"
+            onClick={() => goMonth(1)}
+            aria-label="Next month"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
+          >
+            →
+          </button>
+        </div>
+      </div>
+
+      {calendarError ? (
+        <div className="mt-4 rounded-[18px] border border-[#f3d7cc] bg-[#fff4ef] px-4 py-3 text-sm text-[#c46545]">
+          {calendarError}
+        </div>
+      ) : null}
+
+      {calendarLoading ? (
+        <div className="mt-4 rounded-[18px] bg-[#faf7f4] px-4 py-3 text-sm text-slate-500">
+          Loading calendar...
+        </div>
+      ) : null}
+
+      <div className="mt-4 grid grid-cols-7 gap-2 text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+        <div>Sun</div>
+      </div>
+
+      <div className="mt-2 grid grid-cols-7 gap-2">
+        {days.map((item) => {
+          const key = toKey(item.date);
+          const selected = key === selectedKey;
+          const isToday = key === todayKey;
+          const dayEvents = eventsByDate[key] || [];
+          const leadType = dayEvents[0]?.type;
+          const dotClass = leadType ? (eventTypeStyles[leadType] || eventTypeStyles.celebration).dot : null;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => handleDayClick(item.date)}
+              aria-label={item.date.toLocaleDateString("en-GB", {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+              aria-pressed={selected}
+              className={`min-h-[58px] rounded-[16px] border p-2 text-left transition ${
+                selected
+                  ? "border-[#f2b39a] bg-[#fff2ea] shadow-[inset_0_0_0_1px_rgba(242,179,154,0.35)]"
+                  : isToday
+                    ? "border-[#f3c8b7] bg-[#fff8f4]"
+                    : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6] hover:bg-[#fff7f2]"
+              }`}
+            >
+              <div
+                className={`text-[13px] font-semibold ${
+                  selected
+                    ? "text-[#d96d4f]"
+                    : isToday
+                      ? "text-slate-900"
+                      : item.currentMonth
+                        ? "text-slate-700"
+                        : "text-slate-300"
+                }`}
+              >
+                {item.day}
+              </div>
+
+              {dayEvents.length > 0 ? (
+                <div className="mt-1.5 flex items-center gap-1">
+                  <span className={`h-2 w-2 rounded-full ${dotClass}`} />
+                  {dayEvents.length > 1 ? (
+                    <span className="text-[10px] text-slate-400">+{dayEvents.length - 1}</span>
+                  ) : null}
+                </div>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      {openPopover ? (
+        <CalendarPopover
+          selectedDate={selectedDate}
+          events={selectedEvents}
+          onClose={() => setOpenPopover(false)}
+          onAddEvent={handleAddEvent}
+          draft={draft}
+          setDraft={setDraft}
+          isSaving={calendarSaving}
+        />
+      ) : null}
+    </section>
+  );
+}
+
+export default function FeedClient() {
+  const supabase = createClient();
+
+  const [activeFilter, setActiveFilter] = useState("all");
   const [sessionUser, setSessionUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
   const [contacts, setContacts] = useState([]);
-  const [realCircles, setRealCircles] = useState([]);
-  const [ownHints, setOwnHints] = useState([]);
-
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
-  const [isLoadingCircles, setIsLoadingCircles] = useState(true);
-
   const [pageError, setPageError] = useState("");
   const [contactError, setContactError] = useState("");
-  const [circleError, setCircleError] = useState("");
-  const [circleSuccess, setCircleSuccess] = useState("");
+  const [contactSuccess, setContactSuccess] = useState("");
 
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
-
   const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
-  const [isDeleteCircleOpen, setIsDeleteCircleOpen] = useState(false);
   const [selectedContactToDelete, setSelectedContactToDelete] = useState(null);
-  const [selectedCircleToDelete, setSelectedCircleToDelete] = useState(null);
   const [isDeletingContact, setIsDeletingContact] = useState(false);
-  const [isDeletingCircle, setIsDeletingCircle] = useState(false);
   const [deleteContactError, setDeleteContactError] = useState("");
-  const [deleteCircleError, setDeleteCircleError] = useState("");
 
-  const [eventMode, setEventMode] = useState("calendar");
-  const [selectedEventId, setSelectedEventId] = useState(String(safeDefaultEvent.id || ""));
-  const [selectedPeople, setSelectedPeople] = useState([]);
-  const [selectedHintOwnerId, setSelectedHintOwnerId] = useState(SELF_SELECTOR_ID);
-  const [linkPreview, setLinkPreview] = useState(null);
-  const [isFetchingPreview, setIsFetchingPreview] = useState(false);
-  const [isCreatingCircle, setIsCreatingCircle] = useState(false);
-
-  const [form, setForm] = useState({
-    eventTitle: safeDefaultEvent.title || "",
-    eventDate: safeDefaultEvent.date || "",
-    deadline: safeDefaultEvent.date || "",
-    goalType: "item",
-    goalValue: "",
-    currency: "GBP",
-    fundingMode: "flexible",
-    itemSource: "hint",
-    selectedHintId: "",
-    itemUrl: "",
-  });
-
-  const displayedCircles = useMemo(() => {
-    if (realCircles.length > 0) return realCircles;
-    return [exampleCircle];
-  }, [realCircles]);
-
-  const resetCircleForm = useCallback(() => {
-    const fallbackEvent = safeCalendarEvents[0] || {
-      id: "",
-      title: "",
-      date: "",
-      type: "Event",
-    };
-
-    setEventMode("calendar");
-    setSelectedEventId(String(fallbackEvent.id || ""));
-    setSelectedPeople([]);
-    setSelectedHintOwnerId(SELF_SELECTOR_ID);
-    setLinkPreview(null);
-    setCircleError("");
-    setCircleSuccess("");
-    setForm({
-      eventTitle: fallbackEvent.title || "",
-      eventDate: fallbackEvent.date || "",
-      deadline: fallbackEvent.date || "",
-      goalType: "item",
-      goalValue: "",
-      currency: "GBP",
-      fundingMode: "flexible",
-      itemSource: "hint",
-      selectedHintId: "",
-      itemUrl: "",
-    });
-  }, [safeCalendarEvents]);
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [invitesLoading, setInvitesLoading] = useState(true);
+  const [invitesError, setInvitesError] = useState("");
+  const [activeInvite, setActiveInvite] = useState(null);
+  const [inviteActionId, setInviteActionId] = useState(null);
 
   const loadProfile = useCallback(
     async (userId) => {
@@ -2066,78 +1401,34 @@ export default function CirclesClient() {
     [supabase]
   );
 
-  const loadOwnHints = useCallback(
-    async (userId) => {
-      const { data, error } = await supabase
-        .from("hints")
-        .select("id, user_id, title, url, image_url, source, created_at, is_private")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+  async function loadPendingInvites() {
+    setInvitesLoading(true);
+    setInvitesError("");
 
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to load hints."));
-      }
+    const { data, error } = await supabase
+      .from("circle_invites")
+      .select(`
+        id,
+        circle_id,
+        invite_name,
+        invite_email,
+        status,
+        created_at,
+        invited_user_id
+      `)
+      .in("status", ["pending", "viewed"])
+      .order("created_at", { ascending: false });
 
-      setOwnHints(data || []);
-      return data || [];
-    },
-    [supabase]
-  );
+    if (error) {
+      setInvitesError(error.message || "Could not load invites.");
+      setPendingInvites([]);
+      setInvitesLoading(false);
+      return;
+    }
 
-  const loadCircles = useCallback(
-    async (userId, currentProfile) => {
-      setIsLoadingCircles(true);
-      setCircleError("");
-
-      const { data: circlesData, error: circlesError } = await supabase
-        .from("circles")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-
-      if (circlesError) {
-        setRealCircles([]);
-        setIsLoadingCircles(false);
-        throw new Error(normalizeSupabaseError(circlesError, "Failed to load circles."));
-      }
-
-      const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
-      let inviteMap = {};
-
-      if (circleIds.length > 0) {
-        const { data: inviteData, error: inviteError } = await supabase
-          .from("circle_invites")
-          .select("*")
-          .in("circle_id", circleIds);
-
-        if (inviteError) {
-          setIsLoadingCircles(false);
-          throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
-        }
-
-        inviteMap = (inviteData || []).reduce((acc, invite) => {
-          if (!acc[invite.circle_id]) acc[invite.circle_id] = [];
-          acc[invite.circle_id].push(invite);
-          return acc;
-        }, {});
-      }
-
-      const currentUserName =
-        getGoogleName(currentProfile || {}) ||
-        currentProfile?.full_name ||
-        currentProfile?.invite_name ||
-        "You";
-
-      const mapped = (circlesData || []).map((circle) =>
-        buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
-      );
-
-      setRealCircles(mapped);
-      setIsLoadingCircles(false);
-      return mapped;
-    },
-    [supabase]
-  );
+    setPendingInvites(data || []);
+    setInvitesLoading(false);
+  }
 
   useEffect(() => {
     let active = true;
@@ -2156,27 +1447,24 @@ export default function CirclesClient() {
         }
 
         if (!user) {
-          throw new Error("You must be signed in to view circles.");
+          throw new Error("You must be signed in to view the feed.");
         }
 
         if (!active) return;
         setSessionUser(user);
 
-        const currentProfile = await loadProfile(user.id);
+        await loadProfile(user.id);
         if (!active) return;
 
         await loadContacts(user.id);
         if (!active) return;
 
-        await loadOwnHints(user.id);
-        if (!active) return;
-
-        await loadCircles(user.id, currentProfile);
+        await loadPendingInvites();
       } catch (error) {
         if (active) {
-          setPageError(error?.message || "Failed to load the Circles page.");
+          setPageError(error?.message || "Failed to load the feed page.");
           setIsLoadingContacts(false);
-          setIsLoadingCircles(false);
+          setInvitesLoading(false);
         }
       }
     }
@@ -2186,65 +1474,11 @@ export default function CirclesClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadOwnHints, loadCircles]);
-
-  const handleFetchPreview = async () => {
-    if (!form.itemUrl.trim()) {
-      setCircleError("Paste a product or experience link first.");
-      return;
-    }
-
-    try {
-      setIsFetchingPreview(true);
-      setCircleError("");
-      setLinkPreview(null);
-
-      const response = await fetch("/api/link-preview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: form.itemUrl.trim() }),
-      });
-
-      const rawText = await response.text();
-      let data = null;
-
-      if (rawText) {
-        try {
-          data = JSON.parse(rawText);
-        } catch {
-          throw new Error("Link preview API returned an invalid response.");
-        }
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.error || `Failed to fetch preview (${response.status}).`);
-      }
-
-      if (!data) {
-        throw new Error("Link preview API returned an empty response.");
-      }
-
-      setLinkPreview(data);
-    } catch (error) {
-      setLinkPreview({
-        title: "Preview unavailable",
-        description:
-          "We could not pull a preview from that link yet, but you can still use the URL.",
-        image: "",
-        siteName: form.itemUrl,
-        url: form.itemUrl,
-      });
-
-      setCircleError(error?.message || "Failed to fetch link preview.");
-    } finally {
-      setIsFetchingPreview(false);
-    }
-  };
+  }, [supabase, loadProfile, loadContacts]);
 
   async function handleSaveContact(contactPayload) {
     setContactError("");
+    setContactSuccess("");
 
     if (!sessionUser?.id) {
       throw new Error("You must be signed in to save contacts.");
@@ -2267,14 +1501,12 @@ export default function CirclesClient() {
 
     if (error) {
       throw new Error(
-        normalizeSupabaseError(
-          error,
-          "Failed to save contact to profile_connections."
-        )
+        normalizeSupabaseError(error, "Failed to save contact to profile_connections.")
       );
     }
 
     await loadContacts(sessionUser.id);
+    setContactSuccess("Contact saved successfully.");
   }
 
   function openDeleteContactModal(contact) {
@@ -2283,16 +1515,10 @@ export default function CirclesClient() {
     setIsDeleteContactOpen(true);
   }
 
-  function openDeleteCircleModal(circle) {
-    setDeleteCircleError("");
-    setSelectedCircleToDelete(circle);
-    setIsDeleteCircleOpen(true);
-  }
-
   async function handleConfirmDeleteContact(contact) {
     setDeleteContactError("");
     setContactError("");
-    setCircleSuccess("");
+    setContactSuccess("");
 
     if (!contact?.id) {
       setDeleteContactError("Missing contact id.");
@@ -2313,14 +1539,10 @@ export default function CirclesClient() {
         );
       }
 
-      const remainingContacts = contacts.filter((item) => item.id !== contact.id);
-
-      setContacts(remainingContacts);
-      setSelectedPeople((prev) => prev.filter((item) => item.id !== contact.id));
-
+      setContacts((prev) => prev.filter((item) => item.id !== contact.id));
       setIsDeleteContactOpen(false);
       setSelectedContactToDelete(null);
-      setCircleSuccess("Contact deleted successfully.");
+      setContactSuccess("Contact deleted successfully.");
     } catch (error) {
       setDeleteContactError(error?.message || "Failed to delete contact.");
     } finally {
@@ -2328,276 +1550,40 @@ export default function CirclesClient() {
     }
   }
 
-  async function handleConfirmDeleteCircle(circle) {
-    setDeleteCircleError("");
-    setCircleError("");
-    setCircleSuccess("");
+  async function handleInviteDecision(inviteId, nextStatus) {
+    setInviteActionId(inviteId);
+    setInvitesError("");
 
-    if (!circle?.id) {
-      setDeleteCircleError("Missing circle id.");
+    const { error } = await supabase
+      .from("circle_invites")
+      .update({ status: nextStatus })
+      .eq("id", inviteId)
+      .select()
+      .single();
+
+    if (error) {
+      setInvitesError(error.message || "Could not update invite.");
+      setInviteActionId(null);
       return;
     }
 
-    setIsDeletingCircle(true);
-
-    try {
-      const { error: inviteDeleteError } = await supabase
-        .from("circle_invites")
-        .delete()
-        .eq("circle_id", circle.id);
-
-      if (inviteDeleteError) {
-        throw new Error(
-          normalizeSupabaseError(inviteDeleteError, "Failed to delete related circle invites.")
-        );
-      }
-
-      const { error: circleDeleteError } = await supabase
-        .from("circles")
-        .delete()
-        .eq("id", circle.id);
-
-      if (circleDeleteError) {
-        throw new Error(normalizeSupabaseError(circleDeleteError, "Failed to delete circle."));
-      }
-
-      setRealCircles((prev) => prev.filter((item) => item.id !== circle.id));
-      setIsDeleteCircleOpen(false);
-      setSelectedCircleToDelete(null);
-      setCircleSuccess("Circle deleted successfully.");
-    } catch (error) {
-      setDeleteCircleError(error?.message || "Failed to delete circle.");
-    } finally {
-      setIsDeletingCircle(false);
-    }
+    setPendingInvites((current) => current.filter((invite) => invite.id !== inviteId));
+    setActiveInvite((current) => {
+      if (!current) return null;
+      return current.id === inviteId ? null : current;
+    });
+    setInviteActionId(null);
   }
 
-  async function handleCreateCircle() {
-    setCircleError("");
-    setCircleSuccess("");
+  const showDemoGuide = demoMode && !(contacts.length > 0 || hasContactsDemoFallback);
 
-    const selectedEvent =
-      eventMode === "calendar"
-        ? safeCalendarEvents.find((event) => String(event.id) === String(selectedEventId))
-        : null;
+  const visibleFeedItems = useMemo(() => {
+    if (activeFilter === "all") return feedItems;
+    return feedItems.filter((item) => item.type === activeFilter);
+  }, [activeFilter]);
 
-    const eventTitle =
-      eventMode === "calendar"
-        ? selectedEvent?.title || form.eventTitle || ""
-        : form.eventTitle?.trim() || "";
-
-    const eventDate =
-      eventMode === "calendar"
-        ? selectedEvent?.date || form.eventDate || ""
-        : form.eventDate || "";
-
-    if (!sessionUser?.id) {
-      setCircleError("You must be signed in to create a circle.");
-      return;
-    }
-
-    if (!eventTitle.trim()) {
-      setCircleError("Event title is required.");
-      return;
-    }
-
-    if (!safeIsoDate(eventDate)) {
-      setCircleError("Event date is required.");
-      return;
-    }
-
-    if (!safeIsoTimestampEndOfDay(form.deadline || eventDate)) {
-      setCircleError("Contribution deadline is required.");
-      return;
-    }
-
-    const contactsWithoutEmail = selectedPeople.filter(
-      (person) => !String(person.email || "").trim() || !isValidEmail(person.email)
-    );
-
-    if (contactsWithoutEmail.length > 0) {
-      setCircleError("Every invited contact must have a valid email address.");
-      return;
-    }
-
-    const selectedHint = ownHints.find((hint) => hint.id === form.selectedHintId) || null;
-    const selectedRecipientContact =
-      selectedHintOwnerId !== SELF_SELECTOR_ID
-        ? contacts.find((contact) => String(contact.id) === String(selectedHintOwnerId)) || null
-        : null;
-
-    let itemTitle = "Shared contribution pot";
-    let itemUrl = null;
-    let itemImageUrl = null;
-    let itemDescription = null;
-    let itemTargetAmount = 0;
-    let organisingFeeAmount = 0;
-    let totalTargetAmount = 0;
-    let selectedHintId = null;
-    let sourceType = "external_link";
-
-    if (form.goalType === "item") {
-      if (form.itemSource === "hint") {
-        if (selectedHintOwnerId !== SELF_SELECTOR_ID) {
-          setCircleError(
-            "This contact is not linked to a hinted account yet, so you cannot use their hints in Circles right now."
-          );
-          return;
-        }
-
-        if (!selectedHint) {
-          setCircleError("Choose one of your hints or switch to pasted link.");
-          return;
-        }
-
-        const baseAmount = extractHintAmount(selectedHint);
-
-        if (baseAmount <= 0) {
-          setCircleError(
-            "We couldn’t find a valid price for that hint. Use a hint title/link that includes a price, or switch to pasted link."
-          );
-          return;
-        }
-
-        const totals = calculateCircleTotals(baseAmount);
-
-        itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
-        itemUrl = selectedHint.url || null;
-        itemImageUrl = selectedHint.image_url || null;
-        itemDescription = null;
-        itemTargetAmount = totals.itemAmount;
-        organisingFeeAmount = totals.feeAmount;
-        totalTargetAmount = totals.totalAmount;
-        selectedHintId = selectedHint.id;
-        sourceType = selectedHint.is_private ? "organiser_private_hint" : "recipient_public_hint";
-      } else {
-        if (!form.itemUrl.trim()) {
-          setCircleError("Paste a product or experience link.");
-          return;
-        }
-
-        const baseAmount = extractPreviewAmount(linkPreview);
-
-        if (baseAmount <= 0) {
-          setCircleError(
-            "We couldn’t detect a price from that link preview yet. Add pricing to the preview response or use a hint with a valid amount."
-          );
-          return;
-        }
-
-        const totals = calculateCircleTotals(baseAmount);
-
-        itemTitle = buildStoredItemTitle(linkPreview?.title || "Shared item");
-        itemUrl = linkPreview?.url || form.itemUrl.trim();
-        itemImageUrl = linkPreview?.image || null;
-        itemDescription = linkPreview?.description || null;
-        itemTargetAmount = totals.itemAmount;
-        organisingFeeAmount = totals.feeAmount;
-        totalTargetAmount = totals.totalAmount;
-        sourceType = "external_link";
-      }
-    } else {
-      const manualAmount = parseAmount(form.goalValue);
-
-      if (manualAmount <= 0) {
-        setCircleError("Target amount must be greater than 0.");
-        return;
-      }
-
-      itemTitle = "Shared contribution pot";
-      itemTargetAmount = roundCurrency(manualAmount);
-      organisingFeeAmount = calculateHintedFee(itemTargetAmount);
-      totalTargetAmount = roundCurrency(itemTargetAmount + organisingFeeAmount);
-      sourceType = "external_link";
-    }
-
-    const circleInsertPayload = {
-      user_id: sessionUser.id,
-      recipient_contact_id: selectedRecipientContact?.id || null,
-      title: eventTitle.trim(),
-      occasion_type: eventMode === "calendar" ? selectedEvent?.type || "Event" : "Event",
-      event_date: safeIsoDate(eventDate),
-      deadline_at: safeIsoTimestampEndOfDay(form.deadline || eventDate),
-      source_type: sourceType,
-      hint_id: selectedHintId,
-      item_title: itemTitle,
-      item_url: itemUrl,
-      item_image_url: itemImageUrl,
-      item_description: itemDescription,
-      currency: form.currency || "GBP",
-      item_target_amount: itemTargetAmount,
-      organising_fee_amount: organisingFeeAmount,
-      total_target_amount: totalTargetAmount,
-      fee_mode: "included_in_target",
-      payout_mode: "release_to_organiser",
-      funding_mode: fundingModeToDb(form.fundingMode),
-      status: "draft",
-    };
-
-    setIsCreatingCircle(true);
-
-    try {
-      const { data: insertedRows, error: insertCircleError } = await supabase
-        .from("circles")
-        .insert(circleInsertPayload)
-        .select("*");
-
-      if (insertCircleError) {
-        throw new Error(
-          normalizeSupabaseError(insertCircleError, "Failed to insert into circles.")
-        );
-      }
-
-      const insertedCircle = Array.isArray(insertedRows) ? insertedRows[0] : null;
-
-      if (!insertedCircle?.id) {
-        throw new Error("Circle was inserted, but the new row could not be returned.");
-      }
-
-      const inviteRows = selectedPeople.map((person) => ({
-        circle_id: insertedCircle.id,
-        user_id: sessionUser.id,
-        contact_id: null,
-        invite_name: person.name || null,
-        invite_email: person.email.trim().toLowerCase(),
-        status: "pending",
-        reminder_count: 0,
-      }));
-
-      let insertedInvites = [];
-      if (inviteRows.length > 0) {
-        const { data: inviteData, error: inviteError } = await supabase
-          .from("circle_invites")
-          .insert(inviteRows)
-          .select("*");
-
-        if (inviteError) {
-          throw new Error(
-            normalizeSupabaseError(inviteError, "Circle created but invite insert failed.")
-          );
-        }
-
-        insertedInvites = inviteData || [];
-      }
-
-      const currentUserName =
-        getGoogleName(profile || {}) ||
-        profile?.full_name ||
-        profile?.invite_name ||
-        "You";
-
-      const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
-
-      setRealCircles((prev) => [mappedCircle, ...prev]);
-      setCircleSuccess("Circle created successfully.");
-      setIsCreateOpen(false);
-      resetCircleForm();
-    } catch (error) {
-      setCircleError(error?.message || "Failed to create circle.");
-    } finally {
-      setIsCreatingCircle(false);
-    }
-  }
+  const displayContacts = contacts.length > 0 ? contacts : demoContacts;
+  const displayContactsAreDemo = contacts.length === 0 && demoMode;
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -2614,7 +1600,7 @@ export default function CirclesClient() {
             <nav className="flex items-center gap-2 sm:gap-3">
               <Link
                 href="/feed"
-                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
               >
                 Feed
               </Link>
@@ -2626,7 +1612,7 @@ export default function CirclesClient() {
               </Link>
               <Link
                 href="/circles"
-                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
               >
                 Circles
               </Link>
@@ -2644,7 +1630,7 @@ export default function CirclesClient() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
-        {pageError || contactError || circleError || circleSuccess ? (
+        {pageError || contactError || contactSuccess ? (
           <div className="mb-5 space-y-3">
             {pageError ? (
               <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
@@ -2658,139 +1644,408 @@ export default function CirclesClient() {
               </div>
             ) : null}
 
-            {circleError ? (
-              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-                {circleError}
-              </div>
-            ) : null}
-
-            {circleSuccess ? (
+            {contactSuccess ? (
               <div className="rounded-[22px] border border-[#d8e8d3] bg-[#f3fbf1] px-4 py-3 text-sm text-[#4a7a3a]">
-                {circleSuccess}
+                {contactSuccess}
               </div>
             ) : null}
           </div>
         ) : null}
 
-        <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
-          <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
-            <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
-              <aside className="space-y-4">
-                <div className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5">
+        <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
+          <aside className="space-y-5">
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Contacts
+                    Filters
                   </p>
-                  <h1 className="mt-1 text-[24px] font-semibold tracking-[-0.04em] text-slate-900">
-                    People you can add
+                  <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                    Activity
                   </h1>
-                  <p className="mt-2 text-[14px] leading-7 text-slate-600">
-                    Invite people into shared circles, then track who has joined and who is still pending.
-                  </p>
-
-                  <div className="mt-5 space-y-3">
-                    {isLoadingContacts ? (
-                      <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
-                        Loading contacts...
-                      </div>
-                    ) : contacts.length ? (
-                      contacts.map((contact) => (
-                        <ContactCard
-                          key={contact.id}
-                          contact={contact}
-                          onDeleteClick={openDeleteContactModal}
-                        />
-                      ))
-                    ) : (
-                      <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
-                        No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
-                      </div>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsAddContactOpen(true)}
-                    className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
-                  >
-                    Add new contact
-                  </button>
                 </div>
 
-                <PotTypeGuide />
-              </aside>
+                {demoMode && (
+                  <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
+                    Demo
+                  </span>
+                )}
+              </div>
 
-              <section className="min-w-0">
-                <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
-                  <div>
-                    <div className="inline-flex rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e37b57]">
-                      Shared gifting
+              <div className="mt-4 flex flex-col gap-2">
+                {initialFilters.map((filter) => {
+                  const selected = activeFilter === filter.key;
+
+                  return (
+                    <button
+                      key={filter.key}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setActiveFilter(filter.key)}
+                      className={`rounded-[18px] px-4 py-3 text-left text-sm font-medium transition ${
+                        selected
+                          ? "bg-[#2f3b2d] text-white shadow-sm"
+                          : "border border-[#efe4dd] bg-[#fffdfa] text-slate-600 hover:bg-[#faf7f5]"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {showDemoGuide && (
+              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  First look
+                </p>
+                <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                  How this feed will work
+                </h2>
+                <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                  You’re seeing a demo version of your feed so you can understand the layout before real activity starts appearing.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {onboardingSteps.map((step) => (
+                    <div key={step.id} className="rounded-[20px] bg-[#faf7f4] p-4">
+                      <div className="flex gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f3b2d] text-[12px] font-semibold text-white">
+                          {step.id}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
+                          <p className="mt-1 text-[13px] leading-6 text-slate-600">{step.text}</p>
+                        </div>
+                      </div>
                     </div>
-                    <h2 className="mt-3 text-[34px] font-semibold tracking-[-0.06em] text-slate-900 sm:text-[40px]">
-                      Build circles around the people and moments that matter.
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">Contacts</h2>
+                  <p className="mt-1 text-xs text-slate-500">Manage people from the same source as Circles.</p>
+                </div>
+
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  {contacts.length > 0 ? contacts.length : displayContacts.length}
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {isLoadingContacts ? (
+                  <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                    Loading contacts...
+                  </div>
+                ) : displayContacts.length ? (
+                  displayContacts.map((contact) =>
+                    contacts.length > 0 ? (
+                      <ContactCard
+                        key={contact.id}
+                        contact={contact}
+                        onDeleteClick={openDeleteContactModal}
+                      />
+                    ) : (
+                      <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+                          >
+                            {contact.initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
+                            <p className="text-xs text-slate-500">{contact.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )
+                ) : (
+                  <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
+                    No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
+                  </div>
+                )}
+              </div>
+
+              {displayContactsAreDemo ? (
+                <p className="mt-4 text-[12px] leading-5 text-slate-400">
+                  These are demo contacts until you add real ones.
+                </p>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => setIsAddContactOpen(true)}
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
+              >
+                Add or import contact
+              </button>
+            </section>
+          </aside>
+
+          <section className="min-w-0">
+            <div className="rounded-[32px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
+              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <div className="inline-flex rounded-full bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e07c54]">
+                      Activity stream
+                    </div>
+                    <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
+                      Your people, moments, and nudges.
                     </h2>
-                    <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
-                      Create a circle around an event, invite people, choose a hint from your own account or paste a product link, and let the pot stay flexible if everyone does not join.
+                    <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
+                      This feed updates automatically as reminders get closer, hints are added, and shared gift moments start moving.
                     </p>
                   </div>
 
+                  {demoMode && (
+                    <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
+                      Demo mode is on now. Once contacts are added, this area will switch to real activity.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsCreateOpen(true)}
-                    className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
+                    onClick={() => setIsAddContactOpen(true)}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
                   >
-                    Create new circle
+                    Add contact
+                  </button>
+
+                  <Link
+                    href="/circles"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Create circle
+                  </Link>
+
+                  <Link
+                    href="/shop"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Open shop
+                  </Link>
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {visibleFeedItems.map((item) => (
+                    <FeedItem key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <aside className="space-y-5">
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Pending invites
+                  </p>
+                  <h2 className="mt-1 text-base font-semibold text-slate-900">
+                    Invites waiting for you
+                  </h2>
+                </div>
+
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  {pendingInvites.length}
+                </span>
+              </div>
+
+              {invitesLoading ? (
+                <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
+              ) : invitesError ? (
+                <p className="mt-4 text-sm text-[#c46545]">{invitesError}</p>
+              ) : pendingInvites.length === 0 ? (
+                <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
+                  <p className="text-sm font-medium text-slate-700">
+                    No invites need a response right now.
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    When someone adds you to a circle, it will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {pendingInvites.map((invite) => (
+                    <article
+                      key={invite.id}
+                      className="rounded-[22px] border border-[#ecd9cf] bg-[#fcf8f5] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {invite.invite_name || invite.invite_email || "Circle invite"}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {invite.invite_email || "No email attached"}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e77756]">
+                          {invite.status}
+                        </span>
+                      </div>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-500">
+                        You’ve been invited to join a circle.
+                      </p>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveInvite(invite)}
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+                        >
+                          {inviteActionId === invite.id ? "Working..." : "View invite"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleInviteDecision(invite.id, "accepted")}
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
+                        >
+                          {inviteActionId === invite.id ? "Working..." : "Accept"}
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleInviteDecision(invite.id, "declined")}
+                          disabled={inviteActionId === invite.id}
+                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                        >
+                          {inviteActionId === invite.id ? "Working..." : "Decline"}
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {activeInvite ? (
+              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Selected invite
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-slate-900">
+                      {activeInvite.invite_name || activeInvite.invite_email || "Circle invite"}
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveInvite(null)}
+                    className="rounded-full border border-[#ead7cd] bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
+                  >
+                    Close
                   </button>
                 </div>
 
-                <div className="space-y-5">
-                  {isLoadingCircles ? (
-                    <div className="rounded-[24px] border border-[#f0dfd6] bg-white p-5 text-sm text-slate-500">
-                      Loading circles...
-                    </div>
-                  ) : (
-                    displayedCircles.map((circle) => (
-                      <CircleCard
-                        key={circle.id}
-                        circle={circle}
-                        onDeleteCircleClick={openDeleteCircleModal}
-                        deletingCircleId={isDeletingCircle ? selectedCircleToDelete?.id : null}
-                      />
-                    ))
-                  )}
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <p>Email: {activeInvite.invite_email || "No email attached"}</p>
+                  <p>Status: {activeInvite.status}</p>
+                  <p>Circle ID: {activeInvite.circle_id}</p>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleInviteDecision(activeInvite.id, "accepted")}
+                    disabled={inviteActionId === activeInvite.id}
+                    className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
+                  >
+                    {inviteActionId === activeInvite.id ? "Working..." : "Accept invite"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInviteDecision(activeInvite.id, "declined")}
+                    disabled={inviteActionId === activeInvite.id}
+                    className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+                  >
+                    {inviteActionId === activeInvite.id ? "Working..." : "Decline invite"}
+                  </button>
                 </div>
               </section>
-            </div>
-          </div>
-        </section>
-      </div>
+            ) : null}
 
-      <CreateCircleModal
-        open={isCreateOpen}
-        onClose={() => {
-          setIsCreateOpen(false);
-          resetCircleForm();
-        }}
-        onSubmit={handleCreateCircle}
-        contacts={contacts}
-        calendarEvents={safeCalendarEvents}
-        selectedPeople={selectedPeople}
-        setSelectedPeople={setSelectedPeople}
-        eventMode={eventMode}
-        setEventMode={setEventMode}
-        selectedEventId={selectedEventId}
-        setSelectedEventId={setSelectedEventId}
-        form={form}
-        setForm={setForm}
-        linkPreview={linkPreview}
-        isFetchingPreview={isFetchingPreview}
-        handleFetchPreview={handleFetchPreview}
-        selectedHintOwnerId={selectedHintOwnerId}
-        setSelectedHintOwnerId={setSelectedHintOwnerId}
-        errorMessage={circleError}
-        isSubmitting={isCreatingCircle}
-        ownHints={ownHints}
-        selfProfile={profile}
-      />
+            <MiniCalendar />
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">Upcoming reminders</h2>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  3 soon
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {reminders.map((item) => (
+                  <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                        <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-[28px] border border-[#e6ddd7] bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Shop next
+              </p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                A place for saved gift options
+              </h2>
+              <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                Shop can become the home for linked products, saved retailer finds, and the items you might attach to circles later.
+              </p>
+
+              <Link
+                href="/shop"
+                className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Go to shop
+              </Link>
+            </section>
+
+            <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+                Gift prompt
+              </p>
+              <p className="mt-3 text-sm leading-7 text-white/90">
+                Sarah has recently saved “ceramic dinnerware” and “weekend city break”, so experience-led gifts may be the strongest route.
+              </p>
+              <button
+                type="button"
+                className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
+              >
+                View related hints
+              </button>
+            </section>
+          </aside>
+        </div>
+      </div>
 
       <AddContactModal
         open={isAddContactOpen}
@@ -2817,19 +2072,6 @@ export default function CirclesClient() {
         contact={selectedContactToDelete}
         isDeleting={isDeletingContact}
         errorMessage={deleteContactError}
-      />
-
-      <DeleteCircleModal
-        open={isDeleteCircleOpen}
-        onClose={() => {
-          setIsDeleteCircleOpen(false);
-          setSelectedCircleToDelete(null);
-          setDeleteCircleError("");
-        }}
-        onConfirm={handleConfirmDeleteCircle}
-        circle={selectedCircleToDelete}
-        isDeleting={isDeletingCircle}
-        errorMessage={deleteCircleError}
       />
     </main>
   );
