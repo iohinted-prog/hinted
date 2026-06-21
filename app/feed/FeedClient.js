@@ -834,6 +834,10 @@ export default function FeedClient() {
     setInvitesLoading(false);
   }
 
+    useEffect(() => {
+    loadPendingInvites();
+  }, []);
+
   const showDemoGuide = demoMode && !hasContacts;
 
   const visibleFeedItems = useMemo(() => {
