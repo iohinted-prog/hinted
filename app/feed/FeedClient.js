@@ -220,7 +220,6 @@ function LogoMark() {
   );
 }
 
-
 function ModalShell({ open, onClose, title, eyebrow, children, maxWidth = "max-w-[720px]" }) {
   if (!open) return null;
 
@@ -799,9 +798,12 @@ export default function FeedClient() {
     birthday: "",
     phone: "",
   });
+
   const [pendingInvites, setPendingInvites] = useState([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
   const [invitesError, setInvitesError] = useState("");
+  const [hiddenInviteIds, setHiddenInviteIds] = useState([]);
+  const [activeInvite, setActiveInvite] = useState(null);
 
   async function loadPendingInvites() {
     setInvitesLoading(true);
@@ -834,7 +836,7 @@ export default function FeedClient() {
     setInvitesLoading(false);
   }
 
-    useEffect(() => {
+  useEffect(() => {
     loadPendingInvites();
   }, []);
 
@@ -844,6 +846,11 @@ export default function FeedClient() {
     if (activeFilter === "all") return feedItems;
     return feedItems.filter((item) => item.type === activeFilter);
   }, [activeFilter]);
+
+  const visiblePendingInvites = useMemo(
+    () => pendingInvites.filter((invite) => !hiddenInviteIds.includes(invite.id)),
+    [pendingInvites, hiddenInviteIds]
+  );
 
   const resetContactForm = () => {
     setContactForm({
@@ -878,325 +885,404 @@ export default function FeedClient() {
   };
 
   return (
-  <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-    <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
-      <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
-        <Link href="/feed" className="flex items-center gap-3.5">
-          <LogoMark />
-          <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
-            Hinted<span className="text-[#f36f64]">.io</span>
+    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+      <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/feed" className="flex items-center gap-3.5">
+            <LogoMark />
+            <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
+              Hinted<span className="text-[#f36f64]">.io</span>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-3 sm:gap-4">
+            <nav className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/feed"
+                className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/hints"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Hints
+              </Link>
+              <Link
+                href="/circles"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Circles
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
+              >
+                Shop
+              </Link>
+            </nav>
+
+            <AvatarMenu />
           </div>
-        </Link>
-
-        <div className="flex items-center gap-3 sm:gap-4">
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/feed"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-[14px] font-semibold text-white sm:px-5"
-            >
-              Feed
-            </Link>
-            <Link
-              href="/hints"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-            >
-              Hints
-            </Link>
-            <Link
-              href="/circles"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-            >
-              Circles
-            </Link>
-            <Link
-              href="/shop"
-              className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 hover:bg-[#fff5f0] sm:px-5"
-            >
-              Shop
-            </Link>
-          </nav>
-
-          <AvatarMenu />
         </div>
-      </div>
-    </header>
+      </header>
 
-    <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
-      <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
-        <aside className="space-y-5">
-          <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Filters
-                </p>
-                <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                  Activity
-                </h1>
+      <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
+        <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)_360px]">
+          <aside className="space-y-5">
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Filters
+                  </p>
+                  <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                    Activity
+                  </h1>
+                </div>
+
+                {demoMode && (
+                  <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
+                    Demo
+                  </span>
+                )}
               </div>
 
-              {demoMode && (
-                <span className="rounded-full bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e77756]">
-                  Demo
+              <div className="mt-4 flex flex-col gap-2">
+                {initialFilters.map((filter) => {
+                  const selected = activeFilter === filter.key;
+
+                  return (
+                    <button
+                      key={filter.key}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => setActiveFilter(filter.key)}
+                      className={`rounded-[18px] px-4 py-3 text-left text-sm font-medium transition ${
+                        selected
+                          ? "bg-[#2f3b2d] text-white shadow-sm"
+                          : "border border-[#efe4dd] bg-[#fffdfa] text-slate-600 hover:bg-[#faf7f5]"
+                      }`}
+                    >
+                      {filter.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            {showDemoGuide && (
+              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  First look
+                </p>
+                <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                  How this feed will work
+                </h2>
+                <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                  You’re seeing a demo version of your feed so you can understand the layout before real activity starts appearing.
+                </p>
+
+                <div className="mt-5 space-y-3">
+                  {onboardingSteps.map((step) => (
+                    <div key={step.id} className="rounded-[20px] bg-[#faf7f4] p-4">
+                      <div className="flex gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f3b2d] text-[12px] font-semibold text-white">
+                          {step.id}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
+                          <p className="mt-1 text-[13px] leading-6 text-slate-600">{step.text}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">People added</h2>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  {contacts.length}
                 </span>
-              )}
-            </div>
+              </div>
 
-            <div className="mt-4 flex flex-col gap-2">
-              {initialFilters.map((filter) => {
-                const selected = activeFilter === filter.key;
+              <div className="mt-4 space-y-3">
+                {contacts.map((contact) => (
+                  <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+                      >
+                        {contact.initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
+                        <p className="text-xs text-slate-500">{contact.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
 
-                return (
+              <button
+                type="button"
+                onClick={() => setIsAddContactOpen(true)}
+                className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
+              >
+                Add contact
+              </button>
+            </section>
+          </aside>
+
+          <section className="min-w-0">
+            <div className="rounded-[32px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
+              <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div>
+                    <div className="inline-flex rounded-full bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e07c54]">
+                      Activity stream
+                    </div>
+                    <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
+                      Your people, moments, and nudges.
+                    </h2>
+                    <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
+                      This feed updates automatically as reminders get closer, hints are added, and shared gift moments start moving.
+                    </p>
+                  </div>
+
+                  {demoMode && (
+                    <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
+                      Demo mode is on now. Once contacts are added, this area will switch to real activity.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-5 flex flex-wrap gap-3">
                   <button
-                    key={filter.key}
                     type="button"
-                    aria-pressed={selected}
-                    onClick={() => setActiveFilter(filter.key)}
-                    className={`rounded-[18px] px-4 py-3 text-left text-sm font-medium transition ${
-                      selected
-                        ? "bg-[#2f3b2d] text-white shadow-sm"
-                        : "border border-[#efe4dd] bg-[#fffdfa] text-slate-600 hover:bg-[#faf7f5]"
-                    }`}
+                    onClick={() => setIsAddContactOpen(true)}
+                    className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
                   >
-                    {filter.label}
+                    Add contact
                   </button>
-                );
-              })}
+
+                  <Link
+                    href="/circles"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Create circle
+                  </Link>
+
+                  <Link
+                    href="/shop"
+                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+                  >
+                    Open shop
+                  </Link>
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  {visibleFeedItems.map((item) => (
+                    <FeedItem key={item.id} item={item} />
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 
-          {showDemoGuide && (
+          <aside className="space-y-5">
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                First look
-              </p>
-              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-                How this feed will work
-              </h2>
-              <p className="mt-2 text-[14px] leading-6 text-slate-600">
-                You’re seeing a demo version of your feed so you can understand the layout before real activity starts appearing.
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Pending invites
+                  </p>
+                  <h2 className="mt-1 text-base font-semibold text-slate-900">
+                    Invites waiting for you
+                  </h2>
+                </div>
 
-              <div className="mt-5 space-y-3">
-                {onboardingSteps.map((step) => (
-                  <div key={step.id} className="rounded-[20px] bg-[#faf7f4] p-4">
-                    <div className="flex gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f3b2d] text-[12px] font-semibold text-white">
-                        {step.id}
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  {visiblePendingInvites.length}
+                </span>
+              </div>
+
+              {invitesLoading ? (
+                <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
+              ) : invitesError ? (
+                <p className="mt-4 text-sm text-[#c46545]">{invitesError}</p>
+              ) : visiblePendingInvites.length === 0 ? (
+                <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
+                  <p className="text-sm font-medium text-slate-700">
+                    No invites need a response right now.
+                  </p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">
+                    When someone adds you to a circle, it will appear here.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {visiblePendingInvites.map((invite) => (
+                    <article
+                      key={invite.id}
+                      className="rounded-[22px] border border-[#ecd9cf] bg-[#fcf8f5] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {invite.invite_name || invite.invite_email || "Circle invite"}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {invite.invite_email || "No email attached"}
+                          </p>
+                        </div>
+
+                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e77756]">
+                          {invite.status}
+                        </span>
                       </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{step.title}</p>
-                        <p className="mt-1 text-[13px] leading-6 text-slate-600">{step.text}</p>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-500">
+                        You’ve been invited to join a circle.
+                      </p>
+
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveInvite(invite)}
+                          className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm"
+                        >
+                          View invite
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHiddenInviteIds((current) =>
+                              current.includes(invite.id)
+                                ? current
+                                : [...current, invite.id]
+                            )
+                          }
+                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+                        >
+                          Not now
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {activeInvite ? (
+              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                      Selected invite
+                    </p>
+                    <h3 className="mt-1 text-base font-semibold text-slate-900">
+                      {activeInvite.invite_name ||
+                        activeInvite.invite_email ||
+                        "Circle invite"}
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveInvite(null)}
+                    className="rounded-full border border-[#ead7cd] bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <p>Email: {activeInvite.invite_email || "No email attached"}</p>
+                  <p>Status: {activeInvite.status}</p>
+                  <p>Circle ID: {activeInvite.circle_id}</p>
+                </div>
+              </section>
+            ) : null}
+
+            <MiniCalendar />
+
+            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-base font-semibold text-slate-900">Upcoming reminders</h2>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  3 soon
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {reminders.map((item) => (
+                  <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                        <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
             </section>
-          )}
 
-          <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-slate-900">People added</h2>
-              <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                {contacts.length}
-              </span>
-            </div>
+            <section className="rounded-[28px] border border-[#e6ddd7] bg-white p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                Shop next
+              </p>
+              <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                A place for saved gift options
+              </h2>
+              <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                Shop can become the home for linked products, saved retailer finds, and the items you might attach to circles later.
+              </p>
 
-            <div className="mt-4 space-y-3">
-              {contacts.map((contact) => (
-                <div key={contact.id} className="rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] p-3">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                    >
-                      {contact.initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-800">{contact.name}</p>
-                      <p className="text-xs text-slate-500">{contact.role}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+              <Link
+                href="/shop"
+                className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Go to shop
+              </Link>
+            </section>
 
-            <button
-              type="button"
-              onClick={() => setIsAddContactOpen(true)}
-              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
-            >
-              Add contact
-            </button>
-          </section>
-        </aside>
-
-        <section className="min-w-0">
-          <div className="rounded-[32px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
-            <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
-              <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
-                <div>
-                  <div className="inline-flex rounded-full bg-[#fff5ef] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e07c54]">
-                    Activity stream
-                  </div>
-                  <h2 className="mt-3 text-[30px] font-semibold tracking-[-0.05em] text-slate-900">
-                    Your people, moments, and nudges.
-                  </h2>
-                  <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
-                    This feed updates automatically as reminders get closer, hints are added, and shared gift moments start moving.
-                  </p>
-                </div>
-
-                {demoMode && (
-                  <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                    Demo mode is on now. Once contacts are added, this area will switch to real activity.
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-5 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddContactOpen(true)}
-                  className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
-                >
-                  Add contact
-                </button>
-
-                <Link
-                  href="/circles"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-                >
-                  Create circle
-                </Link>
-
-                <Link
-                  href="/shop"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-                >
-                  Open shop
-                </Link>
-              </div>
-
-              <div className="mt-5 space-y-4">
-                {visibleFeedItems.map((item) => (
-                  <FeedItem key={item.id} item={item} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <aside className="space-y-5">
-          <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Pending invites
-                </p>
-                <h2 className="mt-1 text-base font-semibold text-slate-900">Debug check</h2>
-              </div>
-              <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                {pendingInvites.length}
-              </span>
-            </div>
-
-            {invitesLoading ? (
-              <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
-            ) : invitesError ? (
-              <p className="mt-4 text-sm text-red-600">{invitesError}</p>
-            ) : pendingInvites.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-500">No pending invites found.</p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {pendingInvites.map((invite) => (
-                  <li
-                    key={invite.id}
-                    className="rounded-[18px] border border-[#f1e4dc] bg-[#fffdfa] p-3 text-sm text-slate-700"
-                  >
-                    <p className="font-semibold text-slate-900">
-                      {invite.invite_name || invite.invite_email || "Unnamed invite"}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">{invite.status}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <MiniCalendar />
-
-          <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold text-slate-900">Upcoming reminders</h2>
-              <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
-                3 soon
-              </span>
-            </div>
-
-            <div className="mt-4 space-y-3">
-              {reminders.map((item) => (
-                <div key={item.title} className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`} />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-800">{item.title}</p>
-                      <p className="mt-1 text-xs text-slate-500">{item.date}</p>
-                      <p className="mt-1 text-xs text-slate-400">{item.subtitle}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="rounded-[28px] border border-[#e6ddd7] bg-white p-5 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-              Shop next
-            </p>
-            <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-              A place for saved gift options
-            </h2>
-            <p className="mt-2 text-[14px] leading-6 text-slate-600">
-              Shop can become the home for linked products, saved retailer finds, and the items you might attach to circles later.
-            </p>
-
-            <Link
-              href="/shop"
-              className="mt-4 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-            >
-              Go to shop
-            </Link>
-          </section>
-
-          <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
-              Gift prompt
-            </p>
-            <p className="mt-3 text-sm leading-7 text-white/90">
-              Sarah has recently saved “ceramic dinnerware” and “weekend city break”, so experience-led gifts may be the strongest route.
-            </p>
-            <button
-              type="button"
-              className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
-            >
-              View related hints
-            </button>
-          </section>
-        </aside>
+            <section className="rounded-[28px] bg-[#2f3b2d] p-5 text-white shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/60">
+                Gift prompt
+              </p>
+              <p className="mt-3 text-sm leading-7 text-white/90">
+                Sarah has recently saved “ceramic dinnerware” and “weekend city break”, so experience-led gifts may be the strongest route.
+              </p>
+              <button
+                type="button"
+                className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
+              >
+                View related hints
+              </button>
+            </section>
+          </aside>
+        </div>
       </div>
-    </div>
 
-    <AddContactModal
-      open={isAddContactOpen}
-      onClose={() => {
-        resetContactForm();
-        setIsAddContactOpen(false);
-      }}
-      onSave={handleSaveContact}
-      form={contactForm}
-      setForm={setContactForm}
-    />
-  </main>
-);
+      <AddContactModal
+        open={isAddContactOpen}
+        onClose={() => {
+          resetContactForm();
+          setIsAddContactOpen(false);
+        }}
+        onSave={handleSaveContact}
+        form={contactForm}
+        setForm={setContactForm}
+      />
+    </main>
+  );
 }
