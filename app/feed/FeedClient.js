@@ -5,18 +5,15 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
+const supabase = createClient();
 const demoMode = true;
-
-const reactionOptions = ["❤️", "🎉", "👏"];
 
 const feedFilters = [
   { key: "all", label: "All activity" },
-  { key: "friend_added", label: "Contacts" },
-  { key: "hint_added", label: "Hints" },
-  { key: "circle_joined", label: "Joins" },
-  { key: "circle_top_up", label: "Contributions" },
-  { key: "circle_milestone", label: "Milestones" },
-  { key: "reminder_week", label: "1 week reminders" },
+  { key: "hint", label: "Hints" },
+  { key: "circle", label: "Circles" },
+  { key: "reminder", label: "Reminders" },
+  { key: "contact", label: "Contacts" },
 ];
 
 const relationshipOptions = [
@@ -34,128 +31,65 @@ const relationshipOptions = [
   "Other",
 ];
 
-const onboardingSteps = [
-  {
-    id: 1,
-    title: "Add your people",
-    text: "Add contacts and mark who already uses Hinted versus who is still invited.",
-  },
-  {
-    id: 2,
-    title: "Let the system post for you",
-    text: "Hints, circle joins, contributions, milestones, and 1-week reminders appear automatically.",
-  },
-  {
-    id: 3,
-    title: "Use the right rail for planning",
-    text: "Calendar and long-range reminders stay separate from the social feed.",
-  },
-];
-
 const demoContacts = [
   {
-    id: "demo-user-1",
+    id: "demo-1",
     name: "Maya",
     role: "Friend",
-    contactState: "user",
-    note: "Hinted user",
+    note: "Saved 8 hints",
     initials: "M",
-    avatarVariant: "user",
-    email: "maya@example.com",
+    colors: "from-[#efc3af] to-[#ae6e57]",
+    email: "",
+    isDemo: true,
   },
   {
-    id: "demo-invitee-1",
+    id: "demo-2",
     name: "James",
     role: "Brother",
-    contactState: "invitee",
-    note: "Invite sent",
+    note: "Saved 5 hints",
     initials: "J",
-    avatarVariant: "invitee",
-    email: "james@example.com",
+    colors: "from-[#4e596d] to-[#212a3c]",
+    email: "",
+    isDemo: true,
   },
   {
-    id: "demo-user-2",
+    id: "demo-3",
     name: "Fiona",
     role: "Friend",
-    contactState: "user",
-    note: "Hinted user",
+    note: "Saved 4 hints",
     initials: "F",
-    avatarVariant: "user",
-    email: "fiona@example.com",
+    colors: "from-[#809168] to-[#41512e]",
+    email: "",
+    isDemo: true,
   },
 ];
 
 const demoFeedItems = [
   {
     id: "demo-feed-1",
-    event_type: "hint_added",
-    actor_name: "Maya",
-    title: "added 4 new hints",
-    body: "Grouped from one session so your feed stays tidy.",
+    owner_user_id: "demo-owner",
+    actor_user_id: "demo-actor",
+    target_user_id: null,
+    family: "hint",
+    item_type: "hint_session",
+    visibility: "private",
+    circle_id: null,
+    activity_session_id: null,
+    source_event_id: null,
+    headline: "Maya added 4 new public hints",
+    body: "Grouped into one update after her session so the feed stays clean.",
+    cta_label: "View hints",
+    cta_href: "/hints",
+    occurred_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    metadata: {
+      social_enabled: true,
+      actor_name: "Maya",
+    },
     comments: [],
-    reactions: [{ id: "demo-r-1", user_id: "demo-2", emoji: "🎉" }],
-    allow_engagement: true,
     isDemo: true,
   },
 ];
-
-const feedTypeConfig = {
-  friend_added: {
-    chip: "bg-[#fff3ee] text-[#e07c54]",
-    border: "border-[#f6ddd2]",
-    icon: "👋",
-    badge: "Contact",
-    actionText: "See hints",
-    actionHref: "/hints",
-    avatarGradient: "from-[#efcdbf] to-[#c88c73]",
-  },
-  hint_added: {
-    chip: "bg-[#f5f3ff] text-[#7c5cbf]",
-    border: "border-[#e5defa]",
-    icon: "🎁",
-    badge: "Hint",
-    actionText: "See hints",
-    actionHref: "/hints",
-    avatarGradient: "from-[#e7cab8] to-[#b97d66]",
-  },
-  circle_joined: {
-    chip: "bg-[#eef6ea] text-[#5b7a3c]",
-    border: "border-[#dcead4]",
-    icon: "⭕",
-    badge: "Circle",
-    actionText: "Open circle",
-    actionHref: "/circles",
-    avatarGradient: "from-[#aab88f] to-[#687a4e]",
-  },
-  circle_top_up: {
-    chip: "bg-[#eef6ea] text-[#5b7a3c]",
-    border: "border-[#dcead4]",
-    icon: "💸",
-    badge: "Contribution",
-    actionText: "Open circle",
-    actionHref: "/circles",
-    avatarGradient: "from-[#aab88f] to-[#687a4e]",
-  },
-  circle_milestone: {
-    chip: "bg-[#fff7e8] text-[#af7b14]",
-    border: "border-[#f3e3b8]",
-    icon: "⭐",
-    badge: "Milestone",
-    actionText: "Open circle",
-    actionHref: "/circles",
-    avatarGradient: "from-[#dcc4b5] to-[#b78972]",
-  },
-  reminder_week: {
-    chip: "bg-[#fff3ee] text-[#e07c54]",
-    border: "border-[#f6ddd2]",
-    icon: "🗓️",
-    badge: "Reminder",
-    actionText: null,
-    actionHref: null,
-    avatarGradient: "from-[#efcdbf] to-[#c88c73]",
-  },
-};
 
 const eventTypeStyles = {
   birthday: {
@@ -199,9 +133,28 @@ function normalizeSupabaseError(error, fallback) {
   return parts.length ? parts.join(" — ") : fallback;
 }
 
-function relationshipLabelFromArray(relationshipTypes) {
-  if (!Array.isArray(relationshipTypes) || relationshipTypes.length === 0) return "Friend";
-  return relationshipTypes[0] || "Friend";
+function formatRelativeFromDate(dateString) {
+  if (!dateString) return "Recently";
+  const now = new Date();
+  const value = new Date(dateString);
+  const diffMs = now.getTime() - value.getTime();
+
+  if (Number.isNaN(diffMs)) return "Recently";
+
+  const minutes = Math.floor(diffMs / (1000 * 60));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  if (hours < 24) return `${hours}h ago`;
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (days < 7) return `${days}d ago`;
+
+  return value.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
 }
 
 function parseDateOnly(dateString) {
@@ -226,29 +179,6 @@ function diffInDaysFromToday(dateString) {
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
 }
 
-function formatRelativeFromDate(dateString) {
-  if (!dateString) return "Recently";
-  const now = new Date();
-  const value = new Date(dateString);
-  const diffMs = now.getTime() - value.getTime();
-  if (Number.isNaN(diffMs)) return "Recently";
-
-  const minutes = Math.floor(diffMs / (1000 * 60));
-  if (minutes < 1) return "Just now";
-  if (minutes < 60) return `${minutes}m ago`;
-
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  if (hours < 24) return `${hours}h ago`;
-
-  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (days < 7) return `${days}d ago`;
-
-  return value.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-  });
-}
-
 function formatReminderDistance(diffDays) {
   if (diffDays === 0) return "Today";
   if (diffDays === 1) return "Tomorrow";
@@ -260,6 +190,12 @@ function formatReminderDistance(diffDays) {
 
   const months = Math.round(diffDays / 30);
   return `In ${months} month${months === 1 ? "" : "s"}`;
+}
+
+function getPrimaryContactField(person, field) {
+  const values = Array.isArray(person?.[field]) ? person[field] : [];
+  if (!values.length) return "";
+  return values[0]?.displayName || values[0]?.value || "";
 }
 
 function getMonthData(date) {
@@ -303,23 +239,93 @@ function getMonthData(date) {
   return cells;
 }
 
-function buildContactRecordFromRow(row) {
-  const relationship = relationshipLabelFromArray(row?.relationship_types);
-  const safeName = row?.name || row?.email || "Unnamed contact";
-  const contactState = row?.contact_state === "user" ? "user" : "invitee";
+function relationshipToRoleLabel(role) {
+  return role || "Friend";
+}
 
-  return {
-    id: row.id,
-    profileConnectionId: row.id,
-    name: safeName,
-    role: relationship,
-    contactState,
-    note: contactState === "user" ? "Hinted user" : "Invite sent",
-    initials: getInitials(safeName),
-    avatarVariant: contactState,
-    email: row?.email || "",
-    raw: row,
-  };
+function mapContactState(status) {
+  return status === "accepted" ? "user" : "invitee";
+}
+
+function getFeedBucket(item) {
+  const family = String(item.family || "").toLowerCase();
+  const itemType = String(item.item_type || "").toLowerCase();
+
+  if (family.includes("hint") || itemType.includes("hint")) return "hint";
+  if (family.includes("circle") || itemType.includes("circle")) return "circle";
+  if (family.includes("reminder") || itemType.includes("reminder")) return "reminder";
+  if (family.includes("contact") || itemType.includes("contact")) return "contact";
+  return "all";
+}
+
+function isSocialFeedItem(item) {
+  const metadata = item.metadata || {};
+  if (typeof metadata.social_enabled === "boolean") return metadata.social_enabled;
+
+  const bucket = getFeedBucket(item);
+  return bucket !== "reminder";
+}
+
+function ContactAvatar({ contact }) {
+  if (contact.isDemo) {
+    return (
+      <div
+        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
+      >
+        {contact.initials}
+      </div>
+    );
+  }
+
+  const isUser = contact.contactState === "user";
+
+  return (
+    <div
+      className={`relative flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${
+        isUser
+          ? "bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-white"
+          : "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
+      }`}
+    >
+      {contact.initials}
+      <span
+        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
+          isUser
+            ? "bg-[#2f3b2d] text-white"
+            : "border border-[#e6c5b6] bg-[#fff0e8] text-[#c87150]"
+        }`}
+      >
+        {isUser ? "U" : "I"}
+      </span>
+    </div>
+  );
+}
+
+function ContactCard({ contact, onDeleteClick }) {
+  return (
+    <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="flex items-center gap-3">
+        <ContactAvatar contact={contact} />
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          <p className="text-xs text-slate-500">
+            {contact.role} · {contact.note}
+          </p>
+        </div>
+
+        {!contact.isDemo ? (
+          <button
+            type="button"
+            onClick={() => onDeleteClick(contact)}
+            className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
+          >
+            Delete
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
 }
 
 function LogoMark() {
@@ -379,31 +385,112 @@ function ModalShell({
 }
 
 function AddContactModal({ open, onClose, onSave }) {
-  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactResults, setContactResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [contactsMessage, setContactsMessage] = useState("");
+  const [selectedRelationship, setSelectedRelationship] = useState("Friend");
   const [form, setForm] = useState({
     name: "",
     email: "",
+    note: "",
   });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     if (!open) {
-      setSelectedRelationships(["Friend"]);
-      setForm({ name: "", email: "" });
+      setContactSearch("");
+      setContactResults([]);
+      setSearchingContacts(false);
+      setContactsMessage("");
+      setSelectedRelationship("Friend");
+      setForm({ name: "", email: "", note: "" });
       setSaving(false);
       setSaveError("");
     }
   }, [open]);
 
-  function toggleRelationship(relationship) {
-    setSelectedRelationships((prev) => {
-      if (prev.includes(relationship)) {
-        if (prev.length === 1) return prev;
-        return prev.filter((item) => item !== relationship);
+  async function searchGoogleContacts(query) {
+    setContactSearch(query);
+    setContactsMessage("");
+    setSaveError("");
+
+    if (!query.trim()) {
+      setContactResults([]);
+      return;
+    }
+
+    setSearchingContacts(true);
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const providerToken = session?.provider_token;
+
+      if (!providerToken) {
+        setContactResults([]);
+        setContactsMessage(
+          "Your Google provider token is missing, so Gmail lookup is unavailable right now. You can still type an email manually."
+        );
+        return;
       }
-      return [...prev, relationship];
-    });
+
+      const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
+      url.searchParams.set("query", query);
+      url.searchParams.set("pageSize", "8");
+      url.searchParams.set("readMask", "names,emailAddresses");
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Authorization: `Bearer ${providerToken}`,
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setContactResults([]);
+        setContactsMessage(result?.error?.message || "We couldn’t search Google contacts right now.");
+        return;
+      }
+
+      const people = Array.isArray(result.results) ? result.results : [];
+      const mapped = people
+        .map((item) => item.person)
+        .filter(Boolean)
+        .map((person, index) => ({
+          id: person.resourceName || String(index),
+          name: getPrimaryContactField(person, "names"),
+          email: getPrimaryContactField(person, "emailAddresses"),
+        }))
+        .filter((person) => person.name || person.email);
+
+      setContactResults(mapped);
+
+      if (mapped.length === 0) {
+        setContactsMessage("No matching Gmail contacts found. You can still add them manually.");
+      }
+    } catch (error) {
+      setContactResults([]);
+      setContactsMessage(error?.message || "We couldn’t search Google contacts right now.");
+    } finally {
+      setSearchingContacts(false);
+    }
+  }
+
+  function selectContact(contact) {
+    setForm((prev) => ({
+      ...prev,
+      name: contact.name || "",
+      email: contact.email || "",
+    }));
+    setContactSearch(contact.name || contact.email || "");
+    setContactResults([]);
+    setContactsMessage("");
+    setSaveError("");
   }
 
   async function handleSave() {
@@ -431,7 +518,8 @@ function AddContactModal({ open, onClose, onSave }) {
       await onSave({
         name: form.name.trim(),
         email: cleanedEmail,
-        relationshipTypes: selectedRelationships.length ? selectedRelationships : ["Friend"],
+        role: selectedRelationship,
+        note: form.note.trim(),
       });
       setSaving(false);
       onClose();
@@ -453,14 +541,51 @@ function AddContactModal({ open, onClose, onSave }) {
       <div className="border-t border-[#efe0d7] px-6 py-6">
         <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Contacts
+            Bring someone in quickly
           </p>
           <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
-            Add someone by email
+            Add from Gmail or type their email
           </h3>
           <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
-            If they already have a Hinted account they should resolve as a user. Otherwise they stay as an invitee until accepted.
+            Search your Gmail contacts, or enter the details manually.
           </p>
+
+          <div className="mt-5">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => searchGoogleContacts(e.target.value)}
+              placeholder="Search Gmail contacts"
+              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </div>
+
+          {searchingContacts ? (
+            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
+          ) : null}
+
+          {contactResults.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
+              {contactResults.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => selectContact(contact)}
+                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
+                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {contactsMessage ? (
+            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
+          ) : null}
         </div>
 
         <div className="mt-6 space-y-5">
@@ -482,34 +607,35 @@ function AddContactModal({ open, onClose, onSave }) {
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="maya@example.com"
-              required
               className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
             />
           </label>
 
-          <div>
+          <label className="block">
             <span className="block text-sm font-medium text-slate-900">Relationship</span>
-            <div className="mt-3 flex flex-wrap gap-2.5">
-              {relationshipOptions.map((relationship) => {
-                const selected = selectedRelationships.includes(relationship);
+            <select
+              value={selectedRelationship}
+              onChange={(e) => setSelectedRelationship(e.target.value)}
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            >
+              {relationshipOptions.map((relationship) => (
+                <option key={relationship} value={relationship}>
+                  {relationship}
+                </option>
+              ))}
+            </select>
+          </label>
 
-                return (
-                  <button
-                    key={relationship}
-                    type="button"
-                    onClick={() => toggleRelationship(relationship)}
-                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                      selected
-                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
-                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {relationship}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Note</span>
+            <textarea
+              value={form.note}
+              onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+              placeholder="Optional note"
+              rows={3}
+              className="mt-2 w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </label>
 
           {saveError ? (
             <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
@@ -624,51 +750,127 @@ function DeleteContactModal({
   );
 }
 
-function ContactAvatar({ contact }) {
-  const isUser = contact.contactState === "user";
+function FeedItem({ item, comments, canComment, activeComposerId, setActiveComposerId, draftComment, setDraftComment, onSubmitComment }) {
+  const metadata = item.metadata || {};
+  const socialEnabled = isSocialFeedItem(item);
+  const bucket = getFeedBucket(item);
+
+  const bucketStyle =
+    bucket === "hint"
+      ? "bg-[#f5f3ff] text-[#7c5cbf]"
+      : bucket === "circle"
+        ? "bg-[#eef6ea] text-[#5b7a3c]"
+        : bucket === "reminder"
+          ? "bg-[#fff3ee] text-[#e07c54]"
+          : "bg-[#fff7e8] text-[#af7b14]";
+
+  const bucketLabel =
+    bucket === "hint"
+      ? "Hint"
+      : bucket === "circle"
+        ? "Circle"
+        : bucket === "reminder"
+          ? "Reminder"
+          : "Contact";
 
   return (
-    <div
-      className={`relative flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${
-        isUser
-          ? "bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-white"
-          : "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
-      }`}
-    >
-      {contact.initials}
-      <span
-        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
-          isUser
-            ? "bg-[#2f3b2d] text-white"
-            : "bg-[#fff0e8] text-[#c87150] border border-[#e6c5b6]"
-        }`}
-      >
-        {isUser ? "U" : "I"}
-      </span>
-    </div>
-  );
-}
-
-function ContactCard({ contact, onDeleteClick }) {
-  return (
-    <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
-      <div className="flex items-center gap-3">
-        <ContactAvatar contact={contact} />
-
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-          <p className="text-xs text-slate-500">
-            {contact.role} · {contact.note}
-          </p>
+    <article className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
+      <div className="flex items-start gap-4">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white">
+          {getInitials(metadata.actor_name || item.headline || "H")}
         </div>
 
-        <button
-          type="button"
-          onClick={() => onDeleteClick(contact)}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
-        >
-          Delete
-        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${bucketStyle}`}>
+                  {bucketLabel}
+                </span>
+                {item.isDemo ? (
+                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                    Demo
+                  </span>
+                ) : null}
+              </div>
+
+              <p className="mt-3 text-[15px] leading-7 text-slate-700">{item.headline}</p>
+
+              {item.body ? (
+                <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.body}</p>
+              ) : null}
+            </div>
+
+            <span className="shrink-0 text-[12px] text-slate-400">
+              {formatRelativeFromDate(item.occurred_at || item.created_at)}
+            </span>
+          </div>
+
+          {(item.cta_label && item.cta_href) ? (
+            <div className="mt-4">
+              <Link
+                href={item.cta_href}
+                className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+              >
+                {item.cta_label}
+              </Link>
+            </div>
+          ) : null}
+
+          {socialEnabled && canComment ? (
+            <>
+              {comments.length > 0 ? (
+                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
+                  {comments.map((comment) => (
+                    <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
+                      <p className="text-[13px] leading-6 text-slate-600">
+                        <span className="font-semibold text-slate-900">
+                          {comment.author_name || "Someone"}
+                        </span>{" "}
+                        {comment.body}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveComposerId((current) => (current === item.id ? null : item.id))}
+                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                >
+                  Comment
+                </button>
+              </div>
+
+              {activeComposerId === item.id ? (
+                <div className="mt-4 flex gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
+                    Y
+                  </div>
+
+                  <div className="flex w-full gap-2">
+                    <input
+                      type="text"
+                      value={draftComment}
+                      onChange={(e) => setDraftComment(e.target.value)}
+                      placeholder="Write a comment..."
+                      className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => onSubmitComment(item)}
+                      className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-sm font-semibold text-white"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
     </article>
   );
@@ -730,19 +932,9 @@ function CalendarPopover({
                       <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${style.pill}`}>
                         {style.label}
                       </span>
-                      {event.source === "system" ? (
-                        <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                          Seasonal
-                        </span>
-                      ) : (
-                        <span className="rounded-full border border-[#e6ddd7] bg-[#faf7f4] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
-                          You created this
-                        </span>
-                      )}
                     </div>
 
                     <p className="mt-2 text-sm font-semibold text-slate-900">{event.title}</p>
-                    {event.time ? <p className="mt-1 text-xs text-slate-500">{event.time}</p> : null}
                   </div>
 
                   {canDelete ? (
@@ -937,7 +1129,6 @@ function MiniCalendar({
               className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
             >
               →
-
             </button>
           </div>
         </div>
@@ -1047,8 +1238,7 @@ function MiniCalendar({
             </h3>
             <p className="mt-3 text-sm leading-7 text-slate-600">
               This will permanently delete{" "}
-              <span className="font-semibold text-slate-900">{eventToDelete.title}</span> from your
-              calendar.
+              <span className="font-semibold text-slate-900">{eventToDelete.title}</span> from your calendar.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
@@ -1076,189 +1266,28 @@ function MiniCalendar({
   );
 }
 
-function FeedAction({ text, href }) {
-  if (!text) return null;
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
-      >
-        {text}
-      </Link>
-    );
-  }
-
-  return null;
-}
-
-function FeedItem({
-  item,
-  sessionUser,
-  profile,
-  activeComposerId,
-  setActiveComposerId,
-  draftComment,
-  setDraftComment,
-  onSubmitComment,
-  onReact,
-}) {
-  const config = feedTypeConfig[item.event_type] || feedTypeConfig.friend_added;
-  const reactionCounts = item.reactionCounts || {};
-  const viewerReaction = item.viewerReaction || null;
-  const allowEngagement = !!item.allow_engagement;
-
-  return (
-    <article className={`rounded-[28px] border bg-white p-5 shadow-sm ${config.border}`}>
-      <div className="flex items-start gap-4">
-        <div
-          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${config.avatarGradient}`}
-        >
-          {getInitials(item.actor_name || item.title || "H")}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${config.chip}`}>
-                  {config.icon} {config.badge}
-                </span>
-                {item.isDemo ? (
-                  <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
-                    Demo
-                  </span>
-                ) : null}
-              </div>
-
-              <p className="mt-3 text-[15px] leading-7 text-slate-700">
-                <span className="font-semibold text-slate-900">{item.actor_name || "Activity"}</span>{" "}
-                {item.title}
-              </p>
-
-              {item.body ? (
-                <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.body}</p>
-              ) : null}
-            </div>
-
-            <span className="shrink-0 text-[12px] text-slate-400">
-              {formatRelativeFromDate(item.created_at)}
-            </span>
-          </div>
-
-          {allowEngagement ? (
-            <>
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                {reactionOptions.map((emoji) => {
-                  const count = reactionCounts[emoji] || 0;
-                  const active = viewerReaction?.emoji === emoji;
-
-                  return (
-                    <button
-                      key={emoji}
-                      type="button"
-                      onClick={() => onReact(item, emoji)}
-                      className={`inline-flex h-10 items-center justify-center rounded-full border px-3 text-sm ${
-                        active
-                          ? "border-[#ee8d69] bg-[#fff1ea] text-[#d96d4f]"
-                          : "border-[#ebdfd8] bg-[#fffaf7] text-slate-700 hover:bg-[#fff2eb]"
-                      }`}
-                    >
-                      <span>{emoji}</span>
-                      <span className="ml-1 text-xs">{count}</span>
-                    </button>
-                  );
-                })}
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setActiveComposerId((current) => (current === item.id ? null : item.id))
-                  }
-                  className="inline-flex h-10 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  Comment
-                </button>
-
-                <FeedAction text={config.actionText} href={config.actionHref} />
-              </div>
-
-              {(item.comments || []).length > 0 ? (
-                <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
-                  {item.comments.map((comment) => (
-                    <div key={comment.id} className="rounded-[18px] bg-[#faf7f4] px-4 py-3">
-                      <p className="text-[13px] leading-6 text-slate-600">
-                        <span className="font-semibold text-slate-900">
-                          {comment.author_name || "Someone"}
-                        </span>{" "}
-                        {comment.body}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {activeComposerId === item.id ? (
-                <div className="mt-4 flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
-                    {getInitials(profile?.full_name || sessionUser?.email || "Y") || "Y"}
-                  </div>
-
-                  <div className="flex w-full gap-2">
-                    <input
-                      type="text"
-                      value={draftComment}
-                      onChange={(e) => setDraftComment(e.target.value)}
-                      placeholder="Write a comment..."
-                      className="h-11 w-full rounded-full border border-[#e9ddd6] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19a78]/60 focus:ring-4 focus:ring-[#f19a78]/10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => onSubmitComment(item)}
-                      className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3b2d] px-4 text-sm font-semibold text-white"
-                    >
-                      Send
-                    </button>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          ) : (
-            config.actionText ? (
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <FeedAction text={config.actionText} href={config.actionHref} />
-              </div>
-            ) : null
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 export default function FeedClient() {
-  const supabase = createClient();
-
-  const [activeFilter, setActiveFilter] = useState("all");
   const [sessionUser, setSessionUser] = useState(null);
-  const [profile, setProfile] = useState(null);
 
   const [contacts, setContacts] = useState([]);
-  const [isLoadingContacts, setIsLoadingContacts] = useState(true);
-  const [pageError, setPageError] = useState("");
+  const [contactsLoading, setContactsLoading] = useState(true);
   const [contactError, setContactError] = useState("");
   const [contactSuccess, setContactSuccess] = useState("");
-
-  const [calendarEvents, setCalendarEvents] = useState([]);
-  const [calendarLoading, setCalendarLoading] = useState(true);
-  const [calendarError, setCalendarError] = useState("");
-
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
   const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
   const [selectedContactToDelete, setSelectedContactToDelete] = useState(null);
   const [isDeletingContact, setIsDeletingContact] = useState(false);
   const [deleteContactError, setDeleteContactError] = useState("");
+
+  const [feedItems, setFeedItems] = useState([]);
+  const [feedLoading, setFeedLoading] = useState(true);
+  const [feedError, setFeedError] = useState("");
+  const [activeFilter, setActiveFilter] = useState("all");
+
+  const [commentsByFeedId, setCommentsByFeedId] = useState({});
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [activeComposerId, setActiveComposerId] = useState(null);
+  const [draftComment, setDraftComment] = useState("");
 
   const [pendingInvites, setPendingInvites] = useState([]);
   const [invitesLoading, setInvitesLoading] = useState(true);
@@ -1266,269 +1295,192 @@ export default function FeedClient() {
   const [activeInvite, setActiveInvite] = useState(null);
   const [inviteActionId, setInviteActionId] = useState(null);
 
-  const [feedItems, setFeedItems] = useState([]);
-  const [feedLoading, setFeedLoading] = useState(true);
-  const [feedError, setFeedError] = useState("");
-  const [activeComposerId, setActiveComposerId] = useState(null);
-  const [draftComment, setDraftComment] = useState("");
-  const [feedActionLoading, setFeedActionLoading] = useState(false);
+  const [calendarEvents, setCalendarEvents] = useState([]);
+  const [calendarLoading, setCalendarLoading] = useState(true);
+  const [calendarError, setCalendarError] = useState("");
 
-  const [demoFeedState, setDemoFeedState] = useState(demoFeedItems);
+  const [demoFeedState] = useState(demoFeedItems);
 
-  const loadProfile = useCallback(
-    async (userId) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+  const loadSession = useCallback(async () => {
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
 
-      if (error) throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
-      setProfile(data || null);
-      return data || null;
-    },
-    [supabase]
-  );
+    if (error) {
+      throw new Error(normalizeSupabaseError(error, "Failed to get signed-in user."));
+    }
 
-  const loadContacts = useCallback(
-    async (userId) => {
-      setIsLoadingContacts(true);
-      setContactError("");
+    setSessionUser(user || null);
+    return user || null;
+  }, []);
 
-      const { data, error } = await supabase
-        .from("profile_connections")
-        .select("*")
-        .eq("profile_id", userId)
-        .order("created_at", { ascending: false });
+  const loadContacts = useCallback(async (userId) => {
+    setContactsLoading(true);
+    setContactError("");
 
-      if (error) {
-        setContacts([]);
-        setIsLoadingContacts(false);
-        throw new Error(normalizeSupabaseError(error, "Failed to load contacts."));
-      }
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
 
-      const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
-      setContacts(mapped);
-      setIsLoadingContacts(false);
-      return mapped;
-    },
-    [supabase]
-  );
+    if (error) {
+      setContacts([]);
+      setContactsLoading(false);
+      throw new Error(normalizeSupabaseError(error, "Failed to load contacts."));
+    }
 
-  const loadCalendarEvents = useCallback(
-    async (userId) => {
-      setCalendarLoading(true);
-      setCalendarError("");
+    const mapped = (data || []).map((row) => {
+      const contactState = mapContactState(row.status);
 
-      const { data, error } = await supabase
-        .from("calendar_events")
-        .select("id, user_id, title, event_date, event_time, type, source, slug, is_recurring, created_at")
-        .or(`source.eq.system,user_id.eq.${userId}`)
-        .order("event_date", { ascending: true })
-        .order("created_at", { ascending: true });
+      return {
+        id: row.id,
+        name: row.name || row.email || "Unnamed contact",
+        role: relationshipToRoleLabel(row.role),
+        note: contactState === "user" ? "Hinted user" : "Invitee",
+        initials: getInitials(row.name || row.email || "C"),
+        email: row.email || "",
+        contactState,
+        status: row.status,
+        isDemo: false,
+        raw: row,
+      };
+    });
 
-      if (error) {
-        setCalendarEvents([]);
-        setCalendarLoading(false);
-        throw new Error(error.message || "Could not load calendar events.");
-      }
+    setContacts(mapped);
+    setContactsLoading(false);
+    return mapped;
+  }, []);
 
-      setCalendarEvents(data || []);
-      setCalendarLoading(false);
-      return data || [];
-    },
-    [supabase]
-  );
+  const loadFeedItems = useCallback(async () => {
+    setFeedLoading(true);
+    setFeedError("");
 
-  const transformFeedItem = useCallback((item, userId) => {
-    const comments = Array.isArray(item.feed_comments) ? item.feed_comments : [];
-    const reactions = Array.isArray(item.feed_reactions) ? item.feed_reactions : [];
+    const { data, error } = await supabase
+      .from("feed_items")
+      .select("*")
+      .order("occurred_at", { ascending: false })
+      .limit(50);
 
-    const reactionCounts = reactions.reduce((acc, reaction) => {
-      const key = reaction.emoji;
-      if (!key) return acc;
-      acc[key] = (acc[key] || 0) + 1;
+    if (error) {
+      setFeedItems([]);
+      setFeedLoading(false);
+      throw new Error(normalizeSupabaseError(error, "Failed to load feed."));
+    }
+
+    setFeedItems(data || []);
+    setFeedLoading(false);
+    return data || [];
+  }, []);
+
+  const loadComments = useCallback(async (feedIds) => {
+    if (!feedIds.length) {
+      setCommentsByFeedId({});
+      return;
+    }
+
+    setCommentsLoading(true);
+
+    const { data, error } = await supabase
+      .from("feed_comments")
+      .select("id, feed_item_id, user_id, body, created_at")
+      .in("feed_item_id", feedIds)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setCommentsLoading(false);
+      throw new Error(normalizeSupabaseError(error, "Failed to load comments."));
+    }
+
+    const grouped = (data || []).reduce((acc, row) => {
+      if (!acc[row.feed_item_id]) acc[row.feed_item_id] = [];
+      acc[row.feed_item_id].push({
+        ...row,
+        author_name: "User",
+      });
       return acc;
     }, {});
 
-    const viewerReaction = reactions.find((reaction) => reaction.user_id === userId) || null;
-
-    return {
-      ...item,
-      comments,
-      reactions,
-      reactionCounts,
-      viewerReaction,
-      allow_engagement: !!item.allow_engagement,
-    };
+    setCommentsByFeedId(grouped);
+    setCommentsLoading(false);
   }, []);
 
-  const loadFeed = useCallback(
-    async (userId) => {
-      setFeedLoading(true);
-      setFeedError("");
+  const loadInvites = useCallback(async () => {
+    setInvitesLoading(true);
+    setInvitesError("");
 
-      const { data: events, error: eventsError } = await supabase
-        .from("feed_events")
-        .select("*")
-        .eq("user_id", userId)
-        .in("event_type", [
-          "friend_added",
-          "hint_added",
-          "circle_joined",
-          "circle_top_up",
-          "circle_milestone",
-          "reminder_week",
-        ])
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("circle_invites")
+      .select(`
+        id,
+        circle_id,
+        user_id,
+        contact_id,
+        invite_name,
+        invite_email,
+        status,
+        viewed_at,
+        paid_at,
+        created_at,
+        updated_at,
+        invited_user_id
+      `)
+      .in("status", ["pending", "viewed"])
+      .order("created_at", { ascending: false });
 
-      if (eventsError) {
-        setFeedItems([]);
-        setFeedLoading(false);
-        throw new Error(eventsError.message || "Could not load feed events.");
-      }
-
-      const eventIds = Array.isArray(events) ? events.map((item) => item.id).filter(Boolean) : [];
-      let comments = [];
-      let reactions = [];
-
-      if (eventIds.length > 0) {
-        const engageableIds = (events || [])
-          .filter((item) => item.allow_engagement)
-          .map((item) => item.id);
-
-        if (engageableIds.length > 0) {
-          const { data: commentsData, error: commentsError } = await supabase
-            .from("feed_comments")
-            .select("id, feed_item_id, user_id, body, created_at")
-            .in("feed_item_id", engageableIds)
-            .order("created_at", { ascending: true });
-
-          if (commentsError) {
-            setFeedItems([]);
-            setFeedLoading(false);
-            throw new Error(commentsError.message || "Could not load feed comments.");
-          }
-
-          comments = commentsData || [];
-
-          const { data: reactionsData, error: reactionsError } = await supabase
-            .from("feed_reactions")
-            .select("id, feed_item_id, user_id, emoji, created_at")
-            .in("feed_item_id", engageableIds);
-
-          if (reactionsError) {
-            setFeedItems([]);
-            setFeedLoading(false);
-            throw new Error(reactionsError.message || "Could not load feed reactions.");
-          }
-
-          reactions = reactionsData || [];
-        }
-      }
-
-      const commentsByItem = comments.reduce((acc, comment) => {
-        if (!acc[comment.feed_item_id]) acc[comment.feed_item_id] = [];
-        acc[comment.feed_item_id].push(comment);
-        return acc;
-      }, {});
-
-      const reactionsByItem = reactions.reduce((acc, reaction) => {
-        if (!acc[reaction.feed_item_id]) acc[reaction.feed_item_id] = [];
-        acc[reaction.feed_item_id].push(reaction);
-        return acc;
-      }, {});
-
-      const mapped = (events || []).map((item) =>
-        transformFeedItem(
-          {
-            ...item,
-            feed_comments: commentsByItem[item.id] || [],
-            feed_reactions: reactionsByItem[item.id] || [],
-          },
-          userId
-        )
-      );
-
-      setFeedItems(mapped);
-      setFeedLoading(false);
-      return mapped;
-    },
-    [supabase, transformFeedItem]
-  );
-
-  const loadPendingInvites = useCallback(
-    async (userId) => {
-      setInvitesLoading(true);
-      setInvitesError("");
-
-      const { data, error } = await supabase
-        .from("circle_invites")
-        .select(`
-          id,
-          circle_id,
-          invite_name,
-          invite_email,
-          status,
-          created_at,
-          invited_user_id
-        `)
-        .eq("invited_user_id", userId)
-        .in("status", ["pending", "viewed"])
-        .order("created_at", { ascending: false });
-
-      if (error) {
-        setInvitesError(error.message || "Could not load invites.");
-        setPendingInvites([]);
-        setInvitesLoading(false);
-        return;
-      }
-
-      setPendingInvites(data || []);
+    if (error) {
+      setPendingInvites([]);
       setInvitesLoading(false);
-    },
-    [supabase]
-  );
+      throw new Error(normalizeSupabaseError(error, "Failed to load invites."));
+    }
+
+    setPendingInvites(data || []);
+    setInvitesLoading(false);
+    return data || [];
+  }, []);
+
+  const loadCalendarEvents = useCallback(async (userId) => {
+    setCalendarLoading(true);
+    setCalendarError("");
+
+    const { data, error } = await supabase
+      .from("calendar_events")
+      .select("*")
+      .or(`source.eq.system,user_id.eq.${userId}`)
+      .order("event_date", { ascending: true });
+
+    if (error) {
+      setCalendarEvents([]);
+      setCalendarLoading(false);
+      throw new Error(normalizeSupabaseError(error, "Could not load calendar events."));
+    }
+
+    setCalendarEvents(data || []);
+    setCalendarLoading(false);
+    return data || [];
+  }, []);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
       try {
-        setPageError("");
-
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
-
-        if (userError) {
-          throw new Error(normalizeSupabaseError(userError, "Failed to get logged-in user."));
-        }
-
-        if (!user) {
-          throw new Error("You must be signed in to view the feed.");
-        }
-
-        if (!active) return;
-        setSessionUser(user);
-
-        await loadProfile(user.id);
-        if (!active) return;
+        const user = await loadSession();
+        if (!active || !user) return;
 
         await Promise.all([
           loadContacts(user.id),
+          loadFeedItems(),
+          loadInvites(),
           loadCalendarEvents(user.id),
-          loadFeed(user.id),
-          loadPendingInvites(user.id),
         ]);
       } catch (error) {
         if (active) {
-          setPageError(error?.message || "Failed to load the feed page.");
-          setIsLoadingContacts(false);
-          setCalendarLoading(false);
-          setFeedLoading(false);
+          setFeedError(error?.message || "Failed to load feed page.");
+          setContactsLoading(false);
           setInvitesLoading(false);
+          setCalendarLoading(false);
         }
       }
     }
@@ -1538,31 +1490,20 @@ export default function FeedClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadFeed, loadPendingInvites]);
+  }, [loadSession, loadContacts, loadFeedItems, loadInvites, loadCalendarEvents]);
 
-  async function createFeedEvent(payload) {
-    if (!sessionUser?.id) return;
-
-    const insertPayload = {
-      user_id: sessionUser.id,
-      event_type: payload.event_type,
-      actor_name: payload.actor_name,
-      title: payload.title,
-      body: payload.body,
-      entity_type: payload.entity_type || null,
-      entity_id: payload.entity_id || null,
-      allow_engagement: !!payload.allow_engagement,
-      metadata: payload.metadata || {},
-    };
-
-    const { error } = await supabase.from("feed_events").insert(insertPayload);
-
-    if (error) {
-      throw new Error(error.message || "Could not create feed activity.");
+  useEffect(() => {
+    const socialFeedIds = feedItems.filter(isSocialFeedItem).map((item) => item.id);
+    if (socialFeedIds.length) {
+      loadComments(socialFeedIds).catch((error) => {
+        setFeedError(error?.message || "Failed to load comments.");
+      });
+    } else {
+      setCommentsByFeedId({});
     }
-  }
+  }, [feedItems, loadComments]);
 
-  async function handleSaveContact(contactPayload) {
+  async function handleSaveContact(payload) {
     setContactError("");
     setContactSuccess("");
 
@@ -1570,56 +1511,27 @@ export default function FeedClient() {
       throw new Error("You must be signed in to save contacts.");
     }
 
-    const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
+    const cleanedEmail = String(payload.email || "").trim().toLowerCase();
     if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
       throw new Error("A valid email address is required.");
     }
 
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id, email, full_name")
-      .eq("email", cleanedEmail)
-      .maybeSingle();
-
-    const contactState = existingProfile?.id ? "user" : "invitee";
-
     const insertPayload = {
-      profile_id: sessionUser.id,
-      name: contactPayload.name,
+      user_id: sessionUser.id,
+      name: payload.name,
+      role: payload.role || "Friend",
+      note: payload.note || null,
       email: cleanedEmail,
-      relationship_types: contactPayload.relationshipTypes || ["Friend"],
-      contact_state: contactState,
-      connected_user_id: existingProfile?.id || null,
+      status: "accepted",
     };
 
-    const { data, error } = await supabase
-      .from("profile_connections")
-      .insert(insertPayload)
-      .select()
-      .single();
+    const { error } = await supabase.from("contacts").insert(insertPayload);
 
     if (error) {
       throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
     }
 
-    await createFeedEvent({
-      event_type: "friend_added",
-      actor_name: contactPayload.name,
-      title:
-        contactState === "user"
-          ? "is now one of your Hinted contacts"
-          : "was added as an invitee",
-      body: cleanedEmail,
-      entity_type: "profile_connection",
-      entity_id: data?.id || null,
-      allow_engagement: false,
-      metadata: {
-        relationship_types: contactPayload.relationshipTypes || ["Friend"],
-        contact_state: contactState,
-      },
-    });
-
-    await Promise.all([loadContacts(sessionUser.id), loadFeed(sessionUser.id)]);
+    await loadContacts(sessionUser.id);
     setContactSuccess("Contact saved successfully.");
   }
 
@@ -1630,25 +1542,21 @@ export default function FeedClient() {
   }
 
   async function handleConfirmDeleteContact(contact) {
+    if (!contact?.id) return;
+
+    setIsDeletingContact(true);
     setDeleteContactError("");
     setContactError("");
     setContactSuccess("");
 
-    if (!contact?.id) {
-      setDeleteContactError("Missing contact id.");
-      return;
-    }
-
-    setIsDeletingContact(true);
-
     try {
-      const { error } = await supabase.from("profile_connections").delete().eq("id", contact.id);
+      const { error } = await supabase.from("contacts").delete().eq("id", contact.id);
 
       if (error) {
         throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
       }
 
-      setContacts((prev) => prev.filter((item) => item.id !== contact.id));
+      await loadContacts(sessionUser.id);
       setIsDeleteContactOpen(false);
       setSelectedContactToDelete(null);
       setContactSuccess("Contact deleted successfully.");
@@ -1656,6 +1564,53 @@ export default function FeedClient() {
       setDeleteContactError(error?.message || "Failed to delete contact.");
     } finally {
       setIsDeletingContact(false);
+    }
+  }
+
+  async function handleSubmitComment(item) {
+    if (!sessionUser?.id) return;
+    if (!draftComment.trim()) return;
+    if (!isSocialFeedItem(item)) return;
+
+    try {
+      const { error } = await supabase.from("feed_comments").insert({
+        feed_item_id: item.id,
+        user_id: sessionUser.id,
+        body: draftComment.trim(),
+      });
+
+      if (error) {
+        throw new Error(normalizeSupabaseError(error, "Could not save comment."));
+      }
+
+      await loadComments(feedItems.filter(isSocialFeedItem).map((feedItem) => feedItem.id));
+      setDraftComment("");
+      setActiveComposerId(null);
+    } catch (error) {
+      setFeedError(error?.message || "Could not save comment.");
+    }
+  }
+
+  async function handleInviteDecision(invite, nextStatus) {
+    setInviteActionId(invite.id);
+    setInvitesError("");
+
+    try {
+      const { error } = await supabase
+        .from("circle_invites")
+        .update({ status: nextStatus })
+        .eq("id", invite.id);
+
+      if (error) {
+        throw new Error(normalizeSupabaseError(error, "Could not update invite."));
+      }
+
+      await loadInvites();
+      setActiveInvite(null);
+    } catch (error) {
+      setInvitesError(error?.message || "Could not update invite.");
+    } finally {
+      setInviteActionId(null);
     }
   }
 
@@ -1668,11 +1623,8 @@ export default function FeedClient() {
       user_id: sessionUser.id,
       title: payload.title,
       event_date: payload.eventDate,
-      event_time: null,
       type: payload.type,
       source: "user",
-      slug: null,
-      is_recurring: false,
     };
 
     const { data, error } = await supabase
@@ -1682,222 +1634,46 @@ export default function FeedClient() {
       .single();
 
     if (error) {
-      throw new Error(error.message || "Could not save event.");
+      throw new Error(normalizeSupabaseError(error, "Could not save event."));
     }
 
     setCalendarEvents((prev) => [...prev, data]);
-    return data;
   }
 
   async function handleDeleteCalendarEvent(eventToDelete) {
-    if (!sessionUser?.id) {
-      throw new Error("You need to be signed in to delete calendar events.");
+    const { error } = await supabase.from("calendar_events").delete().eq("id", eventToDelete.id);
+
+    if (error) {
+      throw new Error(normalizeSupabaseError(error, "Could not delete event."));
     }
-
-    const { error } = await supabase
-      .from("calendar_events")
-      .delete()
-      .eq("id", eventToDelete.id)
-      .eq("user_id", sessionUser.id);
-
-    if (error) throw new Error(error.message || "Could not delete event.");
 
     setCalendarEvents((prev) => prev.filter((item) => item.id !== eventToDelete.id));
   }
 
-  async function handleInviteDecision(inviteId, nextStatus) {
-    setInviteActionId(inviteId);
-    setInvitesError("");
+  const displayContacts = contacts.length > 0 ? contacts : demoContacts;
 
-    const { data, error } = await supabase
-      .from("circle_invites")
-      .update({ status: nextStatus })
-      .eq("id", inviteId)
-      .select()
-      .single();
+  const combinedFeedItems = useMemo(() => {
+    if (feedItems.length > 0) return feedItems;
+    if (demoMode) return demoFeedState;
+    return [];
+  }, [feedItems, demoFeedState]);
 
-    if (error) {
-      setInvitesError(error.message || "Could not update invite.");
-      setInviteActionId(null);
-      return;
-    }
+  const visibleFeedItems = useMemo(() => {
+    if (activeFilter === "all") return combinedFeedItems;
+    return combinedFeedItems.filter((item) => getFeedBucket(item) === activeFilter);
+  }, [combinedFeedItems, activeFilter]);
 
-    if (sessionUser?.id && nextStatus === "accepted") {
-      await createFeedEvent({
-        event_type: "circle_joined",
-        actor_name: data?.invite_name || data?.invite_email || "Someone",
-        title: "joined your circle",
-        body: data?.invite_email || "A contact joined your circle.",
-        entity_type: "circle_invite",
-        entity_id: data?.id || null,
-        allow_engagement: true,
-      });
-      await loadFeed(sessionUser.id);
-    }
-
-    setPendingInvites((current) => current.filter((invite) => invite.id !== inviteId));
-    setActiveInvite((current) => (current?.id === inviteId ? null : current));
-    setInviteActionId(null);
-  }
-
-  async function handleSubmitComment(item) {
-    if (!sessionUser?.id) return;
-    if (!draftComment.trim()) return;
-    if (!item.allow_engagement) return;
-
-    if (item.isDemo) {
-      const newComment = {
-        id: `demo-comment-${Date.now()}`,
-        user_id: sessionUser.id,
-        body: draftComment.trim(),
-        author_name: profile?.full_name || "You",
-        created_at: new Date().toISOString(),
-      };
-
-      setDemoFeedState((current) =>
-        current.map((feedItem) =>
-          feedItem.id === item.id
-            ? {
-                ...feedItem,
-                comments: [...(feedItem.comments || []), newComment],
-              }
-            : feedItem
-        )
-      );
-      setDraftComment("");
-      setActiveComposerId(null);
-      return;
-    }
-
-    setFeedActionLoading(true);
-    setFeedError("");
-
-    try {
-      const { data, error } = await supabase
-        .from("feed_comments")
-        .insert({
-          feed_item_id: item.id,
-          user_id: sessionUser.id,
-          body: draftComment.trim(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        throw new Error(error.message || "Could not save comment.");
-      }
-
-      const newComment = {
-        ...data,
-        author_name: profile?.full_name || "You",
-      };
-
-      setFeedItems((prev) =>
-        prev.map((feedItem) =>
-          feedItem.id === item.id
-            ? { ...feedItem, comments: [...(feedItem.comments || []), newComment] }
-            : feedItem
-        )
-      );
-
-      setDraftComment("");
-      setActiveComposerId(null);
-    } catch (error) {
-      setFeedError(error?.message || "Could not save comment.");
-    } finally {
-      setFeedActionLoading(false);
-    }
-  }
-
-  async function handleReact(item, emoji) {
-    if (!sessionUser?.id) return;
-    if (!item.allow_engagement) return;
-
-    if (item.isDemo) {
-      setDemoFeedState((current) =>
-        current.map((feedItem) => {
-          if (feedItem.id !== item.id) return feedItem;
-
-          const reactions = [...(feedItem.reactions || [])];
-          const existing = reactions.find((reaction) => reaction.user_id === sessionUser.id) || null;
-
-          let nextReactions = reactions;
-
-          if (existing && existing.emoji === emoji) {
-            nextReactions = reactions.filter((reaction) => reaction.user_id !== sessionUser.id);
-          } else if (existing) {
-            nextReactions = reactions.map((reaction) =>
-              reaction.user_id === sessionUser.id ? { ...reaction, emoji } : reaction
-            );
-          } else {
-            nextReactions = [
-              ...reactions,
-              { id: `demo-reaction-${Date.now()}`, user_id: sessionUser.id, emoji },
-            ];
-          }
-
-          return { ...feedItem, reactions: nextReactions };
-        })
-      );
-      return;
-    }
-
-    setFeedActionLoading(true);
-    setFeedError("");
-
-    try {
-      const existing = item.viewerReaction || null;
-
-      if (existing && existing.emoji === emoji) {
-        const { error } = await supabase
-          .from("feed_reactions")
-          .delete()
-          .eq("id", existing.id)
-          .eq("user_id", sessionUser.id);
-
-        if (error) throw new Error(error.message || "Could not remove reaction.");
-      } else if (existing) {
-        const { error } = await supabase
-          .from("feed_reactions")
-          .update({ emoji })
-          .eq("id", existing.id)
-          .eq("user_id", sessionUser.id);
-
-        if (error) throw new Error(error.message || "Could not update reaction.");
-      } else {
-        const { error } = await supabase
-          .from("feed_reactions")
-          .insert({
-            feed_item_id: item.id,
-            user_id: sessionUser.id,
-            emoji,
-          });
-
-        if (error) throw new Error(error.message || "Could not save reaction.");
-      }
-
-      await loadFeed(sessionUser.id);
-    } catch (error) {
-      setFeedError(error?.message || "Could not save reaction.");
-    } finally {
-      setFeedActionLoading(false);
-    }
-  }
-
-  const safeEventsByDate = useMemo(() => {
+  const eventsByDate = useMemo(() => {
     return (calendarEvents || []).reduce((acc, row) => {
       const key = row.event_date;
       if (!key) return acc;
-
       if (!acc[key]) acc[key] = [];
       acc[key].push({
         id: row.id,
         title: row.title,
-        type: row.type,
-        time: row.event_time || null,
+        type: row.type || "celebration",
         source: row.source || "user",
       });
-
       return acc;
     }, {});
   }, [calendarEvents]);
@@ -1913,10 +1689,7 @@ export default function FeedClient() {
 
         return {
           id: `sidebar-reminder-${event.id}`,
-          eventId: event.id,
           title: event.title,
-          type: event.type,
-          eventDate: event.event_date,
           prettyDate: eventDate.toLocaleDateString("en-GB", {
             day: "numeric",
             month: "long",
@@ -1929,54 +1702,6 @@ export default function FeedClient() {
       .sort((a, b) => a.diffDays - b.diffDays)
       .slice(0, 3);
   }, [calendarEvents]);
-
-  const hasRealContacts = contacts.length > 0;
-  const hasLiveSocialFeedContent = feedItems.length > 0;
-
-  const shouldShowFirstLook = demoMode && !hasRealContacts;
-  const shouldShowSingleDemoFeedCard = demoMode && !hasLiveSocialFeedContent;
-  const displayContacts = hasRealContacts ? contacts : demoContacts;
-
-  const singleDemoFeedCard = useMemo(() => {
-    const demoItem = demoFeedState[0];
-    if (!demoItem) return null;
-
-    const comments = demoItem.comments || [];
-    const reactions = demoItem.reactions || [];
-    const reactionCounts = reactions.reduce((acc, reaction) => {
-      acc[reaction.emoji] = (acc[reaction.emoji] || 0) + 1;
-      return acc;
-    }, {});
-    const viewerReaction =
-      reactions.find((reaction) => reaction.user_id === (sessionUser?.id || "demo-viewer")) || null;
-
-    return {
-      ...demoItem,
-      comments,
-      reactions,
-      reactionCounts,
-      viewerReaction,
-      allow_engagement: true,
-    };
-  }, [demoFeedState, sessionUser?.id]);
-
-  const combinedFeedItems = useMemo(() => {
-    const socialItems = [...feedItems];
-
-    if (shouldShowSingleDemoFeedCard && singleDemoFeedCard) {
-      socialItems.unshift(singleDemoFeedCard);
-    }
-
-    return socialItems.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [feedItems, shouldShowSingleDemoFeedCard, singleDemoFeedCard]);
-
-  const visibleFeedItems = useMemo(() => {
-    if (activeFilter === "all") return combinedFeedItems;
-    return combinedFeedItems.filter((item) => {
-      if (item.isDemo) return false;
-      return item.event_type === activeFilter;
-    });
-  }, [activeFilter, combinedFeedItems]);
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -2023,14 +1748,8 @@ export default function FeedClient() {
       </header>
 
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
-        {pageError || contactError || contactSuccess || feedError ? (
+        {(contactError || contactSuccess || feedError || invitesError) ? (
           <div className="mb-5 space-y-3">
-            {pageError ? (
-              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-                {pageError}
-              </div>
-            ) : null}
-
             {contactError ? (
               <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
                 {contactError}
@@ -2040,6 +1759,12 @@ export default function FeedClient() {
             {feedError ? (
               <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
                 {feedError}
+              </div>
+            ) : null}
+
+            {invitesError ? (
+              <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {invitesError}
               </div>
             ) : null}
 
@@ -2054,15 +1779,13 @@ export default function FeedClient() {
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="space-y-5">
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Filters
-                  </p>
-                  <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                    Activity
-                  </h1>
-                </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+                  Filters
+                </p>
+                <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+                  Activity
+                </h1>
               </div>
 
               <div className="mt-4 flex flex-col gap-2">
@@ -2088,36 +1811,6 @@ export default function FeedClient() {
               </div>
             </section>
 
-            {shouldShowFirstLook ? (
-              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  First look
-                </p>
-                <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
-                  How this feed works
-                </h2>
-                <p className="mt-2 text-[14px] leading-6 text-slate-600">
-                  You’re seeing onboarding guidance until you add your first real contact.
-                </p>
-
-                <div className="mt-5 space-y-3">
-                  {onboardingSteps.map((step) => (
-                    <div key={step.id} className="rounded-[20px] bg-[#faf7f4] p-4">
-                      <div className="flex gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#2f3b2d] text-[12px] font-semibold text-white">
-                          {step.id}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-900">{step.title}</p>
-                          <p className="mt-1 text-[13px] leading-6 text-slate-600">{step.text}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -2127,7 +1820,7 @@ export default function FeedClient() {
               </div>
 
               <div className="mt-4 space-y-3">
-                {isLoadingContacts ? (
+                {contactsLoading ? (
                   <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
                     Loading contacts...
                   </div>
@@ -2168,15 +1861,13 @@ export default function FeedClient() {
                       Your people, moments, and nudges.
                     </h2>
                     <p className="mt-2 max-w-[620px] text-[15px] leading-7 text-slate-600">
-                      The feed shows automatic people-based updates plus short 1-week reminders. Longer reminders stay in the right-hand sidebar.
+                      The feed shows user-driven updates and short reminders. Long reminders stay on the right.
                     </p>
                   </div>
 
-                  {shouldShowSingleDemoFeedCard ? (
-                    <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                      A demo social card is showing until real contact, hint, circle, or reminder-week activity begins.
-                    </div>
-                  ) : null}
+                  <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
+                    {commentsLoading ? "Loading comments..." : "Only user-based updates can be commented on."}
+                  </div>
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-3">
@@ -2206,14 +1897,13 @@ export default function FeedClient() {
                       <FeedItem
                         key={item.id}
                         item={item}
-                        sessionUser={sessionUser}
-                        profile={profile}
+                        comments={commentsByFeedId[item.id] || []}
+                        canComment={!item.isDemo}
                         activeComposerId={activeComposerId}
                         setActiveComposerId={setActiveComposerId}
                         draftComment={draftComment}
                         setDraftComment={setDraftComment}
                         onSubmitComment={handleSubmitComment}
-                        onReact={handleReact}
                       />
                     ))
                   ) : (
@@ -2222,10 +1912,6 @@ export default function FeedClient() {
                     </div>
                   )}
                 </div>
-
-                {feedActionLoading ? (
-                  <p className="mt-4 text-xs text-slate-400">Saving your update...</p>
-                ) : null}
               </div>
             </div>
           </section>
@@ -2245,13 +1931,9 @@ export default function FeedClient() {
 
               {invitesLoading ? (
                 <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
-              ) : invitesError ? (
-                <p className="mt-4 text-sm text-[#c46545]">{invitesError}</p>
               ) : pendingInvites.length === 0 ? (
                 <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
-                  <p className="text-sm font-medium text-slate-700">
-                    No invites need a response right now.
-                  </p>
+                  <p className="text-sm font-medium text-slate-700">No invites need a response right now.</p>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     When someone adds you to a circle, it will appear here.
                   </p>
@@ -2278,10 +1960,6 @@ export default function FeedClient() {
                         </span>
                       </div>
 
-                      <p className="mt-3 text-sm leading-6 text-slate-500">
-                        You’ve been invited to join a circle.
-                      </p>
-
                       <div className="mt-4 flex flex-wrap gap-2">
                         <button
                           type="button"
@@ -2294,16 +1972,16 @@ export default function FeedClient() {
 
                         <button
                           type="button"
-                          onClick={() => handleInviteDecision(invite.id, "accepted")}
+                          onClick={() => handleInviteDecision(invite, "viewed")}
                           disabled={inviteActionId === invite.id}
                           className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
                         >
-                          {inviteActionId === invite.id ? "Working..." : "Accept"}
+                          {inviteActionId === invite.id ? "Working..." : "Mark viewed"}
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handleInviteDecision(invite.id, "declined")}
+                          onClick={() => handleInviteDecision(invite, "declined")}
                           disabled={inviteActionId === invite.id}
                           className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
                         >
@@ -2346,7 +2024,7 @@ export default function FeedClient() {
             ) : null}
 
             <MiniCalendar
-              eventsByDate={safeEventsByDate}
+              eventsByDate={eventsByDate}
               calendarLoading={calendarLoading}
               calendarError={calendarError}
               onCreateEvent={handleCreateCalendarEvent}
@@ -2367,9 +2045,7 @@ export default function FeedClient() {
 
               {sidebarReminders.length === 0 ? (
                 <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
-                  <p className="text-sm font-medium text-slate-700">
-                    No long reminders yet.
-                  </p>
+                  <p className="text-sm font-medium text-slate-700">No long reminders yet.</p>
                   <p className="mt-1 text-sm leading-6 text-slate-500">
                     Events more than a week away will appear here.
                   </p>
