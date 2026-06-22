@@ -34,7 +34,7 @@ const demoContacts = [
   {
     id: "demo-1",
     name: "Maya",
-    role: "Friend",
+    role: "Contact",
     note: "Hinted user",
     initials: "M",
     colors: "from-[#efc3af] to-[#ae6e57]",
@@ -45,7 +45,7 @@ const demoContacts = [
   {
     id: "demo-2",
     name: "James",
-    role: "Brother",
+    role: "Invitee",
     note: "Invitee",
     initials: "J",
     colors: "from-[#4e596d] to-[#212a3c]",
@@ -56,7 +56,7 @@ const demoContacts = [
   {
     id: "demo-3",
     name: "Fiona",
-    role: "Friend",
+    role: "Contact",
     note: "Hinted user",
     initials: "F",
     colors: "from-[#809168] to-[#41512e]",
@@ -100,43 +100,6 @@ const firstLookCard = {
   },
   isDemo: true,
 };
-
-const demoFeedItems = [
-  {
-    id: "demo-feed-1",
-    owner_user_id: "demo-owner",
-    actor_user_id: "maya-demo",
-    target_user_id: null,
-    family: "hint",
-    item_type: "hint_session",
-    visibility: "private",
-    circle_id: null,
-    activity_session_id: null,
-    source_event_id: null,
-    headline: "Maya added 4 new public hints",
-    body: "A neat batched update after one browsing session, so the feed stays tidy.",
-    cta_label: "See hints",
-    cta_href: "/hints",
-    occurred_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-    created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-    metadata: {
-      social_enabled: true,
-      actor_name: "Maya",
-      actor_profile_href: "/hints",
-      actor_avatar_initials: "M",
-      demo_reactions: [
-        { id: "r1", emoji: "❤️", count: 7 },
-        { id: "r2", emoji: "🔥", count: 2 },
-        { id: "r3", emoji: "👏", count: 3 },
-      ],
-      demo_comments: [
-        { id: "c1", author_name: "James", body: "These are very you." },
-        { id: "c2", author_name: "Fiona", body: "The tote is perfect." },
-      ],
-    },
-    isDemo: true,
-  },
-];
 
 const eventTypeStyles = {
   birthday: {
@@ -284,7 +247,7 @@ function relationshipToRoleLabel(relationshipTypes, fallbackRole) {
     return relationshipTypes.join(", ");
   }
   if (fallbackRole) return fallbackRole;
-  return "Friend";
+  return "Contact";
 }
 
 function mapContactState(status) {
@@ -338,7 +301,7 @@ function ContactAvatar({ contact }) {
             : "border border-[#e6c5b6] bg-[#fff0e8] text-[#c87150]"
         }`}
       >
-        {isUser ? "U" : "I"}
+        {isUser ? "C" : "I"}
       </span>
     </div>
   );
@@ -1404,12 +1367,10 @@ export default function FeedClient() {
   const [demoCommentsByFeedId, setDemoCommentsByFeedId] = useState({});
   const [demoReactionsByFeedId, setDemoReactionsByFeedId] = useState(() => {
     const initial = {};
-    for (const item of [firstLookCard, ...demoFeedItems]) {
-      initial[item.id] = (item.metadata?.demo_reactions || []).map((reaction) => ({
-        ...reaction,
-        active: false,
-      }));
-    }
+    initial[firstLookCard.id] = (firstLookCard.metadata?.demo_reactions || []).map((reaction) => ({
+      ...reaction,
+      active: false,
+    }));
     return initial;
   });
 
@@ -1831,7 +1792,7 @@ export default function FeedClient() {
 
   const combinedFeedItems = useMemo(() => {
     const hasRealActivity = feedItems.length > 0;
-    const base = hasRealActivity ? feedItems : [firstLookCard, ...demoFeedItems];
+    const base = hasRealActivity ? feedItems : [firstLookCard];
     const merged = [...shortReminderFeedItems, ...base];
 
     return merged.sort((a, b) => {
@@ -2065,7 +2026,7 @@ export default function FeedClient() {
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">Contacts</h2>
-                <p className="mt-1 text-xs text-slate-500">Invitees and Hinted users live here.</p>
+                <p className="mt-1 text-xs text-slate-500">Invitees and contacts live here.</p>
               </div>
 
               <div className="mt-4 space-y-3">
