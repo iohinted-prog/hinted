@@ -52,7 +52,7 @@ const exampleCircle = {
       contributed: true,
       amount: 40,
       colors: "from-[#4e596d] to-[#212a3c]",
-      status: "joined",
+      status: "accepted",
     },
     {
       name: "Example friend",
@@ -60,7 +60,7 @@ const exampleCircle = {
       contributed: false,
       amount: 0,
       colors: "from-[#efcdbf] to-[#bb8168]",
-      status: "invited",
+      status: "invitee",
     },
   ],
   pot: {
@@ -200,13 +200,38 @@ function fundingModeToLabel(value) {
   return "Flexible pot";
 }
 
+function getAvatarState(status) {
+  return String(status || "").toLowerCase() === "accepted" ? "accepted" : "invitee";
+}
+
+function getStatusLabel(status) {
+  return getAvatarState(status) === "accepted" ? "Accepted" : "Invitee";
+}
+
+function getAvatarClasses(colors, status, size = "md") {
+  const avatarState = getAvatarState(status);
+
+  const sizeClasses =
+    size === "sm"
+      ? "h-8 w-8 text-[11px]"
+      : size === "lg"
+        ? "h-11 w-11 text-[12px]"
+        : "h-10 w-10 text-[11px]";
+
+  if (avatarState === "accepted") {
+    return `flex items-center justify-center rounded-full bg-gradient-to-b ${sizeClasses} font-bold text-white ${colors}`;
+  }
+
+  return `flex items-center justify-center rounded-full border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] ${sizeClasses} font-bold text-[#c87150]`;
+}
+
 function relationshipLabelFromArray(relationshipTypes) {
   if (!Array.isArray(relationshipTypes) || relationshipTypes.length === 0) return "Friend";
   return relationshipTypes[0] || "Friend";
 }
 
 function buildContactRecordFromRow(row) {
-  const relationship = row?.role || "Friend";
+  const relationship = row?.role || relationshipLabelFromArray(row?.relationship_types);
   const safeName = row?.name || row?.email || "Unnamed contact";
 
   return {
@@ -214,13 +239,14 @@ function buildContactRecordFromRow(row) {
     type: "contact",
     profileConnectionId: row.id,
     name: safeName,
-    role: relationship,
-    note: "Saved to contacts",
+    role: relationship || "Friend",
+    note: getStatusLabel(row?.status),
     initials: getInitials(safeName),
-    colors: getRelationshipGradient(relationship),
+    colors: getRelationshipGradient(relationship || "Friend"),
     email: row?.email || "",
     phone: "",
     birthday: "",
+    status: getAvatarState(row?.status),
     raw: row,
   };
 }
@@ -237,10 +263,11 @@ function buildSelfRecord(profile) {
     type: "self",
     name: safeName,
     role: "You",
-    note: "Your hints",
+    note: "Accepted",
     initials: getInitials(safeName || "You"),
     colors: "from-[#4e596d] to-[#212a3c]",
     email: profile?.invite_email || "",
+    status: "accepted",
     raw: profile || null,
   };
 }
@@ -364,7 +391,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       contributed: contributionTotal > 0,
       amount: contributionTotal,
       colors: "from-[#4e596d] to-[#212a3c]",
-      status: "joined",
+      status: "accepted",
     },
     ...inviteRows.map((invite) => ({
       name: invite.invite_name || invite.invite_email || "Invited person",
@@ -372,7 +399,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       contributed: false,
       amount: 0,
       colors: "from-[#efcdbf] to-[#bb8168]",
-      status: invite.status === "paid" ? "joined" : "invited",
+      status: getAvatarState(invite.status),
     })),
   ];
 
@@ -484,9 +511,7 @@ function ContactCard({ contact, onDeleteClick }) {
       aria-label={`Manage ${contact.name}`}
     >
       <div className="flex items-center gap-3">
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors}`}
-        >
+        <div className={getAvatarClasses(contact.colors, contact.status, "lg")}>
           {contact.initials}
         </div>
 
@@ -511,26 +536,20 @@ function ContactCard({ contact, onDeleteClick }) {
 }
 
 function MemberPill({ member, currency = "GBP" }) {
-  const statusStyles =
-    member.status === "joined"
-      ? member.contributed
-        ? "bg-[#edf6eb] text-[#4a7a3a]"
-        : "bg-[#eef4ff] text-[#5676b3]"
-      : "bg-[#fff3ee] text-[#d57a58]";
+  const isAccepted = getAvatarState(member.status) === "accepted";
 
-  const statusLabel =
-    member.status === "joined"
-      ? member.contributed
-        ? "Contributed"
-        : "Joined"
-      : "Invited";
+  const statusStyles = isAccepted
+    ? member.contributed
+      ? "bg-[#edf6eb] text-[#4a7a3a]"
+      : "bg-[#eef4ff] text-[#5676b3]"
+    : "bg-[#fff3ee] text-[#d57a58]";
+
+  const statusLabel = isAccepted ? "Accepted" : "Invitee";
 
   return (
     <div className="rounded-[20px] border border-[#eee1d9] bg-[#fffdfa] p-3">
       <div className="flex items-center gap-3">
-        <div
-          className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${member.colors}`}
-        >
+        <div className={getAvatarClasses(member.colors, member.status)}>
           {member.initials}
         </div>
 
@@ -687,7 +706,9 @@ function PotTypeGuide() {
 
 function CircleCard({ circle, onDeleteCircleClick, deletingCircleId }) {
   const safeMembers = Array.isArray(circle?.members) ? circle.members : [];
-  const joinedCount = safeMembers.filter((member) => member.status === "joined").length;
+  const joinedCount = safeMembers.filter(
+    (member) => getAvatarState(member.status) === "accepted"
+  ).length;
   const invitedCount = safeMembers.length;
   const moneyLabel = formatMoney(circle?.pot?.target, circle?.pot?.currency);
   const raisedLabel = formatMoney(circle?.pot?.raised, circle?.pot?.currency);
@@ -712,7 +733,7 @@ function CircleCard({ circle, onDeleteCircleClick, deletingCircleId }) {
             </div>
 
             <div className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
-              {joinedCount} of {invitedCount} joined
+              {joinedCount} of {invitedCount} accepted
             </div>
           </div>
 
@@ -778,7 +799,7 @@ function CircleCard({ circle, onDeleteCircleClick, deletingCircleId }) {
                   {safeMembers.map((member) => (
                     <div
                       key={`${circle?.id}-${member.name}-avatar`}
-                      className={`flex h-11 w-11 items-center justify-center rounded-full border-4 border-white bg-gradient-to-b text-[11px] font-bold text-white shadow-sm ${member.colors}`}
+                      className={`${getAvatarClasses(member.colors, member.status, "lg")} border-4 border-white shadow-sm`}
                       title={member.name}
                     >
                       {member.initials}
@@ -1195,9 +1216,7 @@ function CreateCircleModal({
                                 : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
                             }`}
                           >
-                            <div
-                              className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
-                            >
+                            <div className={getAvatarClasses(person.colors, person.status)}>
                               {person.initials}
                             </div>
                             <div className="min-w-0">
@@ -1214,9 +1233,7 @@ function CreateCircleModal({
                     {selectedOwner ? (
                       <>
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${selectedOwner.colors}`}
-                          >
+                          <div className={getAvatarClasses(selectedOwner.colors, selectedOwner.status, "lg")}>
                             {selectedOwner.initials}
                           </div>
                           <div>
@@ -1362,9 +1379,7 @@ function CreateCircleModal({
                       key={person.id}
                       className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
                     >
-                      <div
-                        className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${person.colors}`}
-                      >
+                      <div className={getAvatarClasses(person.colors, person.status, "sm")}>
                         {person.initials}
                       </div>
                       <span className="text-sm font-medium text-slate-700">{person.name}</span>
@@ -1398,9 +1413,7 @@ function CreateCircleModal({
                     className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-b text-[11px] font-bold text-white ${contact.colors}`}
-                      >
+                      <div className={getAvatarClasses(contact.colors, contact.status)}>
                         {contact.initials}
                       </div>
                       <div>
@@ -2264,7 +2277,7 @@ export default function CirclesClient() {
         Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
           ? contactPayload.relationshipTypes[0]
           : "Friend",
-      status: "pending",
+      status: "invitee",
     };
 
     const { error } = await supabase.from("contacts").insert(insertPayload);
@@ -2564,7 +2577,7 @@ export default function CirclesClient() {
         contact_id: null,
         invite_name: person.name || null,
         invite_email: person.email.trim().toLowerCase(),
-        status: "pending",
+        status: "invitee",
         reminder_count: 0,
       }));
 
