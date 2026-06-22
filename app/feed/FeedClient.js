@@ -144,25 +144,10 @@ const eventTypeStyles = {
     pill: "bg-[#fff1ea] text-[#c96d4f]",
     label: "Birthday",
   },
-  christmas: {
-    dot: "bg-[#cf6a6a]",
-    pill: "bg-[#fff0f0] text-[#b04a4a]",
-    label: "Christmas",
-  },
   anniversary: {
     dot: "bg-[#d69aae]",
     pill: "bg-[#fff2f6] text-[#b85c79]",
     label: "Anniversary",
-  },
-  fathers_day: {
-    dot: "bg-[#8da9c6]",
-    pill: "bg-[#eff5ff] text-[#597a9d]",
-    label: "Father’s Day",
-  },
-  mothers_day: {
-    dot: "bg-[#d69aae]",
-    pill: "bg-[#fff2f6] text-[#b85c79]",
-    label: "Mother’s Day",
   },
   celebration: {
     dot: "bg-[#e6aa54]",
@@ -294,8 +279,12 @@ function getMonthData(date) {
   return cells;
 }
 
-function relationshipToRoleLabel(role) {
-  return role || "Friend";
+function relationshipToRoleLabel(relationshipTypes, fallbackRole) {
+  if (Array.isArray(relationshipTypes) && relationshipTypes.length > 0) {
+    return relationshipTypes.join(", ");
+  }
+  if (fallbackRole) return fallbackRole;
+  return "Friend";
 }
 
 function mapContactState(status) {
@@ -438,12 +427,12 @@ function ModalShell({
   );
 }
 
-function AddContactModal({ open, onClose, onSave }) {
+function AddContactModal({ open, onClose, onSave, supabase }) {
   const [contactSearch, setContactSearch] = useState("");
   const [contactResults, setContactResults] = useState([]);
   const [searchingContacts, setSearchingContacts] = useState(false);
   const [contactsMessage, setContactsMessage] = useState("");
-  const [selectedRelationship, setSelectedRelationship] = useState("Friend");
+  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -457,7 +446,7 @@ function AddContactModal({ open, onClose, onSave }) {
       setContactResults([]);
       setSearchingContacts(false);
       setContactsMessage("");
-      setSelectedRelationship("Friend");
+      setSelectedRelationships(["Friend"]);
       setForm({ name: "", email: "" });
       setSaving(false);
       setSaveError("");
@@ -486,8 +475,23 @@ function AddContactModal({ open, onClose, onSave }) {
       if (!providerToken) {
         setContactResults([]);
         setContactsMessage(
-          "Your Google provider token is missing, so Gmail lookup is unavailable right now. You can still type an email manually."
+          "We couldn’t access your linked Google contacts right now because the Google provider token is missing."
         );
+        return;
+      }
+
+      const warmupResponse = await fetch(
+        "https://people.googleapis.com/v1/people:searchContacts?query=&pageSize=1&readMask=names,emailAddresses",
+        {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        }
+      );
+
+      if (!warmupResponse.ok) {
+        setContactResults([]);
+        setContactsMessage("We couldn’t access your linked Google contacts right now.");
         return;
       }
 
@@ -524,7 +528,7 @@ function AddContactModal({ open, onClose, onSave }) {
       setContactResults(mapped);
 
       if (mapped.length === 0) {
-        setContactsMessage("No matching Gmail contacts found. You can still invite them manually.");
+        setContactsMessage("No matching Google contacts found. You can still type their email manually.");
       }
     } catch (error) {
       setContactResults([]);
@@ -535,15 +539,24 @@ function AddContactModal({ open, onClose, onSave }) {
   }
 
   function selectContact(contact) {
-    setForm((prev) => ({
-      ...prev,
+    setForm({
       name: contact.name || "",
       email: contact.email || "",
-    }));
+    });
     setContactSearch(contact.name || contact.email || "");
     setContactResults([]);
     setContactsMessage("");
     setSaveError("");
+  }
+
+  function toggleRelationship(relationship) {
+    setSelectedRelationships((prev) => {
+      if (prev.includes(relationship)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== relationship);
+      }
+      return [...prev, relationship];
+    });
   }
 
   async function handleSave() {
@@ -571,12 +584,12 @@ function AddContactModal({ open, onClose, onSave }) {
       await onSave({
         name: form.name.trim(),
         email: cleanedEmail,
-        role: selectedRelationship,
+        relationshipTypes: selectedRelationships.length ? selectedRelationships : ["Friend"],
       });
       setSaving(false);
       onClose();
     } catch (error) {
-      setSaveError(error?.message || "Failed to invite contact.");
+      setSaveError(error?.message || "Failed to save contact.");
       setSaving(false);
     }
   }
@@ -586,7 +599,7 @@ function AddContactModal({ open, onClose, onSave }) {
       open={open}
       onClose={onClose}
       eyebrow="Contact"
-      title="Invite a contact"
+      title="Add a contact"
       maxWidth="max-w-[760px]"
       hideHeaderBorder
     >
@@ -596,10 +609,13 @@ function AddContactModal({ open, onClose, onSave }) {
             Bring someone in quickly
           </p>
           <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
-            Invite from Gmail or type their email
+            Add from Gmail or type their email
           </h3>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
+            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
+          </p>
 
-          <div className="mt-5">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
             <input
               type="text"
               value={contactSearch}
@@ -656,24 +672,26 @@ function AddContactModal({ open, onClose, onSave }) {
               value={form.email}
               onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
               placeholder="maya@example.com"
+              required
               className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
             />
           </label>
 
           <div>
             <span className="block text-sm font-medium text-slate-900">Relationship</span>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="mt-3 flex flex-wrap gap-2.5">
               {relationshipOptions.map((relationship) => {
-                const selected = selectedRelationship === relationship;
+                const selected = selectedRelationships.includes(relationship);
+
                 return (
                   <button
                     key={relationship}
                     type="button"
-                    onClick={() => setSelectedRelationship(relationship)}
-                    className={`rounded-[18px] border px-4 py-3 text-sm font-medium transition ${
+                    onClick={() => toggleRelationship(relationship)}
+                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
                       selected
-                        ? "border-[#f19b7e] bg-[#fff1ea] text-[#d96d4f]"
-                        : "border-[#e5ddd8] bg-white text-slate-700 hover:bg-[#fff7f2]"
+                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
+                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     {relationship}
@@ -708,7 +726,7 @@ function AddContactModal({ open, onClose, onSave }) {
                 : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
             }`}
           >
-            {saving ? "Inviting..." : "Invite contact"}
+            {saving ? "Saving..." : "Save contact"}
           </button>
         </div>
       </div>
@@ -727,7 +745,9 @@ function DeleteContactModal({
   const [typedName, setTypedName] = useState("");
 
   useEffect(() => {
-    if (!open) setTypedName("");
+    if (!open) {
+      setTypedName("");
+    }
   }, [open]);
 
   if (!open || !contact) return null;
@@ -1072,9 +1092,6 @@ function CalendarPopover({
             <option value="birthday">Birthday</option>
             <option value="anniversary">Anniversary</option>
             <option value="celebration">Celebration</option>
-            <option value="christmas">Christmas</option>
-            <option value="fathers_day">Father’s Day</option>
-            <option value="mothers_day">Mother’s Day</option>
           </select>
 
           <button
@@ -1435,14 +1452,16 @@ export default function FeedClient() {
 
     const mapped = (data || []).map((row) => {
       const contactState = mapContactState(row.status);
+      const relationshipTypes = Array.isArray(row.relationship_types) ? row.relationship_types : [];
 
       return {
         id: row.id,
         name: row.name || row.email || "Unnamed contact",
-        role: relationshipToRoleLabel(row.role),
+        role: relationshipToRoleLabel(relationshipTypes, row.role),
         note: contactState === "user" ? "Hinted user" : "Invitee",
         initials: getInitials(row.name || row.email || "C"),
         email: row.email || "",
+        relationshipTypes,
         contactState,
         status: row.status,
         isDemo: false,
@@ -1604,7 +1623,7 @@ export default function FeedClient() {
     setContactSuccess("");
 
     if (!sessionUser?.id) {
-      throw new Error("You must be signed in to invite contacts.");
+      throw new Error("You must be signed in to save contacts.");
     }
 
     const cleanedEmail = String(payload.email || "").trim().toLowerCase();
@@ -1612,20 +1631,27 @@ export default function FeedClient() {
       throw new Error("A valid email address is required.");
     }
 
+    const relationshipTypes =
+      Array.isArray(payload.relationshipTypes) && payload.relationshipTypes.length
+        ? payload.relationshipTypes
+        : ["Friend"];
+
     const insertPayload = {
       user_id: sessionUser.id,
       name: payload.name,
-      role: payload.role || "Friend",
       email: cleanedEmail,
+      relationship_types: relationshipTypes,
+      role: relationshipTypes[0],
       status: "pending",
+      source: "manual",
     };
 
     const { error } = await supabase.from("contacts").insert(insertPayload);
 
-    if (error) throw new Error(normalizeSupabaseError(error, "Failed to invite contact."));
+    if (error) throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
 
     await loadContacts(sessionUser.id);
-    setContactSuccess("Invite sent successfully.");
+    setContactSuccess("Contact saved successfully.");
   }
 
   function openDeleteContactModal(contact) {
@@ -1771,9 +1797,6 @@ export default function FeedClient() {
         const diffDays = diffInDaysFromToday(event.event_date);
         if (![7, 1, 0].includes(diffDays)) return null;
 
-        const label = diffDays === 7 ? "In 1 week" : diffDays === 1 ? "Tomorrow" : "Today";
-        const typeLabel = (eventTypeStyles[event.type]?.label || "Event").toLowerCase();
-
         return {
           id: `reminder-${event.id}-${diffDays}`,
           owner_user_id: sessionUser?.id || "me",
@@ -1785,15 +1808,19 @@ export default function FeedClient() {
           circle_id: null,
           activity_session_id: null,
           source_event_id: event.id,
-          headline: `${event.title} is ${label.toLowerCase()}`,
-          body: `A ${typeLabel} reminder so you have time to sort the gift.`,
+          headline:
+            diffDays === 7
+              ? `${event.title} is in 1 week`
+              : diffDays === 1
+                ? `${event.title} is tomorrow`
+                : `${event.title} is today`,
+          body: "A reminder so you have time to sort the gift.",
           cta_label: "Shop",
           cta_href: "/shop",
           occurred_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           metadata: {
             social_enabled: false,
-            reminder_distance: label,
             event_date: event.event_date,
           },
           isDemo: false,
@@ -2066,7 +2093,7 @@ export default function FeedClient() {
                 onClick={() => setIsAddContactOpen(true)}
                 className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
               >
-                Invite contact
+                Add contact
               </button>
             </section>
 
@@ -2128,7 +2155,7 @@ export default function FeedClient() {
                     onClick={() => setIsAddContactOpen(true)}
                     className="inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
                   >
-                    Invite contact
+                    Add contact
                   </button>
 
                   <Link
@@ -2234,6 +2261,7 @@ export default function FeedClient() {
         open={isAddContactOpen}
         onClose={() => setIsAddContactOpen(false)}
         onSave={handleSaveContact}
+        supabase={supabase}
       />
 
       <DeleteContactModal
