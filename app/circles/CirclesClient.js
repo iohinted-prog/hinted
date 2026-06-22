@@ -206,7 +206,7 @@ function relationshipLabelFromArray(relationshipTypes) {
 }
 
 function buildContactRecordFromRow(row) {
-  const relationship = relationshipLabelFromArray(row?.relationship_types);
+  const relationship = row?.role || "Friend";
   const safeName = row?.name || row?.email || "Unnamed contact";
 
   return {
@@ -2045,16 +2045,16 @@ export default function CirclesClient() {
       setContactError("");
 
       const { data, error } = await supabase
-        .from("profile_connections")
+        .from("contacts")
         .select("*")
-        .eq("profile_id", userId)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) {
         setContacts([]);
         setIsLoadingContacts(false);
         throw new Error(
-          normalizeSupabaseError(error, "Failed to load contacts from profile_connections.")
+          normalizeSupabaseError(error, "Failed to load contacts.")
         );
       }
 
@@ -2257,19 +2257,23 @@ export default function CirclesClient() {
     }
 
     const insertPayload = {
-      profile_id: sessionUser.id,
+      user_id: sessionUser.id,
       name: contactPayload.name,
       email: cleanedEmail,
-      relationship_types: contactPayload.relationshipTypes || ["Friend"],
+      role:
+        Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
+          ? contactPayload.relationshipTypes[0]
+          : "Friend",
+      status: "pending",
     };
 
-    const { error } = await supabase.from("profile_connections").insert(insertPayload);
+    const { error } = await supabase.from("contacts").insert(insertPayload);
 
     if (error) {
       throw new Error(
         normalizeSupabaseError(
           error,
-          "Failed to save contact to profile_connections."
+          "Failed to save contact."
         )
       );
     }
@@ -2303,13 +2307,13 @@ export default function CirclesClient() {
 
     try {
       const { error } = await supabase
-        .from("profile_connections")
+        .from("contacts")
         .delete()
         .eq("id", contact.id);
 
       if (error) {
         throw new Error(
-          normalizeSupabaseError(error, "Failed to delete contact from profile_connections.")
+          normalizeSupabaseError(error, "Failed to delete contact.")
         );
       }
 
