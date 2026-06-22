@@ -42,12 +42,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.johnlewis.com/",
     affiliate_url: "",
-    tag: "Home",
     interest_tags: ["Home"],
     occasion_tags: ["Housewarming", "Birthday"],
     short_note: "A warm, easy gift for people who love hosting.",
     is_active: true,
-    source_type: "curated",
   },
   {
     id: "demo-2",
@@ -59,12 +57,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.papier.com/",
     affiliate_url: "",
-    tag: "Travel",
     interest_tags: ["Travel", "Books"],
     occasion_tags: ["Birthday", "Graduation"],
     short_note: "Great for someone planning a trip or a new chapter.",
     is_active: true,
-    source_type: "curated",
   },
   {
     id: "demo-3",
@@ -76,12 +72,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1507878866276-a947ef722fee?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.selfridges.com/",
     affiliate_url: "",
-    tag: "Tech",
     interest_tags: ["Tech", "Home"],
     occasion_tags: ["Birthday", "Just because"],
     short_note: "A polished upgrade gift that still feels personal.",
     is_active: true,
-    source_type: "curated",
   },
   {
     id: "demo-4",
@@ -93,12 +87,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.buyagift.co.uk/",
     affiliate_url: "",
-    tag: "Experiences",
     interest_tags: ["Wellness", "Experiences"],
     occasion_tags: ["Anniversary", "Thank you"],
     short_note: "Best when a physical item feels too predictable.",
     is_active: true,
-    source_type: "curated",
   },
   {
     id: "demo-5",
@@ -110,12 +102,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.lookfantastic.com/",
     affiliate_url: "",
-    tag: "Beauty",
     interest_tags: ["Beauty", "Wellness"],
     occasion_tags: ["Birthday", "Thank you"],
     short_note: "A premium-feeling pick that still lands as practical.",
     is_active: true,
-    source_type: "curated",
   },
   {
     id: "demo-6",
@@ -127,12 +117,10 @@ const demoProducts = [
       "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
     product_url: "https://www.fortnumandmason.com/",
     affiliate_url: "",
-    tag: "Food",
     interest_tags: ["Food", "Home"],
     occasion_tags: ["Housewarming", "Thank you"],
     short_note: "A safe but elevated gift for easy wins.",
     is_active: true,
-    source_type: "curated",
   },
 ];
 
@@ -142,6 +130,44 @@ function LogoMark() {
       <span className="text-lg">H</span>
     </div>
   );
+}
+
+function errorToMessage(value) {
+  if (!value) return "Something went wrong.";
+  if (typeof value === "string") return value;
+  if (value instanceof Error) return value.message || "Something went wrong.";
+  if (typeof value === "object") {
+    if (typeof value.message === "string" && value.message.trim()) return value.message;
+    if (typeof value.error === "string" && value.error.trim()) return value.error;
+  }
+  return String(value);
+}
+
+function getInterestArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function getProfileInterestTags(profile) {
+  const candidates = [
+    profile?.interests,
+    profile?.interest_tags,
+    profile?.onboarding_interests,
+    profile?.gift_interests,
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = getInterestArray(candidate);
+    if (parsed.length) return parsed;
+  }
+
+  return [];
 }
 
 function normaliseRetailer(url) {
@@ -190,59 +216,10 @@ function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
   }
 }
 
-function getInterestArray(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === "string" && value.trim()) {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function getProfileInterestTags(profile) {
-  const candidates = [
-    profile?.interests,
-    profile?.interest_tags,
-    profile?.onboarding_interests,
-    profile?.gift_interests,
-  ];
-
-  for (const candidate of candidates) {
-    const parsed = getInterestArray(candidate);
-    if (parsed.length) return parsed;
-  }
-
-  return [];
-}
-
 function getOutboundUrl(product) {
   const affiliate = String(product?.affiliate_url || "").trim();
   const productUrl = String(product?.product_url || "").trim();
   return affiliate || productUrl || "";
-}
-
-function matchScore(product, selectedInterests, selectedOccasion) {
-  const interestTags = getInterestArray(product?.interest_tags);
-  const occasionTags = getInterestArray(product?.occasion_tags);
-
-  let score = 0;
-
-  if (selectedInterests.length) {
-    const overlap = interestTags.filter((tag) => selectedInterests.includes(tag)).length;
-    score += overlap * 3;
-  }
-
-  if (selectedOccasion && occasionTags.includes(selectedOccasion)) {
-    score += 2;
-  }
-
-  if (!selectedInterests.length && !selectedOccasion) {
-    score += 1;
-  }
-
-  return score;
 }
 
 function buildHintInsertPayload(product, userId) {
@@ -271,83 +248,146 @@ function buildHintInsertPayload(product, userId) {
   };
 }
 
-function ShopProductCard({ product, onAddToHints, isSavingId }) {
+function splitIntoColumns(items, columnCount = 3) {
+  const columns = Array.from({ length: columnCount }, () => []);
+  items.forEach((item, index) => {
+    columns[index % columnCount].push(item);
+  });
+  return columns;
+}
+
+function loadImageAspectRatio(src) {
+  return new Promise((resolve) => {
+    if (!src) {
+      resolve(null);
+      return;
+    }
+
+    const img = new Image();
+
+    img.onload = () => {
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+        resolve(img.naturalWidth / img.naturalHeight);
+      } else {
+        resolve(null);
+      }
+    };
+
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function fallbackCardRatio(product, index) {
+  const presets = [0.82, 1.12, 0.92, 0.76, 1.05, 0.88];
+  if (product?.image_url) return presets[index % presets.length];
+  return 1;
+}
+
+function getCardAspectRatio(product, imageRatios, index) {
+  const imageRatio = imageRatios[product.id];
+  if (imageRatio && Number.isFinite(imageRatio)) {
+    if (imageRatio > 1.3) return 1.1;
+    if (imageRatio < 0.8) return 0.78;
+    return 0.92;
+  }
+  return fallbackCardRatio(product, index);
+}
+
+function ShopCard({ product, imageRatios, index, onAddToHints, isSavingHintId }) {
+  const ratio = getCardAspectRatio(product, imageRatios, index);
   const outboundUrl = getOutboundUrl(product);
-  const isSaving = isSavingId === product.id;
+  const isSaving = isSavingHintId === product.id;
 
   return (
-    <article className="group overflow-hidden rounded-[30px] border border-[#f0dfd6] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
-      <div className="relative aspect-[4/3] overflow-hidden bg-[#f7efe9]">
+    <article
+      className="group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.68)] transition-all duration-300 hover:-translate-y-1"
+      style={{
+        aspectRatio: ratio,
+        maxHeight: "min(560px, 72vh)",
+        boxShadow:
+          "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
+      }}
+    >
+      <div className="absolute inset-0">
         {product.image_url ? (
           <img
             src={product.image_url}
-            alt={product.title}
+            alt={product.title || "Gift idea"}
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
             loading="lazy"
             referrerPolicy="no-referrer"
           />
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-[#f3ddd2] via-[#ecc7b7] to-[#d6a18e]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]" />
         )}
 
-        <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-          {product.tag ? (
-            <span className="inline-flex rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-              {product.tag}
-            </span>
-          ) : null}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(16,12,10,0.84)] via-[rgba(16,12,10,0.32)] to-[rgba(255,255,255,0.04)]" />
+      </div>
 
-          {product.source_type === "curated" ? (
-            <span className="inline-flex rounded-full border border-[#efe0d7] bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-600 backdrop-blur">
-              Curated
+      <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {getInterestArray(product.interest_tags).slice(0, 2).map((tag) => (
+            <span
+              key={`${product.id}-${tag}`}
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-md"
+            >
+              {tag}
             </span>
-          ) : null}
+          ))}
+        </div>
+
+        <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+          {formatPriceLabel(
+            product.numeric_price,
+            product.price_text,
+            detectCurrency(product.price_text) || ACTIVE_CURRENCY
+          )}
         </div>
       </div>
 
-      <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h3 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <h3
+              className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
+              style={{
+                display: "-webkit-box",
+                WebkitBoxOrient: "vertical",
+                WebkitLineClamp: 2,
+                lineClamp: 2,
+                textShadow: "0 1px 2px rgba(0,0,0,0.24)",
+              }}
+            >
               {product.title || "Gift idea"}
             </h3>
-            <p className="mt-1 text-[13px] text-slate-500">
+
+            <p className="mt-1 truncate text-[13px] text-white/80">
               {product.retailer || normaliseRetailer(outboundUrl)}
             </p>
-          </div>
 
-          <div className="shrink-0 rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-3 py-1 text-[11px] font-semibold text-[#df7c59]">
-            {formatPriceLabel(
-              product.numeric_price,
-              product.price_text,
-              detectCurrency(product.price_text) || ACTIVE_CURRENCY
-            )}
-          </div>
-        </div>
-
-        {product.short_note ? (
-          <p className="mt-3 text-[14px] leading-7 text-slate-600">{product.short_note}</p>
-        ) : null}
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {getInterestArray(product.interest_tags)
-            .slice(0, 3)
-            .map((tag) => (
-              <span
-                key={`${product.id}-${tag}`}
-                className="inline-flex rounded-full border border-[#efe0d7] bg-[#faf6f3] px-3 py-1 text-[11px] font-semibold text-slate-600"
+            {product.short_note ? (
+              <p
+                className="mt-3 overflow-hidden text-[13px] leading-6 text-white/84"
+                style={{
+                  display: "-webkit-box",
+                  WebkitBoxOrient: "vertical",
+                  WebkitLineClamp: ratio < 0.84 ? 2 : 3,
+                  lineClamp: ratio < 0.84 ? 2 : 3,
+                }}
               >
-                {tag}
-              </span>
-            ))}
+                {product.short_note}
+              </p>
+            ) : null}
+          </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="pointer-events-auto mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onAddToHints(product)}
             disabled={isSaving}
-            className="inline-flex h-11 items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSaving ? "Adding..." : "Add to hints"}
           </button>
@@ -356,10 +396,10 @@ function ShopProductCard({ product, onAddToHints, isSavingId }) {
             href={outboundUrl || "#"}
             target="_blank"
             rel="noopener noreferrer sponsored"
-            className={`inline-flex h-11 items-center justify-center rounded-full border px-5 text-sm font-semibold transition ${
+            className={`rounded-full border px-3 py-1.5 text-[12px] font-medium backdrop-blur-md ${
               outboundUrl
-                ? "border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
-                : "pointer-events-none border-[#efe0d7] bg-[#f7f2ee] text-slate-400"
+                ? "border-white/45 bg-white/76 text-slate-700 hover:bg-white"
+                : "pointer-events-none border-white/30 bg-white/40 text-white/70"
             }`}
           >
             View item
@@ -370,7 +410,24 @@ function ShopProductCard({ product, onAddToHints, isSavingId }) {
   );
 }
 
-function EmptyState() {
+function ShopSkeleton() {
+  return (
+    <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
+      {[1, 2, 3, 4, 5, 6].map((item) => (
+        <div key={item} className="mb-6 break-inside-avoid">
+          <div
+            className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
+            style={{ aspectRatio: item % 2 ? 0.82 : 1.04, maxHeight: "min(560px, 72vh)" }}
+          >
+            <div className="h-full w-full animate-pulse bg-[#f2ebe5]" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function EmptyState({ selectedOccasion, selectedInterests, onClear }) {
   return (
     <div className="rounded-[30px] border border-dashed border-[#e6d7cd] bg-white px-6 py-12 text-center">
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e9] text-xl text-[#df7c59]">
@@ -379,9 +436,19 @@ function EmptyState() {
       <h3 className="mt-4 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
         Nothing matched just yet
       </h3>
-      <p className="mx-auto mt-3 max-w-[38ch] text-[14px] leading-7 text-slate-500">
-        Try a different interest or occasion and the curated gift picks will reshuffle.
+      <p className="mx-auto mt-3 max-w-[40ch] text-[14px] leading-7 text-slate-500">
+        We could not find anything for {selectedOccasion || "this occasion"}
+        {selectedInterests.length ? ` with ${selectedInterests.join(", ")}` : ""}. Try clearing one
+        of the filters and the gift picks will widen again.
       </p>
+
+      <button
+        type="button"
+        onClick={onClear}
+        className="mt-5 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+      >
+        Clear filters
+      </button>
     </div>
   );
 }
@@ -399,6 +466,7 @@ export default function ShopPage() {
   const [selectedOccasion, setSelectedOccasion] = useState("Birthday");
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [imageRatios, setImageRatios] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -431,11 +499,12 @@ export default function ShopPage() {
           .maybeSingle();
 
         if (!active) return;
+
         setProfile(profileData || null);
 
         const profileInterests = getProfileInterestTags(profileData);
         if (profileInterests.length) {
-          setSelectedInterests(profileInterests.slice(0, 3));
+          setSelectedInterests(profileInterests.slice(0, 4));
         }
 
         const { data: shopRows, error: shopError } = await supabase
@@ -456,7 +525,7 @@ export default function ShopPage() {
         setIsLoading(false);
       } catch (error) {
         if (!active) return;
-        setPageError(error?.message || "We couldn't load the shop right now.");
+        setPageError(errorToMessage(error));
         setProducts(demoProducts);
         setIsLoading(false);
       }
@@ -469,39 +538,86 @@ export default function ShopPage() {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function measureRatios() {
+      const itemsWithImages = products.filter((product) => product.image_url && !imageRatios[product.id]);
+      if (!itemsWithImages.length) return;
+
+      const nextEntries = await Promise.all(
+        itemsWithImages.map(async (product) => {
+          const ratio = await loadImageAspectRatio(product.image_url);
+          return [product.id, ratio];
+        })
+      );
+
+      if (cancelled) return;
+
+      setImageRatios((current) => {
+        const next = { ...current };
+        for (const [id, ratio] of nextEntries) {
+          if (ratio && Number.isFinite(ratio)) next[id] = ratio;
+        }
+        return next;
+      });
+    }
+
+    measureRatios();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [products, imageRatios]);
+
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return [...products]
-      .filter((product) => {
-        const searchable = [
-          product.title,
-          product.retailer,
-          product.short_note,
-          ...getInterestArray(product.interest_tags),
-          ...getInterestArray(product.occasion_tags),
-        ]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
+    const visible = products.filter((product) => {
+      const interestTags = getInterestArray(product.interest_tags);
+      const occasionTags = getInterestArray(product.occasion_tags);
 
-        if (!query) return true;
-        return searchable.includes(query);
-      })
-      .sort((a, b) => {
-        const scoreA = matchScore(a, selectedInterests, selectedOccasion);
-        const scoreB = matchScore(b, selectedInterests, selectedOccasion);
+      const matchesInterest =
+        selectedInterests.length === 0 ||
+        selectedInterests.some((interest) => interestTags.includes(interest));
 
-        if (scoreA !== scoreB) return scoreB - scoreA;
+      const matchesOccasion = !selectedOccasion || occasionTags.includes(selectedOccasion);
 
-        const priceA =
-          typeof a.numeric_price === "number" ? a.numeric_price : extractNumericPrice(a.price_text) || 0;
-        const priceB =
-          typeof b.numeric_price === "number" ? b.numeric_price : extractNumericPrice(b.price_text) || 0;
+      const searchable = [
+        product.title,
+        product.retailer,
+        product.short_note,
+        ...interestTags,
+        ...occasionTags,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
 
-        return priceA - priceB;
-      });
+      const matchesQuery = !query || searchable.includes(query);
+
+      return matchesInterest && matchesOccasion && matchesQuery;
+    });
+
+    return visible.sort((a, b) => {
+      const priceA =
+        typeof a.numeric_price === "number" ? a.numeric_price : extractNumericPrice(a.price_text) || 0;
+      const priceB =
+        typeof b.numeric_price === "number" ? b.numeric_price : extractNumericPrice(b.price_text) || 0;
+
+      const interestCountA = getInterestArray(a.interest_tags).filter((tag) =>
+        selectedInterests.includes(tag)
+      ).length;
+      const interestCountB = getInterestArray(b.interest_tags).filter((tag) =>
+        selectedInterests.includes(tag)
+      ).length;
+
+      if (interestCountA !== interestCountB) return interestCountB - interestCountA;
+      return priceA - priceB;
+    });
   }, [products, searchQuery, selectedInterests, selectedOccasion]);
+
+  const productColumns = useMemo(() => splitIntoColumns(filteredProducts, 3), [filteredProducts]);
 
   function toggleInterest(interest) {
     setSelectedInterests((current) =>
@@ -509,6 +625,12 @@ export default function ShopPage() {
         ? current.filter((item) => item !== interest)
         : [...current, interest].slice(0, 5)
     );
+  }
+
+  function clearFilters() {
+    setSelectedInterests([]);
+    setSelectedOccasion("Birthday");
+    setSearchQuery("");
   }
 
   async function handleAddToHints(product) {
@@ -529,7 +651,7 @@ export default function ShopPage() {
 
       setSuccessMessage("Added to hints.");
     } catch (error) {
-      setPageError(error?.message || "We couldn't add that item to your hints.");
+      setPageError(errorToMessage(error));
     } finally {
       setSavingHintId("");
     }
@@ -675,8 +797,7 @@ export default function ShopPage() {
                       1. Browse
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Gifts are prioritised around the interests saved in onboarding and the occasion
-                      you are shopping for.
+                      Gifts are filtered by the interests you choose and the occasion you are shopping for.
                     </p>
                   </div>
 
@@ -685,8 +806,7 @@ export default function ShopPage() {
                       2. Save
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Add good finds into hints so they can be used later across personal planning
-                      and circle gifting flows.
+                      Add good finds into hints so they can be used later across personal planning and circle gifting flows.
                     </p>
                   </div>
 
@@ -695,8 +815,7 @@ export default function ShopPage() {
                       3. View item
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      View item opens the retailer in a new tab using the affiliate link when one is
-                      available, or the product URL when it is not.
+                      View item opens the retailer in a new tab using the affiliate link when one is available.
                     </p>
                   </div>
                 </div>
@@ -704,8 +823,7 @@ export default function ShopPage() {
                 <div className="mt-5 rounded-[20px] bg-[#fffaf7] p-4">
                   <p className="text-sm font-semibold text-slate-900">Built to stay aligned</p>
                   <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                    Shop keeps the same gifting language as the rest of the app, so saved items can
-                    move naturally into hints and later into a shared pot flow.
+                    Shop keeps the same gifting language as the rest of the app, so saved items can move naturally into hints and later into a shared pot flow.
                   </p>
                 </div>
               </aside>
@@ -713,38 +831,44 @@ export default function ShopPage() {
           </div>
         </section>
 
-        <section className="mt-8">
-          {isLoading ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {[1, 2, 3, 4, 5, 6].map((item) => (
-                <div
-                  key={item}
-                  className="overflow-hidden rounded-[30px] border border-[#f0dfd6] bg-white shadow-sm"
-                >
-                  <div className="aspect-[4/3] animate-pulse bg-[#f4ece6]" />
-                  <div className="space-y-3 p-5">
-                    <div className="h-5 w-2/3 animate-pulse rounded bg-[#f4ece6]" />
-                    <div className="h-4 w-1/3 animate-pulse rounded bg-[#f4ece6]" />
-                    <div className="h-4 w-full animate-pulse rounded bg-[#f4ece6]" />
-                    <div className="h-4 w-5/6 animate-pulse rounded bg-[#f4ece6]" />
-                  </div>
+        <section className="mt-12">
+          <div className="relative rounded-[36px] border border-[#efe0d7] bg-[#fffdfb] p-3 shadow-[0_12px_32px_rgba(176,118,86,0.08)] sm:p-5">
+            <div
+              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
+              style={{
+                backgroundImage:
+                  "linear-gradient(to right, rgba(214, 195, 184, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(214, 195, 184, 0.22) 1px, transparent 1px)",
+                backgroundSize: "76px 76px",
+                backgroundPosition: "center center",
+              }}
+            />
+
+            <div className="relative">
+              {isLoading ? (
+                <ShopSkeleton />
+              ) : filteredProducts.length ? (
+                <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
+                  {productColumns.flat().map((product, index) => (
+                    <div key={product.id} className="mb-6 break-inside-avoid">
+                      <ShopCard
+                        product={product}
+                        imageRatios={imageRatios}
+                        index={index}
+                        onAddToHints={handleAddToHints}
+                        isSavingHintId={savingHintId}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          ) : filteredProducts.length ? (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => (
-                <ShopProductCard
-                  key={product.id}
-                  product={product}
-                  onAddToHints={handleAddToHints}
-                  isSavingId={savingHintId}
+              ) : (
+                <EmptyState
+                  selectedOccasion={selectedOccasion}
+                  selectedInterests={selectedInterests}
+                  onClear={clearFilters}
                 />
-              ))}
+              )}
             </div>
-          ) : (
-            <EmptyState />
-          )}
+          </div>
         </section>
       </div>
     </main>
