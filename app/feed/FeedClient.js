@@ -66,6 +66,41 @@ const demoContacts = [
   },
 ];
 
+const firstLookCard = {
+  id: "first-look-card",
+  owner_user_id: "demo-owner",
+  actor_user_id: "hinted-demo",
+  target_user_id: null,
+  family: "hint",
+  item_type: "first_look",
+  visibility: "private",
+  circle_id: null,
+  activity_session_id: null,
+  source_event_id: null,
+  headline: "Your feed will fill up as hints, reminders, and circle updates start rolling in.",
+  body: "This first-look card helps show how Hinted works before real activity arrives.",
+  cta_label: "See hints",
+  cta_href: "/hints",
+  occurred_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  metadata: {
+    social_enabled: true,
+    actor_name: "Hinted",
+    actor_profile_href: "/hints",
+    actor_avatar_initials: "H",
+    demo_reactions: [
+      { id: "r1", emoji: "❤️", count: 4 },
+      { id: "r2", emoji: "👏", count: 2 },
+      { id: "r3", emoji: "🎁", count: 3 },
+    ],
+    demo_comments: [
+      { id: "c1", author_name: "Maya", body: "Can already picture this being useful." },
+      { id: "c2", author_name: "James", body: "Nice way to make the feed feel alive." },
+    ],
+  },
+  isDemo: true,
+};
+
 const demoFeedItems = [
   {
     id: "demo-feed-1",
@@ -82,8 +117,8 @@ const demoFeedItems = [
     body: "A neat batched update after one browsing session, so the feed stays tidy.",
     cta_label: "See hints",
     cta_href: "/hints",
-    occurred_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
+    occurred_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     metadata: {
       social_enabled: true,
       actor_name: "Maya",
@@ -1352,7 +1387,7 @@ export default function FeedClient() {
   const [demoCommentsByFeedId, setDemoCommentsByFeedId] = useState({});
   const [demoReactionsByFeedId, setDemoReactionsByFeedId] = useState(() => {
     const initial = {};
-    for (const item of demoFeedItems) {
+    for (const item of [firstLookCard, ...demoFeedItems]) {
       initial[item.id] = (item.metadata?.demo_reactions || []).map((reaction) => ({
         ...reaction,
         active: false,
@@ -1768,7 +1803,8 @@ export default function FeedClient() {
   }, [calendarEvents, sessionUser]);
 
   const combinedFeedItems = useMemo(() => {
-    const base = feedItems.length > 0 ? feedItems : demoFeedItems;
+    const hasRealActivity = feedItems.length > 0;
+    const base = hasRealActivity ? feedItems : [firstLookCard, ...demoFeedItems];
     const merged = [...shortReminderFeedItems, ...base];
 
     return merged.sort((a, b) => {
