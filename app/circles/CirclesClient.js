@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
-import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
+import { useCurrencyFormatter } from "../lib/useCurrencyFormatter";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
@@ -82,6 +82,12 @@ function roundCurrency(value) {
   return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 }
 
+function parseAmount(value) {
+  const cleaned = String(value || "").replace(/[^\d.]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function getInitials(name) {
   return String(name || "")
     .trim()
@@ -97,7 +103,6 @@ function getRelationshipGradient(role) {
   if (normalized.includes("partner") || normalized.includes("spouse")) {
     return "from-[#e8b9a7] to-[#bf755f]";
   }
-
   if (
     normalized.includes("family") ||
     normalized.includes("parent") ||
@@ -107,34 +112,11 @@ function getRelationshipGradient(role) {
   ) {
     return "from-[#eac8b8] to-[#9d6957]";
   }
-
   if (normalized.includes("colleague")) {
     return "from-[#b7c8db] to-[#6b88a7]";
   }
 
   return "from-[#efcdbf] to-[#bb8168]";
-}
-
-function formatDateLabel(dateString) {
-  if (!dateString) return "No date";
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "No date";
-  return date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-  });
-}
-
-function parseAmount(value) {
-  const cleaned = String(value || "").replace(/[^\d.]/g, "");
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function getPrimaryContactField(person, field) {
-  const items = person?.[field];
-  if (!Array.isArray(items) || items.length === 0) return "";
-  return items[0]?.value || items[0]?.displayName || "";
 }
 
 function getGoogleName(metadata = {}) {
@@ -144,6 +126,12 @@ function getGoogleName(metadata = {}) {
     [metadata.given_name, metadata.family_name].filter(Boolean).join(" ") ||
     ""
   ).trim();
+}
+
+function getPrimaryContactField(person, field) {
+  const items = person?.[field];
+  if (!Array.isArray(items) || items.length === 0) return "";
+  return items[0]?.value || items[0]?.displayName || "";
 }
 
 function normalizeSupabaseError(error, fallback) {
@@ -177,10 +165,18 @@ function fundingModeToLabel(value) {
   return "Flexible pot";
 }
 
+function formatDateLabel(dateString) {
+  if (!dateString) return "No date";
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "No date";
+  return date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+  });
+}
+
 function getAvatarState(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized === "accepted" || normalized === "paid") return "accepted";
-  return "invitee";
+  return String(status || "").toLowerCase() === "accepted" ? "accepted" : "invitee";
 }
 
 function getStatusLabel(status) {
@@ -206,6 +202,91 @@ function getAvatarClasses(colors, status, size = "md") {
 function relationshipLabelFromArray(relationshipTypes) {
   if (!Array.isArray(relationshipTypes) || relationshipTypes.length === 0) return "Friend";
   return relationshipTypes[0] || "Friend";
+}
+
+function calculateHintedFee(itemAmount) {
+  return roundCurrency(itemAmount * HINTED_SERVICE_FEE_RATE);
+}
+
+function calculateCircleTotals(itemAmount) {
+  const safeItemAmount = roundCurrency(itemAmount);
+  const feeAmount = calculateHintedFee(safeItemAmount);
+  const totalAmount = roundCurrency(safeItemAmount + feeAmount);
+
+  return {
+    itemAmount: safeItemAmount,
+    feeAmount,
+    totalAmount,
+  };
+}
+
+function toDisplayPotTitle(value) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!text) return "Shared gift";
+
+  const cleaned = text
+    .replace(/[|–—•,:;()[\]{}]+/g, " ")
+    .replace(
+      /\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi,
+      " "
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const words = cleaned.split(" ").filter(Boolean);
+  if (words.length === 0) return "Shared gift";
+
+  return words.slice(0, 2).join(" ");
+}
+
+function buildStoredItemTitle(value) {
+  const text = String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return text || "Shared gift";
+}
+
+function extractHintAmount(hint) {
+  const candidates = [hint?.numeric_price, hint?.amount, hint?.price, hint?.targetAmount];
+  for (const candidate of candidates) {
+    const amount = Number(candidate);
+    if (Number.isFinite(amount) && amount > 0) return roundCurrency(amount);
+  }
+  return 0;
+}
+
+function extractPreviewAmount(preview) {
+  const directCandidates = [
+    preview?.price,
+    preview?.amount,
+    preview?.targetAmount,
+    preview?.priceAmount,
+    preview?.numeric_price,
+  ];
+
+  for (const candidate of directCandidates) {
+    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
+    if (Number.isFinite(amount) && amount > 0) return roundCurrency(amount);
+  }
+
+  const textCandidates = [preview?.priceText, preview?.price_text];
+  for (const text of textCandidates) {
+    const match = String(text || "").match(/(\d+(?:\.\d{1,2})?)/);
+    if (match?.[1]) {
+      const amount = Number(match[1]);
+      if (Number.isFinite(amount) && amount > 0) return roundCurrency(amount);
+    }
+  }
+
+  return 0;
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
 }
 
 function buildContactRecordFromRow(row) {
@@ -248,110 +329,6 @@ function buildSelfRecord(profile) {
     status: "accepted",
     raw: profile || null,
   };
-}
-
-function calculateHintedFee(itemAmount) {
-  return roundCurrency(itemAmount * HINTED_SERVICE_FEE_RATE);
-}
-
-function calculateCircleTotals(itemAmount) {
-  const safeItemAmount = roundCurrency(itemAmount);
-  const feeAmount = calculateHintedFee(safeItemAmount);
-  const totalAmount = roundCurrency(safeItemAmount + feeAmount);
-
-  return {
-    itemAmount: safeItemAmount,
-    feeAmount,
-    totalAmount,
-  };
-}
-
-function extractHintAmount(hint) {
-  const directCandidates = [hint?.numeric_price, hint?.amount, hint?.price, hint?.targetAmount];
-
-  for (const candidate of directCandidates) {
-    const amount = Number(candidate);
-    if (Number.isFinite(amount) && amount > 0) {
-      return roundCurrency(amount);
-    }
-  }
-
-  const textCandidates = [hint?.price_text];
-  for (const text of textCandidates) {
-    const match = String(text || "").match(/(\d+(?:\.\d{1,2})?)/);
-    if (match?.[1]) {
-      const amount = Number(match[1]);
-      if (Number.isFinite(amount) && amount > 0) {
-        return roundCurrency(amount);
-      }
-    }
-  }
-
-  return 0;
-}
-
-function extractPreviewAmount(preview) {
-  const directCandidates = [
-    preview?.price,
-    preview?.amount,
-    preview?.targetAmount,
-    preview?.priceAmount,
-    preview?.numeric_price,
-  ];
-
-  for (const candidate of directCandidates) {
-    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
-    if (Number.isFinite(amount) && amount > 0) {
-      return roundCurrency(amount);
-    }
-  }
-
-  const textCandidates = [preview?.priceText, preview?.price_text];
-  for (const text of textCandidates) {
-    const match = String(text || "").match(/(\d+(?:\.\d{1,2})?)/);
-    if (match?.[1]) {
-      const amount = Number(match[1]);
-      if (Number.isFinite(amount) && amount > 0) {
-        return roundCurrency(amount);
-      }
-    }
-  }
-
-  return 0;
-}
-
-function toDisplayPotTitle(value) {
-  const text = String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (!text) return "Shared gift";
-
-  const cleaned = text
-    .replace(/[|–—•,:;()[\]{}]+/g, " ")
-    .replace(
-      /\b(with|for|and|the|from|your|this|that|into|gift|voucher|experience|set|kit|duo|edition)\b/gi,
-      " "
-    )
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const words = cleaned.split(" ").filter(Boolean);
-  if (words.length === 0) return "Shared gift";
-
-  return words.slice(0, 2).join(" ");
-}
-
-function buildStoredItemTitle(value) {
-  const text = String(value || "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return text || "Shared gift";
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim().toLowerCase());
 }
 
 function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You") {
@@ -403,9 +380,9 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       raised: 0,
       note:
         circleRow.funding_mode === "all_or_nothing"
-          ? "This circle will only proceed if the group reaches the target by the deadline."
+          ? "This circle will only proceed if the target is reached by the deadline."
           : circleRow.funding_mode === "organiser_covers"
-            ? "If the full target is not reached, the organiser can choose to cover the gap."
+            ? "If the target is not reached, the organiser can choose to cover the gap."
             : "This circle can stay flexible if fewer people join than expected.",
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
@@ -418,36 +395,34 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
 }
 
 function buildGenericCalendarEvents() {
-  const today = new Date();
-  const year = today.getFullYear();
-  const start = new Date(today);
-  const end = new Date(today);
+  const now = new Date();
+  const end = new Date();
   end.setMonth(end.getMonth() + 12);
 
-  const candidates = [
-    { title: "Halloween", type: "holiday", month: 10, day: 31 },
-    { title: "Bonfire Night", type: "holiday", month: 11, day: 5 },
-    { title: "Christmas", type: "holiday", month: 12, day: 25 },
-    { title: "New Year's Eve", type: "holiday", month: 12, day: 31 },
-    { title: "Valentine's Day", type: "occasion", month: 2, day: 14 },
-    { title: "Mother's Day", type: "occasion", month: 3, day: 30 },
-    { title: "Father's Day", type: "occasion", month: 6, day: 21 },
-    { title: "Easter", type: "holiday", month: 4, day: 5 },
+  const year = now.getFullYear();
+
+  const recurring = [
+    { title: "Halloween", type: "Holiday", month: 10, day: 31 },
+    { title: "Bonfire Night", type: "Holiday", month: 11, day: 5 },
+    { title: "Christmas", type: "Holiday", month: 12, day: 25 },
+    { title: "New Year's Eve", type: "Holiday", month: 12, day: 31 },
+    { title: "Valentine's Day", type: "Occasion", month: 2, day: 14 },
+    { title: "Mother's Day", type: "Occasion", month: 3, day: 30 },
+    { title: "Father's Day", type: "Occasion", month: 6, day: 21 },
   ];
 
   const rows = [];
 
   for (let y = year; y <= year + 1; y += 1) {
-    for (const item of candidates) {
+    for (const item of recurring) {
       const date = new Date(Date.UTC(y, item.month - 1, item.day));
-      if (date >= start && date <= end) {
+      if (date >= now && date <= end) {
         rows.push({
           id: `generic-${item.title}-${y}`,
           title: item.title,
           event_date: date.toISOString().slice(0, 10),
           type: item.type,
-          source: "system",
-          is_recurring: true,
+          source: "generic",
         });
       }
     }
@@ -514,10 +489,7 @@ function ModalShell({
 
 function ContactCard({ contact, onDeleteClick }) {
   return (
-    <article
-      className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
-      aria-label={`Manage ${contact.name}`}
-    >
+    <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className={getAvatarClasses(contact.colors, contact.status, "lg")}>
           {contact.initials}
@@ -671,17 +643,17 @@ function PotTypeGuide() {
   const potTypes = [
     {
       title: "Flexible pot",
-      text: "Anyone invited can join and contribute what they want. If fewer people join, the group can still continue with a smaller total or switch to a simpler gift.",
+      text: "Anyone invited can join and contribute what they want.",
       colors: "bg-[#edf6eb] text-[#4a7a3a]",
     },
     {
       title: "All-or-nothing",
-      text: "The circle only goes ahead if the target is reached by the deadline. This works best when the item only makes sense at the full amount.",
+      text: "The circle only goes ahead if the target is reached by the deadline.",
       colors: "bg-[#fff3ee] text-[#d57a58]",
     },
     {
       title: "Organizer covers gap",
-      text: "The organiser can choose to top up the missing amount if not everyone joins or contributes. Useful when the gift matters more than exact participation.",
+      text: "The organiser can choose to top up the missing amount.",
       colors: "bg-[#eef4ff] text-[#5676b3]",
     },
   ];
@@ -694,9 +666,6 @@ function PotTypeGuide() {
       <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
         How pot types work
       </h2>
-      <p className="mt-2 text-[14px] leading-7 text-slate-600">
-        Choose the funding style that best fits the gift and how certain you are that everyone will join.
-      </p>
 
       <div className="mt-5 space-y-3">
         {potTypes.map((type) => (
@@ -902,6 +871,444 @@ function CurrencyAmountInput({
   );
 }
 
+function AddContactModal({ open, onClose, onSave, supabase, modalKey }) {
+  const [contactSearch, setContactSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [contactResults, setContactResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [contactsMessage, setContactsMessage] = useState("");
+  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
+  const [form, setForm] = useState({ name: "", email: "" });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => setDebouncedSearch(contactSearch.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [contactSearch, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!debouncedSearch) {
+      setContactResults([]);
+      setContactsMessage("");
+      setSearchingContacts(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runSearch() {
+      setSearchingContacts(true);
+      setContactsMessage("");
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const providerToken = session?.provider_token;
+
+        if (!providerToken) {
+          if (!cancelled) {
+            setContactResults([]);
+            setContactsMessage(
+              "We couldn’t access your linked Google contacts right now."
+            );
+          }
+          return;
+        }
+
+        const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
+        url.searchParams.set("query", debouncedSearch);
+        url.searchParams.set("pageSize", "8");
+        url.searchParams.set("readMask", "names,emailAddresses");
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error?.message || "Couldn’t search contacts.");
+        }
+
+        const people = Array.isArray(result.results) ? result.results : [];
+        const mapped = people
+          .map((item) => item.person)
+          .filter(Boolean)
+          .map((person, index) => ({
+            id: person.resourceName || String(index),
+            name: getPrimaryContactField(person, "names"),
+            email: getPrimaryContactField(person, "emailAddresses"),
+          }))
+          .filter((person) => person.name || person.email);
+
+        if (!cancelled) {
+          setContactResults(mapped);
+          setContactsMessage(mapped.length ? "" : "No matching Google contacts found.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setContactResults([]);
+          setContactsMessage(error?.message || "Couldn’t search contacts.");
+        }
+      } finally {
+        if (!cancelled) setSearchingContacts(false);
+      }
+    }
+
+    runSearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, open, supabase, modalKey]);
+
+  function selectContact(contact) {
+    setForm({
+      name: contact.name || "",
+      email: contact.email || "",
+    });
+    setContactSearch(contact.name || contact.email || "");
+    setContactResults([]);
+    setContactsMessage("");
+    setSaveError("");
+  }
+
+  function toggleRelationship(relationship) {
+    setSelectedRelationships((prev) => {
+      if (prev.includes(relationship)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== relationship);
+      }
+      return [...prev, relationship];
+    });
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) {
+      setSaveError("Contact name is required.");
+      return;
+    }
+
+    const cleanedEmail = form.email.trim().toLowerCase();
+
+    if (!cleanedEmail) {
+      setSaveError("Email is required.");
+      return;
+    }
+
+    if (!isValidEmail(cleanedEmail)) {
+      setSaveError("Enter a valid email address.");
+      return;
+    }
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await onSave({
+        name: form.name.trim(),
+        email: cleanedEmail,
+        relationshipTypes: selectedRelationships,
+      });
+      onClose();
+    } catch (error) {
+      setSaveError(error?.message || "Failed to save contact.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Contact"
+      title="Add a contact"
+      maxWidth="max-w-[760px]"
+      hideHeaderBorder
+    >
+      <div className="border-t border-[#efe0d7] px-6 py-6">
+        <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Bring someone in quickly
+          </p>
+          <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
+            Add from Gmail or type their email
+          </h3>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
+            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              placeholder="Search Gmail contacts"
+              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </div>
+
+          {searchingContacts ? (
+            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
+          ) : null}
+
+          {contactResults.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
+              {contactResults.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => selectContact(contact)}
+                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
+                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {contactsMessage ? (
+            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
+          ) : null}
+        </div>
+
+        <div className="mt-6 space-y-5">
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Maya"
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="maya@example.com"
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <div>
+            <span className="block text-sm font-medium text-slate-900">Relationship</span>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {relationshipOptions.map((relationship) => {
+                const selected = selectedRelationships.includes(relationship);
+
+                return (
+                  <button
+                    key={relationship}
+                    type="button"
+                    onClick={() => toggleRelationship(relationship)}
+                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
+                      selected
+                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
+                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {relationship}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {saveError ? (
+            <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+              {saveError}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !form.name.trim() || !form.email.trim()}
+            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
+              saving || !form.name.trim() || !form.email.trim()
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+            }`}
+          >
+            {saving ? "Saving..." : "Save contact"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function DeleteContactModal({
+  open,
+  onClose,
+  onConfirm,
+  contact,
+  isDeleting,
+  errorMessage,
+}) {
+  const [typedName, setTypedName] = useState("");
+
+  useEffect(() => {
+    if (!open) setTypedName("");
+  }, [open]);
+
+  if (!open || !contact) return null;
+
+  const expectedName = String(contact.name || "").trim();
+  const matches = typedName.trim() === expectedName;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Delete contact"
+      title={`Delete ${contact.name}`}
+      maxWidth="max-w-[620px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently remove the contact.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            Type <span className="font-semibold text-slate-900">{expectedName}</span> to confirm.
+          </p>
+        </div>
+
+        <label className="block">
+          <span className="block text-sm font-medium text-slate-900">Type the contact name</span>
+          <input
+            type="text"
+            value={typedName}
+            onChange={(e) => setTypedName(e.target.value)}
+            placeholder={expectedName}
+            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+          />
+        </label>
+
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting || !matches}
+            onClick={() => onConfirm(contact)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting || !matches
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
+            }`}
+          >
+            {isDeleting ? "Deleting..." : "Delete contact"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function DeleteCircleModal({
+  open,
+  onClose,
+  onConfirm,
+  circle,
+  isDeleting,
+  errorMessage,
+}) {
+  if (!open || !circle) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Delete circle"
+      title={`Delete ${circle.name}`}
+      maxWidth="max-w-[720px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently delete the entire circle.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            This removes the circle itself and its invites.
+          </p>
+        </div>
+
+        <div className="rounded-[20px] bg-[#fffaf7] p-4">
+          <p className="text-sm font-semibold text-slate-900">Circle summary</p>
+          <p className="mt-2 text-[13px] text-slate-600">
+            {circle.name} · {circle.subtitle}
+          </p>
+        </div>
+
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={() => onConfirm(circle)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
+            }`}
+          >
+            {isDeleting ? "Deleting..." : "Delete circle"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
+}
+
 function CreateCircleModal({
   open,
   onClose,
@@ -939,12 +1346,11 @@ function CreateCircleModal({
   const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
 
   useEffect(() => {
-    if (!open) return;
-    if (form.goalType !== "item") return;
+    if (!open || form.goalType !== "item") return;
 
-    if (form.itemSource === "hint" && selectedHint) {
+    if (form.itemSource === "hint" && selectedHint && !parseAmount(form.goalValue)) {
       const extracted = extractHintAmount(selectedHint);
-      if (extracted > 0 && !parseAmount(form.goalValue)) {
+      if (extracted > 0) {
         setForm((prev) => ({
           ...prev,
           goalValue: String(extracted),
@@ -953,9 +1359,9 @@ function CreateCircleModal({
       }
     }
 
-    if (form.itemSource === "url" && linkPreview) {
+    if (form.itemSource === "url" && linkPreview && !parseAmount(form.goalValue)) {
       const extracted = extractPreviewAmount(linkPreview);
-      if (extracted > 0 && !parseAmount(form.goalValue)) {
+      if (extracted > 0) {
         setForm((prev) => ({
           ...prev,
           goalValue: String(extracted),
@@ -967,9 +1373,9 @@ function CreateCircleModal({
     open,
     form.goalType,
     form.itemSource,
+    form.goalValue,
     selectedHint,
     linkPreview,
-    form.goalValue,
     setForm,
   ]);
 
@@ -1036,7 +1442,7 @@ function CreateCircleModal({
                           ...prev,
                           eventTitle: event.title,
                           eventDate: event.event_date,
-                          deadline: event.event_date,
+                          deadline: prev.deadline || event.event_date,
                         }));
                       }}
                     />
@@ -1067,7 +1473,7 @@ function CreateCircleModal({
                       setForm((prev) => ({
                         ...prev,
                         eventDate: e.target.value,
-                        deadline: e.target.value,
+                        deadline: prev.deadline || e.target.value,
                       }))
                     }
                     className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
@@ -1096,9 +1502,6 @@ function CreateCircleModal({
                   onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
                   className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
                 />
-                <p className="text-[12px] text-slate-400">
-                  Defaults to the event day, but you can close contributions earlier.
-                </p>
               </label>
 
               <label className="space-y-2">
@@ -1161,14 +1564,12 @@ function CreateCircleModal({
           </div>
 
           {!amountMode ? (
-            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5 transition">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">4. Choose the item</p>
-                  <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                    Pick the person on the left, then choose one hint or paste a link.
-                  </p>
-                </div>
+            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">4. Choose the item</p>
+                <p className="mt-1 text-[13px] leading-6 text-slate-500">
+                  Pick the person on the left, then choose one hint or paste a link.
+                </p>
               </div>
 
               <div className="mt-4 flex gap-3">
@@ -1314,7 +1715,7 @@ function CreateCircleModal({
                             )
                           ) : (
                             <div className="rounded-[18px] border border-dashed border-[#e5d8cf] bg-white p-5 text-sm leading-6 text-slate-500">
-                              This contact appears in your contacts list, but your current schema does not link contacts to a hinted user account. Because of that, Circles cannot load their public hints yet.
+                              This contact is not linked to a hinted user account yet.
                             </div>
                           )}
                         </div>
@@ -1424,7 +1825,6 @@ function CreateCircleModal({
                           )
                         }
                         className="text-slate-400 hover:text-slate-600"
-                        aria-label={`Remove ${person.name}`}
                       >
                         ✕
                       </button>
@@ -1476,19 +1876,6 @@ function CreateCircleModal({
                   </div>
                 );
               })}
-
-              {!contacts.length ? (
-                <div className="rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-4 text-sm text-slate-500">
-                  Add a contact first, then invite them into a circle here.
-                </div>
-              ) : null}
-            </div>
-
-            <div className="mt-6 rounded-[20px] bg-[#fffaf7] p-4">
-              <p className="text-sm font-semibold text-slate-900">What happens if people do not join?</p>
-              <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                Your funding mode controls the fallback: keep the pot flexible, cancel if the goal is not met, or let the organiser cover the gap.
-              </p>
             </div>
 
             <div className="mt-6 flex gap-3">
@@ -1519,465 +1906,6 @@ function CreateCircleModal({
   );
 }
 
-function AddContactModal({ open, onClose, onSave, supabase }) {
-  const [contactSearch, setContactSearch] = useState("");
-  const [contactResults, setContactResults] = useState([]);
-  const [searchingContacts, setSearchingContacts] = useState(false);
-  const [contactsMessage, setContactsMessage] = useState("");
-  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setContactSearch("");
-      setContactResults([]);
-      setSearchingContacts(false);
-      setContactsMessage("");
-      setSelectedRelationships(["Friend"]);
-      setForm({ name: "", email: "" });
-      setSaving(false);
-      setSaveError("");
-    }
-  }, [open]);
-
-  const searchGoogleContacts = useCallback(async (query) => {
-    setContactSearch(query);
-    setContactsMessage("");
-    setSaveError("");
-
-    if (!query.trim()) {
-      setContactResults([]);
-      return;
-    }
-
-    setSearchingContacts(true);
-
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const providerToken = session?.provider_token;
-
-      if (!providerToken) {
-        setContactResults([]);
-        setContactsMessage(
-          "We couldn’t access your linked Google contacts right now because the Google provider token is missing."
-        );
-        return;
-      }
-
-      const warmupResponse = await fetch(
-        "https://people.googleapis.com/v1/people:searchContacts?query=&pageSize=1&readMask=names,emailAddresses",
-        {
-          headers: {
-            Authorization: `Bearer ${providerToken}`,
-          },
-        }
-      );
-
-      if (!warmupResponse.ok) {
-        setContactResults([]);
-        setContactsMessage("We couldn’t access your linked Google contacts right now.");
-        return;
-      }
-
-      const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
-      url.searchParams.set("query", query);
-      url.searchParams.set("pageSize", "8");
-      url.searchParams.set("readMask", "names,emailAddresses");
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          Authorization: `Bearer ${providerToken}`,
-        },
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        setContactResults([]);
-        setContactsMessage(result?.error?.message || "We couldn’t search Google contacts right now.");
-        return;
-      }
-
-      const people = Array.isArray(result.results) ? result.results : [];
-      const mapped = people
-        .map((item) => item.person)
-        .filter(Boolean)
-        .map((person, index) => ({
-          id: person.resourceName || String(index),
-          name: getPrimaryContactField(person, "names"),
-          email: getPrimaryContactField(person, "emailAddresses"),
-        }))
-        .filter((person) => person.name || person.email);
-
-      setContactResults(mapped);
-
-      if (mapped.length === 0) {
-        setContactsMessage("No matching Google contacts found. You can still type their email manually.");
-      }
-    } catch (error) {
-      setContactResults([]);
-      setContactsMessage(error?.message || "We couldn’t search Google contacts right now.");
-    } finally {
-      setSearchingContacts(false);
-    }
-  }, [supabase]);
-
-  function selectContact(contact) {
-    setForm({
-      name: contact.name || "",
-      email: contact.email || "",
-    });
-    setContactSearch(contact.name || contact.email || "");
-    setContactResults([]);
-    setContactsMessage("");
-    setSaveError("");
-  }
-
-  function toggleRelationship(relationship) {
-    setSelectedRelationships((prev) => {
-      if (prev.includes(relationship)) {
-        if (prev.length === 1) return prev;
-        return prev.filter((item) => item !== relationship);
-      }
-      return [...prev, relationship];
-    });
-  }
-
-  async function handleSave() {
-    if (!form.name.trim()) {
-      setSaveError("Contact name is required.");
-      return;
-    }
-
-    const cleanedEmail = form.email.trim().toLowerCase();
-
-    if (!cleanedEmail) {
-      setSaveError("Email is required.");
-      return;
-    }
-
-    if (!isValidEmail(cleanedEmail)) {
-      setSaveError("Enter a valid email address.");
-      return;
-    }
-
-    setSaving(true);
-    setSaveError("");
-
-    try {
-      await onSave({
-        name: form.name.trim(),
-        email: cleanedEmail,
-        relationshipTypes: selectedRelationships.length ? selectedRelationships : ["Friend"],
-      });
-      setSaving(false);
-      onClose();
-    } catch (error) {
-      setSaveError(error?.message || "Failed to save contact.");
-      setSaving(false);
-    }
-  }
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      eyebrow="Contact"
-      title="Add a contact"
-      maxWidth="max-w-[760px]"
-      hideHeaderBorder
-    >
-      <div className="border-t border-[#efe0d7] px-6 py-6">
-        <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-            Bring someone in quickly
-          </p>
-          <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
-            Add from Gmail or type their email
-          </h3>
-          <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
-            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
-          </p>
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <input
-              type="text"
-              value={contactSearch}
-              onChange={(e) => {
-                const value = e.target.value;
-                setContactSearch(value);
-                searchGoogleContacts(value);
-              }}
-              placeholder="Search Gmail contacts"
-              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
-            />
-          </div>
-
-          {searchingContacts ? (
-            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
-          ) : null}
-
-          {contactResults.length > 0 ? (
-            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
-              {contactResults.map((contact) => (
-                <button
-                  key={contact.id}
-                  type="button"
-                  onClick={() => selectContact(contact)}
-                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
-                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
-                  </div>
-                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          {contactsMessage ? (
-            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
-          ) : null}
-        </div>
-
-        <div className="mt-6 space-y-5">
-          <label className="block">
-            <span className="block text-sm font-medium text-slate-900">Name</span>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="Maya"
-              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
-            />
-          </label>
-
-          <label className="block">
-            <span className="block text-sm font-medium text-slate-900">Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-              placeholder="maya@example.com"
-              required
-              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
-            />
-          </label>
-
-          <div>
-            <span className="block text-sm font-medium text-slate-900">Relationship</span>
-            <div className="mt-3 flex flex-wrap gap-2.5">
-              {relationshipOptions.map((relationship) => {
-                const selected = selectedRelationships.includes(relationship);
-
-                return (
-                  <button
-                    key={relationship}
-                    type="button"
-                    onClick={() => toggleRelationship(relationship)}
-                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
-                      selected
-                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
-                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
-                    }`}
-                  >
-                    {relationship}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {saveError ? (
-            <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-              {saveError}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || !form.name.trim() || !form.email.trim()}
-            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
-              saving || !form.name.trim() || !form.email.trim()
-                ? "cursor-not-allowed bg-[#e9a48d]"
-                : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
-            }`}
-          >
-            {saving ? "Saving..." : "Save contact"}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function DeleteContactModal({
-  open,
-  onClose,
-  onConfirm,
-  contact,
-  isDeleting,
-  errorMessage,
-}) {
-  const [typedName, setTypedName] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setTypedName("");
-    }
-  }, [open]);
-
-  if (!open || !contact) return null;
-
-  const expectedName = String(contact.name || "").trim();
-  const matches = typedName.trim() === expectedName;
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      eyebrow="Delete contact"
-      title={`Delete ${contact.name}`}
-      maxWidth="max-w-[620px]"
-    >
-      <div className="space-y-5 p-6">
-        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
-          <p className="text-sm font-semibold text-[#b14f43]">This will permanently remove the contact.</p>
-          <p className="mt-2 text-[13px] leading-6 text-slate-600">
-            Type <span className="font-semibold text-slate-900">{expectedName}</span> to confirm.
-          </p>
-        </div>
-
-        <label className="block">
-          <span className="block text-sm font-medium text-slate-900">Type the contact name</span>
-          <input
-            type="text"
-            value={typedName}
-            onChange={(e) => setTypedName(e.target.value)}
-            placeholder={expectedName}
-            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-          />
-        </label>
-
-        {errorMessage ? (
-          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-            {errorMessage}
-          </div>
-        ) : null}
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isDeleting || !matches}
-            onClick={() => onConfirm(contact)}
-            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
-              isDeleting || !matches
-                ? "cursor-not-allowed bg-[#e9a48d]"
-                : "bg-[#b14f43]"
-            }`}
-          >
-            {isDeleting ? "Deleting..." : "Delete contact"}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
-function DeleteCircleModal({
-  open,
-  onClose,
-  onConfirm,
-  circle,
-  isDeleting,
-  errorMessage,
-}) {
-  if (!open || !circle) return null;
-
-  return (
-    <ModalShell
-      open={open}
-      onClose={onClose}
-      eyebrow="Delete circle"
-      title={`Delete ${circle.name}`}
-      maxWidth="max-w-[720px]"
-    >
-      <div className="space-y-5 p-6">
-        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
-          <p className="text-sm font-semibold text-[#b14f43]">This will permanently delete the entire circle.</p>
-          <p className="mt-2 text-[13px] leading-6 text-slate-600">
-            This removes the circle itself and its invites.
-          </p>
-        </div>
-
-        <div className="rounded-[20px] bg-[#fffaf7] p-4">
-          <p className="text-sm font-semibold text-slate-900">Circle summary</p>
-          <p className="mt-2 text-[13px] text-slate-600">
-            {circle.name} · {circle.subtitle}
-          </p>
-          <p className="mt-2 text-[13px] text-slate-500">
-            Members and invitees shown on this circle will lose access once it is deleted.
-          </p>
-        </div>
-
-        {errorMessage ? (
-          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
-            {errorMessage}
-          </div>
-        ) : null}
-
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isDeleting}
-            onClick={() => onConfirm(circle)}
-            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
-              isDeleting
-                ? "cursor-not-allowed bg-[#e9a48d]"
-                : "bg-[#b14f43]"
-            }`}
-          >
-            {isDeleting ? "Deleting..." : "Delete circle"}
-          </button>
-        </div>
-      </div>
-    </ModalShell>
-  );
-}
-
 export default function CirclesClient() {
   const supabase = createClient();
   const { formatCurrency } = useCurrencyFormatter();
@@ -1986,8 +1914,8 @@ export default function CirclesClient() {
   const [profile, setProfile] = useState(null);
 
   const [contacts, setContacts] = useState([]);
-  const [realCircles, setRealCircles] = useState([]);
   const [ownHints, setOwnHints] = useState([]);
+  const [realCircles, setRealCircles] = useState([]);
   const [calendarEvents, setCalendarEvents] = useState([]);
 
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
@@ -2000,6 +1928,7 @@ export default function CirclesClient() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isAddContactOpen, setIsAddContactOpen] = useState(false);
+  const [addContactModalKey, setAddContactModalKey] = useState(0);
 
   const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
   const [isDeleteCircleOpen, setIsDeleteCircleOpen] = useState(false);
@@ -2031,9 +1960,7 @@ export default function CirclesClient() {
     itemUrl: "",
   });
 
-  const displayedCircles = useMemo(() => {
-    return [...realCircles, exampleCircle];
-  }, [realCircles]);
+  const didBootstrap = useRef(false);
 
   const mergedCalendarEvents = useMemo(() => {
     const generic = buildGenericCalendarEvents();
@@ -2041,15 +1968,18 @@ export default function CirclesClient() {
     const map = new Map();
 
     [...generic, ...real].forEach((event) => {
-      const key = `${event.title}-${event.event_date}`;
+      const date = event.event_date || event.date || "";
+      const title = event.title || "Event";
+      const type = event.type || event.occasion_type || "Event";
+      const key = `${title}-${date}`;
+
       if (!map.has(key)) {
         map.set(key, {
           id: event.id,
-          title: event.title,
-          event_date: event.event_date,
-          type: event.type || "event",
+          title,
+          event_date: date,
+          type,
           source: event.source || "user",
-          is_recurring: !!event.is_recurring,
         });
       }
     });
@@ -2059,125 +1989,112 @@ export default function CirclesClient() {
     );
   }, [calendarEvents]);
 
-  const resetCircleForm = useCallback(
-    (events = mergedCalendarEvents, currentProfile = profile) => {
-      const safeEvents = Array.isArray(events) ? events : [];
-      const fallbackEvent = safeEvents[0] || null;
-      const fallbackCurrency = currentProfile?.currency || "GBP";
+  const displayedCircles = useMemo(() => {
+    return [...realCircles, exampleCircle];
+  }, [realCircles]);
 
-      setEventMode("calendar");
-      setSelectedEventId(String(fallbackEvent?.id || ""));
-      setSelectedPeople([]);
-      setSelectedHintOwnerId(SELF_SELECTOR_ID);
-      setLinkPreview(null);
-      setCircleError("");
-      setCircleSuccess("");
-      setForm({
-        eventTitle: fallbackEvent?.title || "",
-        eventDate: fallbackEvent?.event_date || "",
-        deadline: fallbackEvent?.event_date || "",
-        goalType: "item",
-        goalValue: "",
-        currency: fallbackCurrency,
-        fundingMode: "flexible",
-        itemSource: "hint",
-        selectedHintId: "",
-        itemUrl: "",
-      });
-    },
-    [mergedCalendarEvents, profile]
-  );
+  const initialiseCircleForm = useCallback((profileValue, eventsValue) => {
+    const safeEvents = Array.isArray(eventsValue) ? eventsValue : [];
+    const fallback = safeEvents[0] || buildGenericCalendarEvents()[0] || null;
 
-  const loadProfile = useCallback(
-    async (userId) => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
+    setEventMode("calendar");
+    setSelectedEventId(fallback?.id ? String(fallback.id) : "");
+    setSelectedPeople([]);
+    setSelectedHintOwnerId(SELF_SELECTOR_ID);
+    setLinkPreview(null);
+    setCircleError("");
+    setForm({
+      eventTitle: fallback?.title || "",
+      eventDate: fallback?.event_date || "",
+      deadline: fallback?.event_date || "",
+      goalType: "item",
+      goalValue: "",
+      currency: profileValue?.currency || "GBP",
+      fundingMode: "flexible",
+      itemSource: "hint",
+      selectedHintId: "",
+      itemUrl: "",
+    });
+  }, []);
 
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
-      }
+  const loadProfile = useCallback(async (userId) => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
 
-      setProfile(data || null);
-      return data || null;
-    },
-    [supabase]
-  );
+    if (error) throw new Error(normalizeSupabaseError(error, "Failed to load profile."));
+    return data || null;
+  }, [supabase]);
 
-  const loadContacts = useCallback(
-    async (userId) => {
-      setIsLoadingContacts(true);
-      setContactError("");
+  const loadContacts = useCallback(async (userId) => {
+    setIsLoadingContacts(true);
+    setContactError("");
 
+    try {
       const { data, error } = await supabase
         .from("contacts")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        setContacts([]);
-        setIsLoadingContacts(false);
-        throw new Error(
-          normalizeSupabaseError(error, "Failed to load contacts.")
-        );
-      }
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to load contacts."));
 
       const mapped = Array.isArray(data) ? data.map(buildContactRecordFromRow) : [];
       setContacts(mapped);
-      setIsLoadingContacts(false);
       return mapped;
-    },
-    [supabase]
-  );
+    } catch (error) {
+      setContacts([]);
+      setContactError(error?.message || "Failed to load contacts.");
+      return [];
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  }, [supabase]);
 
-  const loadCalendarEvents = useCallback(
-    async (userId) => {
+  const loadCalendarEvents = useCallback(async (userId) => {
+    try {
       const { data, error } = await supabase
         .from("calendar_events")
         .select("*")
         .eq("user_id", userId)
-        .order("event_date", { ascending: true })
-        .order("created_at", { ascending: false });
+        .order("event_date", { ascending: true });
 
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to load calendar events."));
-      }
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to load calendar events."));
 
       const rows = data || [];
       setCalendarEvents(rows);
       return rows;
-    },
-    [supabase]
-  );
+    } catch (error) {
+      setCalendarEvents([]);
+      return [];
+    }
+  }, [supabase]);
 
-  const loadOwnHints = useCallback(
-    async (userId) => {
+  const loadOwnHints = useCallback(async (userId) => {
+    try {
       const { data, error } = await supabase
         .from("hints")
-        .select(
-          "id, user_id, title, url, image_url, source, created_at, is_private, price_text, numeric_price, currency"
-        )
+        .select("id, user_id, title, url, image_url, created_at, is_private, price_text, numeric_price, currency")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to load hints."));
-      }
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to load hints."));
 
       setOwnHints(data || []);
       return data || [];
-    },
-    [supabase]
-  );
+    } catch (error) {
+      setOwnHints([]);
+      return [];
+    }
+  }, [supabase]);
 
-  const loadCircles = useCallback(
-    async (userId, currentProfile) => {
-      setIsLoadingCircles(true);
-      setCircleError("");
+  const loadCircles = useCallback(async (userId, currentProfile) => {
+    setIsLoadingCircles(true);
+    setCircleError("");
 
+    try {
       const { data: circlesData, error: circlesError } = await supabase
         .from("circles")
         .select("*")
@@ -2185,8 +2102,6 @@ export default function CirclesClient() {
         .order("created_at", { ascending: false });
 
       if (circlesError) {
-        setRealCircles([]);
-        setIsLoadingCircles(false);
         throw new Error(normalizeSupabaseError(circlesError, "Failed to load circles."));
       }
 
@@ -2200,7 +2115,6 @@ export default function CirclesClient() {
           .in("circle_id", circleIds);
 
         if (inviteError) {
-          setIsLoadingCircles(false);
           throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
         }
 
@@ -2222,13 +2136,20 @@ export default function CirclesClient() {
       );
 
       setRealCircles(mapped);
-      setIsLoadingCircles(false);
       return mapped;
-    },
-    [supabase]
-  );
+    } catch (error) {
+      setRealCircles([]);
+      setCircleError(error?.message || "Failed to load circles.");
+      return [];
+    } finally {
+      setIsLoadingCircles(false);
+    }
+  }, [supabase]);
 
   useEffect(() => {
+    if (didBootstrap.current) return;
+    didBootstrap.current = true;
+
     let active = true;
 
     async function bootstrap() {
@@ -2240,33 +2161,32 @@ export default function CirclesClient() {
           error: userError,
         } = await supabase.auth.getUser();
 
-        if (userError) {
-          throw new Error(normalizeSupabaseError(userError, "Failed to get logged-in user."));
-        }
-
-        if (!user) {
-          throw new Error("You must be signed in to view circles.");
-        }
+        if (userError) throw new Error(normalizeSupabaseError(userError, "Failed to get user."));
+        if (!user) throw new Error("You must be signed in to view circles.");
 
         if (!active) return;
         setSessionUser(user);
 
-        const currentProfile = await loadProfile(user.id);
+        let currentProfile = null;
+        try {
+          currentProfile = await loadProfile(user.id);
+          if (active) setProfile(currentProfile);
+        } catch {
+          if (active) setProfile(null);
+        }
+
+        const [loadedContacts, loadedEvents] = await Promise.all([
+          loadContacts(user.id),
+          loadCalendarEvents(user.id),
+          loadOwnHints(user.id),
+        ]);
+
         if (!active) return;
 
-        await loadContacts(user.id);
-        if (!active) return;
-
-        await loadCalendarEvents(user.id);
-        if (!active) return;
-
-        await loadOwnHints(user.id);
-        if (!active) return;
+        const merged = [...buildGenericCalendarEvents(), ...(loadedEvents || [])];
+        initialiseCircleForm(currentProfile, merged);
 
         await loadCircles(user.id, currentProfile);
-        if (!active) return;
-
-        resetCircleForm(undefined, currentProfile);
       } catch (error) {
         if (active) {
           setPageError(error?.message || "Failed to load the Circles page.");
@@ -2281,9 +2201,18 @@ export default function CirclesClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadOwnHints, loadCircles, resetCircleForm]);
+  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadOwnHints, loadCircles, initialiseCircleForm]);
 
-  const handleFetchPreview = async () => {
+  function openAddContactModal() {
+    setAddContactModalKey((prev) => prev + 1);
+    setIsAddContactOpen(true);
+  }
+
+  function closeAddContactModal() {
+    setIsAddContactOpen(false);
+  }
+
+  async function handleFetchPreview() {
     if (!form.itemUrl.trim()) {
       setCircleError("Paste a product or experience link first.");
       return;
@@ -2317,24 +2246,19 @@ export default function CirclesClient() {
         throw new Error(data?.error || `Failed to fetch preview (${response.status}).`);
       }
 
-      if (!data) {
-        throw new Error("Link preview API returned an empty response.");
-      }
-
-      setLinkPreview(data);
-    } catch (error) {
+      setLinkPreview(data || null);
+    } catch {
       setLinkPreview({
         title: "Preview unavailable",
         description:
           "We could not pull a preview from that link yet, but you can still use the URL.",
         image: "",
-        siteName: form.itemUrl,
-        url: form.itemUrl,
+        url: form.itemUrl.trim(),
       });
     } finally {
       setIsFetchingPreview(false);
     }
-  };
+  }
 
   async function handleSaveContact(contactPayload) {
     setContactError("");
@@ -2344,7 +2268,6 @@ export default function CirclesClient() {
     }
 
     const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
-
     if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
       throw new Error("A valid email address is required.");
     }
@@ -2361,10 +2284,7 @@ export default function CirclesClient() {
     };
 
     const { error } = await supabase.from("contacts").insert(insertPayload);
-
-    if (error) {
-      throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
-    }
+    if (error) throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
 
     await loadContacts(sessionUser.id);
   }
@@ -2382,32 +2302,17 @@ export default function CirclesClient() {
   }
 
   async function handleConfirmDeleteContact(contact) {
-    setDeleteContactError("");
-    setContactError("");
-    setCircleSuccess("");
-
-    if (!contact?.id) {
-      setDeleteContactError("Missing contact id.");
-      return;
-    }
-
     setIsDeletingContact(true);
+    setDeleteContactError("");
 
     try {
-      const { error } = await supabase
-        .from("contacts")
-        .delete()
-        .eq("id", contact.id);
-
-      if (error) {
-        throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
-      }
+      const { error } = await supabase.from("contacts").delete().eq("id", contact.id);
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
 
       setContacts((prev) => prev.filter((item) => item.id !== contact.id));
       setSelectedPeople((prev) => prev.filter((item) => item.id !== contact.id));
-      setIsDeleteContactOpen(false);
       setSelectedContactToDelete(null);
-      setCircleSuccess("Contact deleted successfully.");
+      setIsDeleteContactOpen(false);
     } catch (error) {
       setDeleteContactError(error?.message || "Failed to delete contact.");
     } finally {
@@ -2416,16 +2321,8 @@ export default function CirclesClient() {
   }
 
   async function handleConfirmDeleteCircle(circle) {
-    setDeleteCircleError("");
-    setCircleError("");
-    setCircleSuccess("");
-
-    if (!circle?.id || circle.id === "example-circle") {
-      setDeleteCircleError("Missing circle id.");
-      return;
-    }
-
     setIsDeletingCircle(true);
+    setDeleteCircleError("");
 
     try {
       const { error: inviteDeleteError } = await supabase
@@ -2434,9 +2331,7 @@ export default function CirclesClient() {
         .eq("circle_id", circle.id);
 
       if (inviteDeleteError) {
-        throw new Error(
-          normalizeSupabaseError(inviteDeleteError, "Failed to delete related circle invites.")
-        );
+        throw new Error(normalizeSupabaseError(inviteDeleteError, "Failed to delete invites."));
       }
 
       const { error: circleDeleteError } = await supabase
@@ -2449,9 +2344,8 @@ export default function CirclesClient() {
       }
 
       setRealCircles((prev) => prev.filter((item) => item.id !== circle.id));
-      setIsDeleteCircleOpen(false);
       setSelectedCircleToDelete(null);
-      setCircleSuccess("Circle deleted successfully.");
+      setIsDeleteCircleOpen(false);
     } catch (error) {
       setDeleteCircleError(error?.message || "Failed to delete circle.");
     } finally {
@@ -2480,8 +2374,8 @@ export default function CirclesClient() {
 
     const occasionType =
       eventMode === "calendar"
-        ? selectedEvent?.type || "event"
-        : "event";
+        ? selectedEvent?.type || "Event"
+        : "Event";
 
     if (!sessionUser?.id) {
       setCircleError("You must be signed in to create a circle.");
@@ -2503,6 +2397,12 @@ export default function CirclesClient() {
       return;
     }
 
+    const manualAmount = parseAmount(form.goalValue);
+    if (manualAmount <= 0) {
+      setCircleError("Target amount must be greater than 0.");
+      return;
+    }
+
     const contactsWithoutEmail = selectedPeople.filter(
       (person) => !String(person.email || "").trim() || !isValidEmail(person.email)
     );
@@ -2518,13 +2418,6 @@ export default function CirclesClient() {
         ? contacts.find((contact) => String(contact.id) === String(selectedHintOwnerId)) || null
         : null;
 
-    const manualAmount = parseAmount(form.goalValue);
-
-    if (manualAmount <= 0) {
-      setCircleError("Target amount must be greater than 0.");
-      return;
-    }
-
     const totals = calculateCircleTotals(manualAmount);
 
     let itemTitle = "Shared contribution pot";
@@ -2537,9 +2430,7 @@ export default function CirclesClient() {
     if (form.goalType === "item") {
       if (form.itemSource === "hint") {
         if (selectedHintOwnerId !== SELF_SELECTOR_ID) {
-          setCircleError(
-            "This contact is not linked to a hinted account yet, so you cannot use their hints in Circles right now."
-          );
+          setCircleError("This contact is not linked to hinted yet.");
           return;
         }
 
@@ -2551,7 +2442,6 @@ export default function CirclesClient() {
         itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
         itemUrl = selectedHint.url || null;
         itemImageUrl = selectedHint.image_url || null;
-        itemDescription = null;
         selectedHintId = selectedHint.id;
         sourceType = selectedHint.is_private ? "organiser_private_hint" : "recipient_public_hint";
       } else {
@@ -2605,13 +2495,10 @@ export default function CirclesClient() {
         .select("*");
 
       if (insertCircleError) {
-        throw new Error(
-          normalizeSupabaseError(insertCircleError, "Failed to insert into circles.")
-        );
+        throw new Error(normalizeSupabaseError(insertCircleError, "Failed to insert into circles."));
       }
 
       const insertedCircle = Array.isArray(insertedRows) ? insertedRows[0] : null;
-
       if (!insertedCircle?.id) {
         throw new Error("Circle was inserted, but the new row could not be returned.");
       }
@@ -2649,11 +2536,10 @@ export default function CirclesClient() {
         "You";
 
       const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
-
       setRealCircles((prev) => [mappedCircle, ...prev]);
       setCircleSuccess("Circle created successfully.");
       setIsCreateOpen(false);
-      resetCircleForm();
+      initialiseCircleForm(profile, mergedCalendarEvents);
     } catch (error) {
       setCircleError(error?.message || "Failed to create circle.");
     } finally {
@@ -2764,14 +2650,14 @@ export default function CirclesClient() {
                       ))
                     ) : (
                       <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
-                        No contacts added yet. Use the add contact flow to browse from your linked Google account or type someone in manually.
+                        No contacts added yet.
                       </div>
                     )}
                   </div>
 
                   <button
                     type="button"
-                    onClick={() => setIsAddContactOpen(true)}
+                    onClick={openAddContactModal}
                     className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
                   >
                     Add new contact
@@ -2791,14 +2677,14 @@ export default function CirclesClient() {
                       Build circles around the people and moments that matter.
                     </h2>
                     <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
-                      Create a circle around an event, invite people, choose a hint from your own account or paste a product link, and let the pot stay flexible if everyone does not join.
+                      Create a circle around an event, invite people, choose a hint or paste a product link, and keep the pot warm and flexible.
                     </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => {
-                      resetCircleForm();
+                      initialiseCircleForm(profile, mergedCalendarEvents);
                       setIsCreateOpen(true);
                     }}
                     className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
@@ -2834,7 +2720,7 @@ export default function CirclesClient() {
         open={isCreateOpen}
         onClose={() => {
           setIsCreateOpen(false);
-          resetCircleForm();
+          initialiseCircleForm(profile, mergedCalendarEvents);
         }}
         onSubmit={handleCreateCircle}
         contacts={contacts}
@@ -2860,16 +2746,11 @@ export default function CirclesClient() {
       />
 
       <AddContactModal
+        key={addContactModalKey}
+        modalKey={addContactModalKey}
         open={isAddContactOpen}
-        onClose={() => setIsAddContactOpen(false)}
-        onSave={async (payload) => {
-          try {
-            await handleSaveContact(payload);
-          } catch (error) {
-            setContactError(error?.message || "Failed to save contact.");
-            throw error;
-          }
-        }}
+        onClose={closeAddContactModal}
+        onSave={handleSaveContact}
         supabase={supabase}
       />
 
