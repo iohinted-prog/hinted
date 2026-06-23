@@ -17,7 +17,10 @@ export default function AppFooter() {
             <Link href="/for-brands" className="transition hover:text-slate-900">
               For Brands
             </Link>
-            <a href="mailto:iohinted@gmail.com" className="transition hover:text-slate-900">
+            <a
+              href="mailto:iohinted@gmail.com"
+              className="transition hover:text-slate-900"
+            >
               Contact
             </a>
           </div>
@@ -26,4 +29,3 @@ export default function AppFooter() {
     </footer>
   );
 }
-
