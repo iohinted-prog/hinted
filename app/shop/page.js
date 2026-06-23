@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Script from "next/script";
 import { createClient } from "../../lib/supabase/client";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
-import AppHeader from "../components/AppHeader";
+import AppHeader from "../components/AppHeader.jsx";
 
 const INTEREST_OPTIONS = [
   "Home",
