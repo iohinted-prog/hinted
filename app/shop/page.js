@@ -16,6 +16,10 @@ const INTEREST_OPTIONS = [
   "Books",
   "Fashion",
   "Experiences",
+  "Music",
+  "Kids",
+  "Hobbies",
+  "Other",
 ];
 
 const OCCASION_OPTIONS = [
@@ -107,17 +111,17 @@ function buildHintInsertPayload(product, userId) {
       : extractNumericPrice(product?.price_text);
 
   return {
-    userid: userId,
+    user_id: userId,
     title: product?.title?.trim() || "Saved from shop",
     url: outboundUrl,
-    imageurl: product?.image_url || "",
-    retailer: product?.retailer || normaliseRetailer(outboundUrl),
-    pricetext: product?.price_text || "",
-    numericprice: parsedNumericPrice,
-    starred: false,
-    isprivate: false,
-    position: 0,
+    image_url: product?.image_url || "",
     source: "shop",
+    is_private: false,
+    retailer: product?.retailer || normaliseRetailer(outboundUrl),
+    price_text: product?.price_text || "",
+    numeric_price: parsedNumericPrice,
+    starred: false,
+    position: 0,
   };
 }
 
@@ -257,7 +261,7 @@ function ShopCard({
             type="button"
             onClick={() => onAddToHints(product)}
             disabled={isSavingHint}
-            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
+            className="rounded-full border border-[#ffb38f] bg-[#ff875d] px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md hover:bg-[#f47145] disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSavingHint ? "Adding..." : "Add to hints"}
           </button>
