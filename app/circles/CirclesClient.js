@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
-import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
+import { useCurrencyFormatter } from "../lib/useCurrencyFormatter";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
@@ -251,11 +251,20 @@ function buildStoredItemTitle(value) {
 }
 
 function extractHintAmount(hint) {
-  const candidates = [hint?.numeric_price, hint?.amount, hint?.price, hint?.targetAmount];
+  const candidates = [
+    hint?.numeric_price,
+    hint?.amount,
+    hint?.price,
+    hint?.targetAmount,
+    hint?.priceAmount,
+  ];
+
   for (const candidate of candidates) {
-    const amount = Number(candidate);
+    const cleaned = String(candidate ?? "").replace(/[^\d.]/g, "");
+    const amount = Number(cleaned);
     if (Number.isFinite(amount) && amount > 0) return roundCurrency(amount);
   }
+
   return 0;
 }
 
@@ -913,9 +922,7 @@ function AddContactModal({ open, onClose, onSave, supabase, modalKey }) {
         if (!providerToken) {
           if (!cancelled) {
             setContactResults([]);
-            setContactsMessage(
-              "We couldn’t access your linked Google contacts right now."
-            );
+            setContactsMessage("We couldn’t access your linked Google contacts right now.");
           }
           return;
         }
@@ -1324,6 +1331,7 @@ function CreateCircleModal({
   form,
   setForm,
   linkPreview,
+  setLinkPreview,
   isFetchingPreview,
   handleFetchPreview,
   selectedHintOwnerId,
@@ -1343,44 +1351,31 @@ function CreateCircleModal({
   const isSelfSelected = String(selectedHintOwnerId) === SELF_SELECTOR_ID;
   const visibleHints = isSelfSelected ? ownHints : [];
   const amountMode = form.goalType === "amount";
-  const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
-
-  useEffect(() => {
-    if (!open || form.goalType !== "item") return;
-
-    if (form.itemSource === "hint" && selectedHint && !parseAmount(form.goalValue)) {
-      const extracted = extractHintAmount(selectedHint);
-      if (extracted > 0) {
-        setForm((prev) => ({
-          ...prev,
-          goalValue: String(extracted),
-          currency: selectedHint?.currency || prev.currency,
-        }));
-      }
-    }
-
-    if (form.itemSource === "url" && linkPreview && !parseAmount(form.goalValue)) {
-      const extracted = extractPreviewAmount(linkPreview);
-      if (extracted > 0) {
-        setForm((prev) => ({
-          ...prev,
-          goalValue: String(extracted),
-          currency: linkPreview?.currency || prev.currency,
-        }));
-      }
-    }
-  }, [
-    open,
-    form.goalType,
-    form.itemSource,
-    form.goalValue,
-    selectedHint,
-    linkPreview,
-    setForm,
-  ]);
 
   const liveBaseAmount = parseAmount(form.goalValue);
   const liveTotals = calculateCircleTotals(liveBaseAmount);
+
+  const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
+
+  function handleSelectHint(hint) {
+    const hintAmount = extractHintAmount(hint);
+    const nextAmount = hintAmount > 0 ? String(hintAmount) : "";
+
+    setForm((prev) => ({
+      ...prev,
+      selectedHintId: hint.id,
+      goalValue: nextAmount,
+      currency: hint?.currency || prev.currency,
+    }));
+
+    setLinkPreview({
+      title: hint?.title || "Shared item",
+      description: hint?.description || "",
+      image: hint?.image_url || "",
+      url: hint?.url || "",
+      currency: hint?.currency || form.currency,
+    });
+  }
 
   return (
     <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
@@ -1440,9 +1435,10 @@ function CreateCircleModal({
                         setSelectedEventId(String(event.id));
                         setForm((prev) => ({
                           ...prev,
-                          eventTitle: event.title,
                           eventDate: event.event_date,
                           deadline: prev.deadline || event.event_date,
+                          occasionType: event.type || prev.occasionType,
+                          title: prev.title?.trim() ? prev.title : event.title,
                         }));
                       }}
                     />
@@ -1457,7 +1453,11 @@ function CreateCircleModal({
                     type="text"
                     value={form.eventTitle}
                     onChange={(e) =>
-                      setForm((prev) => ({ ...prev, eventTitle: e.target.value }))
+                      setForm((prev) => ({
+                        ...prev,
+                        eventTitle: e.target.value,
+                        title: prev.title?.trim() ? prev.title : e.target.value,
+                      }))
                     }
                     className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
                     placeholder="Summer birthday dinner"
@@ -1487,12 +1487,16 @@ function CreateCircleModal({
             <p className="text-sm font-semibold text-slate-900">2. Circle details</p>
 
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <span className="text-sm font-medium text-slate-700">Circle title</span>
-                <div className="flex h-12 w-full items-center rounded-[18px] border border-[#efe1d9] bg-[#faf7f5] px-4 text-sm font-medium text-slate-700">
-                  {form.eventTitle || "Select or create an event first"}
-                </div>
-              </div>
+              <label className="space-y-2 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">Circle name</span>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                  placeholder="Jules birthday circle"
+                />
+              </label>
 
               <label className="space-y-2">
                 <span className="text-sm font-medium text-slate-700">Contribution deadline</span>
@@ -1536,6 +1540,9 @@ function CreateCircleModal({
                       selectedHintId: nextValue === "amount" ? "" : prev.selectedHintId,
                       itemUrl: nextValue === "amount" ? "" : prev.itemUrl,
                     }));
+                    if (nextValue === "amount") {
+                      setLinkPreview(null);
+                    }
                   }}
                   className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
                 >
@@ -1556,7 +1563,7 @@ function CreateCircleModal({
                 <div className="space-y-2">
                   <span className="text-sm font-medium text-slate-700">Amount</span>
                   <div className="flex h-12 w-full items-center rounded-[18px] border border-[#efe1d9] bg-[#faf7f5] px-4 text-sm text-slate-500">
-                    You can set the target manually below after choosing the item.
+                    Clicking different hints will update the amount below.
                   </div>
                 </div>
               )}
@@ -1575,14 +1582,16 @@ function CreateCircleModal({
               <div className="mt-4 flex gap-3">
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setForm((prev) => ({
                       ...prev,
                       itemSource: "hint",
                       itemUrl: "",
                       selectedHintId: "",
-                    }))
-                  }
+                      goalValue: "",
+                    }));
+                    setLinkPreview(null);
+                  }}
                   className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
                     form.itemSource === "hint"
                       ? "bg-[#2f3b2d] text-white"
@@ -1593,13 +1602,15 @@ function CreateCircleModal({
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setForm((prev) => ({
                       ...prev,
                       itemSource: "url",
                       selectedHintId: "",
-                    }))
-                  }
+                      goalValue: prev.itemSource === "url" ? prev.goalValue : "",
+                    }));
+                    setLinkPreview(null);
+                  }}
                   className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
                     form.itemSource === "url"
                       ? "bg-[#2f3b2d] text-white"
@@ -1630,7 +1641,9 @@ function CreateCircleModal({
                               setForm((prev) => ({
                                 ...prev,
                                 selectedHintId: "",
+                                goalValue: "",
                               }));
+                              setLinkPreview(null);
                             }}
                             className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
                               selected
@@ -1699,12 +1712,7 @@ function CreateCircleModal({
                                     name="selectedHint"
                                     className="mt-1 h-4 w-4 accent-[#f36f64]"
                                     checked={form.selectedHintId === hint.id}
-                                    onChange={() =>
-                                      setForm((prev) => ({
-                                        ...prev,
-                                        selectedHintId: hint.id,
-                                      }))
-                                    }
+                                    onChange={() => handleSelectHint(hint)}
                                   />
                                 </label>
                               ))
@@ -1719,6 +1727,16 @@ function CreateCircleModal({
                             </div>
                           )}
                         </div>
+
+                        {form.itemSource === "hint" && linkPreview ? (
+                          <div className="mt-4">
+                            <PotPreviewCard
+                              image={linkPreview.image}
+                              title={linkPreview.title}
+                              url={linkPreview.url}
+                            />
+                          </div>
+                        ) : null}
                       </>
                     ) : (
                       <div className="flex h-full min-h-[220px] items-center justify-center rounded-[18px] bg-white p-6 text-center text-sm text-slate-500">
@@ -1948,8 +1966,10 @@ export default function CirclesClient() {
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
 
   const [form, setForm] = useState({
+    title: "",
     eventTitle: "",
     eventDate: "",
+    occasionType: "Event",
     deadline: "",
     goalType: "item",
     goalValue: "",
@@ -1990,7 +2010,7 @@ export default function CirclesClient() {
   }, [calendarEvents]);
 
   const displayedCircles = useMemo(() => {
-    return [...realCircles, exampleCircle];
+    return realCircles.length > 0 ? realCircles : [exampleCircle];
   }, [realCircles]);
 
   const initialiseCircleForm = useCallback((profileValue, eventsValue) => {
@@ -2004,8 +2024,10 @@ export default function CirclesClient() {
     setLinkPreview(null);
     setCircleError("");
     setForm({
+      title: fallback?.title || "",
       eventTitle: fallback?.title || "",
       eventDate: fallback?.event_date || "",
+      occasionType: fallback?.type || "Event",
       deadline: fallback?.event_date || "",
       goalType: "item",
       goalValue: "",
@@ -2066,7 +2088,7 @@ export default function CirclesClient() {
       const rows = data || [];
       setCalendarEvents(rows);
       return rows;
-    } catch (error) {
+    } catch {
       setCalendarEvents([]);
       return [];
     }
@@ -2076,7 +2098,7 @@ export default function CirclesClient() {
     try {
       const { data, error } = await supabase
         .from("hints")
-        .select("id, user_id, title, url, image_url, created_at, is_private, price_text, numeric_price, currency")
+        .select("id, user_id, title, url, image_url, description, created_at, is_private, price_text, numeric_price, amount, price, currency")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -2084,7 +2106,7 @@ export default function CirclesClient() {
 
       setOwnHints(data || []);
       return data || [];
-    } catch (error) {
+    } catch {
       setOwnHints([]);
       return [];
     }
@@ -2175,7 +2197,7 @@ export default function CirclesClient() {
           if (active) setProfile(null);
         }
 
-        const [loadedContacts, loadedEvents] = await Promise.all([
+        const [, loadedEvents] = await Promise.all([
           loadContacts(user.id),
           loadCalendarEvents(user.id),
           loadOwnHints(user.id),
@@ -2246,7 +2268,13 @@ export default function CirclesClient() {
         throw new Error(data?.error || `Failed to fetch preview (${response.status}).`);
       }
 
+      const previewAmount = extractPreviewAmount(data);
       setLinkPreview(data || null);
+      setForm((prev) => ({
+        ...prev,
+        goalValue: previewAmount > 0 ? String(previewAmount) : "",
+        currency: data?.currency || prev.currency,
+      }));
     } catch {
       setLinkPreview({
         title: "Preview unavailable",
@@ -2255,6 +2283,10 @@ export default function CirclesClient() {
         image: "",
         url: form.itemUrl.trim(),
       });
+      setForm((prev) => ({
+        ...prev,
+        goalValue: "",
+      }));
     } finally {
       setIsFetchingPreview(false);
     }
@@ -2362,10 +2394,12 @@ export default function CirclesClient() {
         ? mergedCalendarEvents.find((event) => String(event.id) === String(selectedEventId))
         : null;
 
-    const eventTitle =
+    const fallbackEventTitle =
       eventMode === "calendar"
         ? selectedEvent?.title || form.eventTitle || ""
         : form.eventTitle?.trim() || "";
+
+    const finalCircleTitle = form.title?.trim() || fallbackEventTitle;
 
     const eventDate =
       eventMode === "calendar"
@@ -2374,16 +2408,16 @@ export default function CirclesClient() {
 
     const occasionType =
       eventMode === "calendar"
-        ? selectedEvent?.type || "Event"
-        : "Event";
+        ? selectedEvent?.type || form.occasionType || "Event"
+        : form.occasionType || "Event";
 
     if (!sessionUser?.id) {
       setCircleError("You must be signed in to create a circle.");
       return;
     }
 
-    if (!eventTitle.trim()) {
-      setCircleError("Event title is required.");
+    if (!finalCircleTitle.trim()) {
+      setCircleError("Circle name is required.");
       return;
     }
 
@@ -2442,6 +2476,7 @@ export default function CirclesClient() {
         itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
         itemUrl = selectedHint.url || null;
         itemImageUrl = selectedHint.image_url || null;
+        itemDescription = selectedHint.description || null;
         selectedHintId = selectedHint.id;
         sourceType = selectedHint.is_private ? "organiser_private_hint" : "recipient_public_hint";
       } else {
@@ -2466,7 +2501,7 @@ export default function CirclesClient() {
     const circleInsertPayload = {
       user_id: sessionUser.id,
       recipient_contact_id: selectedRecipientContact?.id || null,
-      title: eventTitle.trim(),
+      title: finalCircleTitle.trim(),
       occasion_type: occasionType,
       event_date: safeIsoDate(eventDate),
       deadline_at: safeIsoTimestampEndOfDay(form.deadline || eventDate),
@@ -2734,6 +2769,7 @@ export default function CirclesClient() {
         form={form}
         setForm={setForm}
         linkPreview={linkPreview}
+        setLinkPreview={setLinkPreview}
         isFetchingPreview={isFetchingPreview}
         handleFetchPreview={handleFetchPreview}
         selectedHintOwnerId={selectedHintOwnerId}
