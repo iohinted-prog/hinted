@@ -134,7 +134,7 @@ export default function OnboardingPage() {
       const { data: existingProfile, error: profileError } = await supabase
         .from("profiles")
         .select(
-          "full_name, avatar_url, birthday, interests, onboarding_completed, other_interest"
+          "full_name, avatar_url, birthday, interests, other_interest, onboarding_completed"
         )
         .eq("id", user.id)
         .maybeSingle();
@@ -155,9 +155,7 @@ export default function OnboardingPage() {
       const resolvedAvatar = googleAvatar || existingAvatar || "";
 
       const filteredExistingInterests = Array.isArray(existingProfile?.interests)
-        ? existingProfile.interests.filter((interest) =>
-            interestOptions.includes(interest)
-          )
+        ? existingProfile.interests.filter((interest) => interestOptions.includes(interest))
         : [];
 
       const initialInterests =
@@ -206,6 +204,9 @@ export default function OnboardingPage() {
   }
 
   function toggleInterest(interest) {
+    const isRemovingOther =
+      interest === "Other" && selectedInterests.includes("Other");
+
     setSelectedInterests((prev) => {
       const isSelected = prev.includes(interest);
 
@@ -217,7 +218,7 @@ export default function OnboardingPage() {
       return [...prev, interest];
     });
 
-    if (interest === "Other" && selectedInterests.includes("Other")) {
+    if (isRemovingOther) {
       setForm((prev) => ({ ...prev, otherInterest: "" }));
     }
 
@@ -234,6 +235,7 @@ export default function OnboardingPage() {
         ? prev.filter((item) => item !== relationship)
         : [...prev, relationship]
     );
+
     setErrors((prev) => ({ ...prev, relationships: "" }));
   }
 
