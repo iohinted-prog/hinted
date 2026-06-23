@@ -22,9 +22,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "../../lib/supabase/client";
+import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 import AvatarMenu from "../components/AvatarMenu";
 
-const ACTIVE_CURRENCY = "GBP";
+const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
 const CARD_MAX_HEIGHT = "min(540px, 68vh)";
 const TIMEOUT_MODAL_MESSAGE =
@@ -57,8 +58,8 @@ const demoHints = [
     id: "demo-1",
     title: "Weekend cabin",
     retailer: "airbnb.co.uk",
-    priceLabel: "From £320",
     numericPrice: 320,
+    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
@@ -72,8 +73,8 @@ const demoHints = [
     id: "demo-2",
     title: "Sony headphones",
     retailer: "amazon.co.uk",
-    priceLabel: "About £249",
     numericPrice: 249,
+    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
@@ -87,8 +88,8 @@ const demoHints = [
     id: "demo-3",
     title: "Silk pillowcases",
     retailer: "johnlewis.com",
-    priceLabel: "About £45",
     numericPrice: 45,
+    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
@@ -102,8 +103,8 @@ const demoHints = [
     id: "demo-4",
     title: "Hotel voucher",
     retailer: "booking.com",
-    priceLabel: "From £1290",
     numericPrice: 1290,
+    currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
@@ -214,24 +215,13 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
-  if (currency !== ACTIVE_CURRENCY) return "Price unavailable";
-  if (rawPrice && typeof rawPrice === "string" && detectCurrency(rawPrice) === ACTIVE_CURRENCY) {
-    return rawPrice;
-  }
-  if (price == null) return "Price unavailable";
-  if (currency === "GBP") return `About £${Math.round(price)}`;
-  return `About ${Math.round(price)}`;
-}
-
 function sanitisePrice(rawPrice, numericPrice) {
-  const detectedCurrency = detectCurrency(rawPrice) || ACTIVE_CURRENCY;
-  if (detectedCurrency !== ACTIVE_CURRENCY) {
-    return { numericPrice: null, priceLabel: "Price unavailable" };
-  }
+  const detectedCurrency = detectCurrency(rawPrice) || BASE_CURRENCY;
+
   return {
-    numericPrice,
-    priceLabel: formatPriceLabel(numericPrice, rawPrice, ACTIVE_CURRENCY),
+    numericPrice: typeof numericPrice === "number" && Number.isFinite(numericPrice) ? numericPrice : null,
+    originalCurrency: detectedCurrency,
+    rawPrice: rawPrice || "",
   };
 }
 
@@ -362,7 +352,7 @@ function buildDraftFromPreview(data, rawUrl) {
   const title = shortenTitle(data?.title || "Saved hint", retailer);
   const image = typeof data?.image === "string" && data.image.startsWith("http") ? data.image : "";
   const finalUrl = data?.url || normaliseInputUrl(rawUrl);
-  const needsReview = Boolean(data?.needsReview) || !image || !title || !priceMeta.numericPrice;
+  const needsReview = Boolean(data?.needsReview) || !image || !title;
 
   return {
     title,
@@ -371,8 +361,9 @@ function buildDraftFromPreview(data, rawUrl) {
     uploadedImage: null,
     url: finalUrl,
     priceInput: priceMeta.numericPrice != null ? String(priceMeta.numericPrice) : "",
-    priceLabel: priceMeta.priceLabel,
     numericPrice: priceMeta.numericPrice,
+    rawPrice: priceMeta.rawPrice,
+    currency: priceMeta.originalCurrency || BASE_CURRENCY,
     starred: false,
     private: false,
     needsReview,
@@ -391,8 +382,9 @@ function buildManualDraft(rawUrl) {
     uploadedImage: null,
     url: normalisedUrl,
     priceInput: "",
-    priceLabel: "Price unavailable",
     numericPrice: null,
+    rawPrice: "",
+    currency: BASE_CURRENCY,
     starred: false,
     private: false,
     needsReview: true,
@@ -420,7 +412,7 @@ async function fetchPreviewWithTimeout(url, timeoutMs = PREVIEW_TIMEOUT_MS) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ url, currency: ACTIVE_CURRENCY }),
+      body: JSON.stringify({ url, currency: BASE_CURRENCY }),
       signal: controller.signal,
     });
 
@@ -732,8 +724,14 @@ function HintCard({
   isDragging,
   dragHandleListeners,
   dragHandleAttributes,
+  formatCurrency,
 }) {
   const ratio = getCardAspectRatio(hint, imageRatios);
+
+  const displayPrice =
+    typeof hint.numericPrice === "number" && Number.isFinite(hint.numericPrice)
+      ? formatCurrency(hint.numericPrice, hint.currency || BASE_CURRENCY)
+      : "Price unavailable";
 
   return (
     <article
@@ -846,7 +844,7 @@ function HintCard({
 
             <div className="mt-3">
               <span className="inline-flex rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
-                {hint.priceLabel}
+                {displayPrice}
               </span>
             </div>
           </div>
@@ -875,7 +873,14 @@ function HintCard({
   );
 }
 
-function SortableHintCard({ hint, imageRatios, onEdit, onToggleStarred, onTogglePrivate }) {
+function SortableHintCard({
+  hint,
+  imageRatios,
+  onEdit,
+  onToggleStarred,
+  onTogglePrivate,
+  formatCurrency,
+}) {
   const animateLayoutChanges = (args) => {
     if (args.isSorting || args.wasDragging) return defaultAnimateLayoutChanges(args);
     return true;
@@ -908,12 +913,15 @@ function SortableHintCard({ hint, imageRatios, onEdit, onToggleStarred, onToggle
         isDragging={isDragging}
         dragHandleAttributes={attributes}
         dragHandleListeners={listeners}
+        formatCurrency={formatCurrency}
       />
     </div>
   );
 }
 
 export default function HintsClient() {
+  const { formatCurrency } = useCurrencyFormatter();
+
   const [hints, setHints] = useState([]);
   const [link, setLink] = useState("");
   const [isAdding, setIsAdding] = useState(false);
@@ -1044,8 +1052,9 @@ export default function HintsClient() {
           id: row.id,
           title: row.title || "Saved hint",
           retailer: row.retailer || normaliseRetailer(row.url || ""),
-          priceLabel: row.price_text || formatPriceLabel(row.numeric_price, null, ACTIVE_CURRENCY),
           numericPrice: row.numeric_price,
+          rawPrice: row.price_text || "",
+          currency: row.currency || detectCurrency(row.price_text) || BASE_CURRENCY,
           image: row.image_url || "",
           fallbackGradient: buildFallbackGradient(index),
           starred: Boolean(row.starred),
@@ -1062,7 +1071,7 @@ export default function HintsClient() {
     loadHints();
   }, [currentUser]);
 
-  const visibleHints = hints.length > 0 ? hints : demoHints;
+  const visibleHints = hints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
   const columns = useMemo(() => splitIntoColumns(visibleHints, 3), [visibleHints]);
 
@@ -1161,8 +1170,9 @@ export default function HintsClient() {
           url: trimmedUrl,
           retailer: trimmedRetailer,
           image_url: finalImage,
-          price_text: priceMeta.priceLabel,
+          price_text: editForm.priceInput || "",
           numeric_price: priceMeta.numericPrice,
+          currency: priceMeta.originalCurrency || BASE_CURRENCY,
         })
         .eq("id", editingHintId);
 
@@ -1189,8 +1199,9 @@ export default function HintsClient() {
                 url: trimmedUrl || hint.url,
                 retailer: trimmedRetailer,
                 image: finalImage,
-                priceLabel: priceMeta.priceLabel,
+                rawPrice: editForm.priceInput || "",
                 numericPrice: priceMeta.numericPrice,
+                currency: priceMeta.originalCurrency || BASE_CURRENCY,
                 needsReview: false,
               }
             : hint
@@ -1283,8 +1294,9 @@ export default function HintsClient() {
                 ...hint,
                 title: draft.title,
                 retailer: draft.retailer,
-                priceLabel: draft.priceLabel,
                 numericPrice: draft.numericPrice,
+                rawPrice: draft.rawPrice,
+                currency: draft.currency || BASE_CURRENCY,
                 image: draft.image || hint.image,
                 url: draft.url,
                 needsReview: draft.needsReview,
@@ -1390,8 +1402,9 @@ export default function HintsClient() {
         id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `hint-${Date.now()}`,
         title,
         retailer,
-        priceLabel: priceMeta.priceLabel,
         numericPrice: priceMeta.numericPrice,
+        rawPrice: newHintForm.priceInput || "",
+        currency: priceMeta.originalCurrency || BASE_CURRENCY,
         image,
         fallbackGradient: buildFallbackGradient(hints.length),
         starred: Boolean(newHintForm.starred),
@@ -1409,8 +1422,9 @@ export default function HintsClient() {
         url: newHint.url,
         image_url: newHint.image,
         retailer: newHint.retailer,
-        price_text: newHint.priceLabel,
+        price_text: newHint.rawPrice,
         numeric_price: newHint.numericPrice,
+        currency: newHint.currency,
         starred: newHint.starred,
         is_private: newHint.private,
         position: 0,
@@ -1621,6 +1635,7 @@ export default function HintsClient() {
                             onEdit={openEditModal}
                             onToggleStarred={toggleStarred}
                             onTogglePrivate={togglePrivate}
+                            formatCurrency={formatCurrency}
                           />
                         ))}
                       </div>
@@ -1638,6 +1653,7 @@ export default function HintsClient() {
                         onToggleStarred={() => {}}
                         onTogglePrivate={() => {}}
                         isDragging
+                        formatCurrency={formatCurrency}
                       />
                     </div>
                   ) : null}
@@ -1654,6 +1670,7 @@ export default function HintsClient() {
                       onToggleStarred={() => {}}
                       onTogglePrivate={() => {}}
                       isDragging={false}
+                      formatCurrency={formatCurrency}
                     />
                   </div>
                 ))}
