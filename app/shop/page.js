@@ -17,6 +17,7 @@ const INTEREST_OPTIONS = [
   "Fashion",
   "Experiences",
   "Music",
+  "Gaming",
   "Kids",
   "Hobbies",
   "Other",
@@ -481,11 +482,14 @@ export default function ShopPage() {
   }, [products, searchQuery, selectedInterests, selectedOccasion]);
 
   function toggleInterest(interest) {
-    setSelectedInterests((current) =>
-      current.includes(interest)
-        ? current.filter((item) => item !== interest)
-        : [...current, interest].slice(0, 5)
-    );
+    setSelectedInterests((current) => {
+      if (current.includes(interest)) {
+        const next = current.filter((item) => item !== interest);
+        return next.length ? next : [];
+      }
+
+      return [...current, interest].slice(0, 5);
+    });
   }
 
   function clearFilters() {
