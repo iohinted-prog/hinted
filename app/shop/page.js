@@ -604,8 +604,6 @@ export default function ShopPage() {
         src="https://s.skimresources.com/js/305122X1793314.skimlinks.js"
       />
 
-      <AppHeader active="shop" />
-
       <div className="mx-auto max-w-[1380px] px-5 py-8 md:px-8">
         {pageError ? (
           <div className="mb-5 rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
