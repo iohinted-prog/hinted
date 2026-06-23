@@ -775,8 +775,6 @@ export default function ShopPage() {
           </div>
         </section>
       </div>
-
-      <AppFooter />
     </main>
   );
 }
