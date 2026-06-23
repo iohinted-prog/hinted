@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
-import { useCurrencyFormatter } from "../lib/useCurrencyFormatter";
+import { useCurrencyFormatter } from "../lib/useCurrencyFormatter.js";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
