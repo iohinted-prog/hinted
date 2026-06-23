@@ -1,27 +1,26 @@
 import { NextResponse } from "next/server";
-import { getProducts } from "@/lib/products";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeProductRow, errorToMessage } from "@/lib/products";
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
+export async function GET() {
+  try {
+    const supabase = getSupabaseAdmin();
 
-  const merchant = searchParams.get("merchant");
-  const query = searchParams.get("query") || "";
-  const category = searchParams.get("category") || "";
+    const { data, error } = await supabase
+      .from("shop_products")
+      .select("*")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
 
-  if (!merchant) {
+    if (error) throw error;
+
+    return NextResponse.json({
+      products: Array.isArray(data) ? data.map(normalizeProductRow) : [],
+    });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Missing merchant" },
-      { status: 400 }
+      { error: errorToMessage(error), products: [] },
+      { status: 500 }
     );
   }
-
-  const products = getProducts({ merchant, query, category });
-
-  return NextResponse.json({
-    merchant,
-    query,
-    category,
-    count: products.length,
-    products,
-  });
 }
