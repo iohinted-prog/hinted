@@ -6,8 +6,6 @@ import Script from "next/script";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 
-const ACTIVE_CURRENCY = "GBP";
-
 const INTEREST_OPTIONS = [
   "Home",
   "Food",
@@ -29,99 +27,6 @@ const OCCASION_OPTIONS = [
   "Wedding",
   "Graduation",
   "Just because",
-];
-
-const demoProducts = [
-  {
-    id: "demo-1",
-    title: "Stoneware pasta bowls",
-    retailer: "johnlewis.com",
-    price_text: "£42",
-    numeric_price: 42,
-    image_url:
-      "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.johnlewis.com/",
-    affiliate_url: "",
-    interest_tags: ["Home"],
-    occasion_tags: ["Housewarming", "Birthday"],
-    short_note: "A warm, easy gift for people who love hosting.",
-    is_active: true,
-  },
-  {
-    id: "demo-2",
-    title: "Leather-bound travel journal",
-    retailer: "papier.com",
-    price_text: "£28",
-    numeric_price: 28,
-    image_url:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.papier.com/",
-    affiliate_url: "",
-    interest_tags: ["Travel", "Books"],
-    occasion_tags: ["Birthday", "Graduation"],
-    short_note: "Great for someone planning a trip or a new chapter.",
-    is_active: true,
-  },
-  {
-    id: "demo-3",
-    title: "Wireless bedside speaker",
-    retailer: "selfridges.com",
-    price_text: "£95",
-    numeric_price: 95,
-    image_url:
-      "https://images.unsplash.com/photo-1507878866276-a947ef722fee?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.selfridges.com/",
-    affiliate_url: "",
-    interest_tags: ["Tech", "Home"],
-    occasion_tags: ["Birthday", "Just because"],
-    short_note: "A polished upgrade gift that still feels personal.",
-    is_active: true,
-  },
-  {
-    id: "demo-4",
-    title: "Spa evening for two",
-    retailer: "buyagift.co.uk",
-    price_text: "£79",
-    numeric_price: 79,
-    image_url:
-      "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.buyagift.co.uk/",
-    affiliate_url: "",
-    interest_tags: ["Wellness", "Experiences"],
-    occasion_tags: ["Anniversary", "Thank you"],
-    short_note: "Best when a physical item feels too predictable.",
-    is_active: true,
-  },
-  {
-    id: "demo-5",
-    title: "Silk sleep set",
-    retailer: "lookfantastic.com",
-    price_text: "£54",
-    numeric_price: 54,
-    image_url:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.lookfantastic.com/",
-    affiliate_url: "",
-    interest_tags: ["Beauty", "Wellness"],
-    occasion_tags: ["Birthday", "Thank you"],
-    short_note: "A premium-feeling pick that still lands as practical.",
-    is_active: true,
-  },
-  {
-    id: "demo-6",
-    title: "Coffee tasting set",
-    retailer: "fortnumandmason.com",
-    price_text: "£36",
-    numeric_price: 36,
-    image_url:
-      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
-    product_url: "https://www.fortnumandmason.com/",
-    affiliate_url: "",
-    interest_tags: ["Food", "Home"],
-    occasion_tags: ["Housewarming", "Thank you"],
-    short_note: "A safe but elevated gift for easy wins.",
-    is_active: true,
-  },
 ];
 
 function LogoMark() {
@@ -178,21 +83,6 @@ function normaliseRetailer(url) {
   }
 }
 
-function detectCurrency(raw) {
-  const text = String(raw || "").trim();
-  if (!text) return null;
-  if (text.includes("£")) return "GBP";
-  if (text.includes("€")) return "EUR";
-  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) {
-    return "USD";
-  }
-  if (/A\$/i.test(text)) return "AUD";
-  if (/NZ\$/i.test(text)) return "NZD";
-  if (/C\$/i.test(text)) return "CAD";
-  if (/R\s?\d/i.test(text)) return "ZAR";
-  return null;
-}
-
 function extractNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value) return null;
@@ -201,21 +91,6 @@ function extractNumericPrice(value) {
   if (!match) return null;
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
-  if (rawPrice && typeof rawPrice === "string" && rawPrice.trim()) return rawPrice;
-  if (price == null) return "Price unavailable";
-
-  try {
-    return new Intl.NumberFormat("en-GB", {
-      style: "currency",
-      currency,
-      maximumFractionDigits: Number(price) % 1 === 0 ? 0 : 2,
-    }).format(Number(price));
-  } catch {
-    return `£${Math.round(Number(price))}`;
-  }
 }
 
 function getOutboundUrl(product) {
@@ -237,11 +112,7 @@ function buildHintInsertPayload(product, userId) {
     url: outboundUrl,
     imageurl: product?.image_url || "",
     retailer: product?.retailer || normaliseRetailer(outboundUrl),
-    pricetext: formatPriceLabel(
-      parsedNumericPrice,
-      product?.price_text,
-      detectCurrency(product?.price_text) || ACTIVE_CURRENCY
-    ),
+    pricetext: product?.price_text || "",
     numericprice: parsedNumericPrice,
     starred: false,
     isprivate: false,
@@ -274,16 +145,24 @@ function loadImageAspectRatio(src) {
 
 function getCardAspectRatio(product, imageRatios) {
   const ratio = imageRatios[product.id];
+
   if (ratio && Number.isFinite(ratio)) {
     if (ratio > 1.35) return 1.12;
     if (ratio < 0.78) return 0.78;
     return 0.9;
   }
+
   return product?.image_url ? 0.9 : 1;
 }
 
-function ShopCard({ product, imageRatios, onAddToHints, isSaving }) {
-  const outboundUrl = getOutboundUrl(product);
+function ShopCard({
+  product,
+  imageRatios,
+  onAddToHints,
+  onViewItem,
+  isSavingHint,
+  isOpeningLink,
+}) {
   const ratio = getCardAspectRatio(product, imageRatios);
   const interestTags = getTagArray(product.interest_tags);
   const occasionTags = getTagArray(product.occasion_tags);
@@ -329,11 +208,7 @@ function ShopCard({ product, imageRatios, onAddToHints, isSaving }) {
         </div>
 
         <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-          {formatPriceLabel(
-            product.numeric_price,
-            product.price_text,
-            detectCurrency(product.price_text) || ACTIVE_CURRENCY
-          )}
+          {product.price_text || "Price unavailable"}
         </div>
       </div>
 
@@ -353,7 +228,7 @@ function ShopCard({ product, imageRatios, onAddToHints, isSaving }) {
           </h3>
 
           <p className="mt-1 truncate text-[13px] text-white/80">
-            {product.retailer || normaliseRetailer(outboundUrl)}
+            {product.retailer || normaliseRetailer(getOutboundUrl(product))}
           </p>
 
           {product.short_note ? (
@@ -369,30 +244,32 @@ function ShopCard({ product, imageRatios, onAddToHints, isSaving }) {
               {product.short_note}
             </p>
           ) : null}
+
+          {(product.primary_category || product.subcategory) && (
+            <p className="mt-3 text-[12px] text-white/72">
+              {[product.primary_category, product.subcategory].filter(Boolean).join(" · ")}
+            </p>
+          )}
         </div>
 
         <div className="pointer-events-auto mt-4 flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => onAddToHints(product)}
-            disabled={isSaving}
+            disabled={isSavingHint}
             className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSaving ? "Adding..." : "Add to hints"}
+            {isSavingHint ? "Adding..." : "Add to hints"}
           </button>
 
-          <a
-            href={outboundUrl || "#"}
-            target="_blank"
-            rel="noopener noreferrer sponsored"
-            className={`rounded-full border px-3 py-1.5 text-[12px] font-medium backdrop-blur-md ${
-              outboundUrl
-                ? "border-white/45 bg-white/76 text-slate-700 hover:bg-white"
-                : "pointer-events-none border-white/30 bg-white/40 text-white/70"
-            }`}
+          <button
+            type="button"
+            onClick={() => onViewItem(product)}
+            disabled={isOpeningLink}
+            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white disabled:cursor-not-allowed disabled:opacity-70"
           >
-            View item
-          </a>
+            {isOpeningLink ? "Opening..." : "View item"}
+          </button>
         </div>
       </div>
     </article>
@@ -453,6 +330,7 @@ export default function ShopPage() {
   const [pageError, setPageError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [savingHintId, setSavingHintId] = useState("");
+  const [openingLinkId, setOpeningLinkId] = useState("");
   const [selectedOccasion, setSelectedOccasion] = useState("Birthday");
   const [selectedInterests, setSelectedInterests] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -476,45 +354,36 @@ export default function ShopPage() {
 
         setCurrentUser(user || null);
 
-        if (!user) {
-          setProducts(demoProducts);
-          setIsLoading(false);
-          return;
+        if (user) {
+          const { data: profileData } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .maybeSingle();
+
+          if (!active) return;
+
+          const profileInterests = getProfileInterestTags(profileData);
+          if (profileInterests.length) {
+            setSelectedInterests(profileInterests.slice(0, 4));
+          }
         }
 
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
+        const response = await fetch("/api/products", { cache: "no-store" });
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data?.error || "Failed to load shop products.");
+        }
 
         if (!active) return;
 
-        const profileInterests = getProfileInterestTags(profileData);
-        if (profileInterests.length) {
-          setSelectedInterests(profileInterests.slice(0, 4));
-        }
-
-        const { data: shopRows, error: shopError } = await supabase
-          .from("shop_products")
-          .select("*")
-          .eq("is_active", true)
-          .order("created_at", { ascending: false });
-
-        if (shopError) throw shopError;
-        if (!active) return;
-
-        if (Array.isArray(shopRows) && shopRows.length) {
-          setProducts(shopRows);
-        } else {
-          setProducts(demoProducts);
-        }
-
+        setProducts(Array.isArray(data?.products) ? data.products : []);
         setIsLoading(false);
       } catch (error) {
         if (!active) return;
         setPageError(errorToMessage(error));
-        setProducts(demoProducts);
+        setProducts([]);
         setIsLoading(false);
       }
     }
@@ -576,6 +445,8 @@ export default function ShopPage() {
           product.title,
           product.retailer,
           product.short_note,
+          product.primary_category,
+          product.subcategory,
           ...interestTags,
           ...occasionTags,
         ]
@@ -640,6 +511,56 @@ export default function ShopPage() {
       setPageError(errorToMessage(error));
     } finally {
       setSavingHintId("");
+    }
+  }
+
+  async function handleViewItem(product) {
+    const existingAffiliateUrl = String(product?.affiliate_url || "").trim();
+    const destinationUrl = String(product?.product_url || "").trim();
+
+    if (existingAffiliateUrl) {
+      window.open(existingAffiliateUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    if (!destinationUrl) {
+      setPageError("No product URL is available for this item.");
+      return;
+    }
+
+    setOpeningLinkId(product.id);
+    setPageError("");
+
+    try {
+      const response = await fetch("/api/affiliate-link", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          destinationUrl,
+          network: product?.network || "manual",
+          campaignId: product?.campaign_id || null,
+          product: {
+            id: product?.id,
+            network: product?.network,
+            campaign_id: product?.campaign_id,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to create affiliate link.");
+      }
+
+      const finalUrl = data?.url || destinationUrl;
+      window.open(finalUrl, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setPageError(errorToMessage(error));
+    } finally {
+      setOpeningLinkId("");
     }
   }
 
@@ -840,7 +761,9 @@ export default function ShopPage() {
                         product={product}
                         imageRatios={imageRatios}
                         onAddToHints={handleAddToHints}
-                        isSaving={savingHintId === product.id}
+                        onViewItem={handleViewItem}
+                        isSavingHint={savingHintId === product.id}
+                        isOpeningLink={openingLinkId === product.id}
                       />
                     </div>
                   ))}
