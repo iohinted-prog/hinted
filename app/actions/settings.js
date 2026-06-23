@@ -43,6 +43,10 @@ export async function saveSettings(formData) {
     throw new Error("Please choose at least 2 interests.");
   }
 
+  if (interests.includes("Other") && !formData.other_interest?.trim()) {
+    throw new Error("Please tell us your other interest.");
+  }
+
   const currency = ALLOWED_CURRENCIES.includes(formData.currency)
     ? formData.currency
     : "GBP";
@@ -55,7 +59,9 @@ export async function saveSettings(formData) {
     default_reminder_days: Number(formData.default_reminder_days) || 7,
     currency,
     interests,
-    other_interest: formData.other_interest?.trim() || null,
+    other_interest: interests.includes("Other")
+      ? formData.other_interest.trim()
+      : null,
   };
 
   const { error } = await supabase
