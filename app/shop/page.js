@@ -56,12 +56,14 @@ function errorToMessage(value) {
 
 function getTagArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
+
   if (typeof value === "string" && value.trim()) {
     return value
       .split(",")
       .map((item) => item.trim())
       .filter(Boolean);
   }
+
   return [];
 }
 
@@ -92,9 +94,12 @@ function normaliseRetailer(url) {
 function extractNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (!value) return null;
+
   const cleaned = String(value).replace(/,/g, "");
   const match = cleaned.match(/(\d+(\.\d{1,2})?)/);
+
   if (!match) return null;
+
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
 }
@@ -164,11 +169,11 @@ function getCardAspectRatio(product, imageRatios) {
 function getDisplayPrice(product, formatCurrency) {
   const numericPrice =
     typeof product?.numeric_price === "number"
-      ? product.numeric_price
+      ? Number(product.numeric_price)
       : extractNumericPrice(product?.price_text);
 
   if (typeof numericPrice === "number" && Number.isFinite(numericPrice)) {
-    return formatCurrency(numericPrice);
+    return formatCurrency(numericPrice, product?.currency || "GBP");
   }
 
   return product?.price_text || "Price unavailable";
@@ -421,7 +426,10 @@ export default function ShopPage() {
     let cancelled = false;
 
     async function measureRatios() {
-      const itemsWithImages = products.filter((product) => product.image_url && !imageRatios[product.id]);
+      const itemsWithImages = products.filter(
+        (product) => product.image_url && !imageRatios[product.id]
+      );
+
       if (!itemsWithImages.length) return;
 
       const nextEntries = await Promise.all(
@@ -435,9 +443,11 @@ export default function ShopPage() {
 
       setImageRatios((current) => {
         const next = { ...current };
+
         for (const [id, ratio] of nextEntries) {
           if (ratio && Number.isFinite(ratio)) next[id] = ratio;
         }
+
         return next;
       });
     }
@@ -482,13 +492,19 @@ export default function ShopPage() {
       })
       .sort((a, b) => {
         const priceA =
-          typeof a.numeric_price === "number" ? a.numeric_price : extractNumericPrice(a.price_text) || 0;
+          typeof a.numeric_price === "number"
+            ? a.numeric_price
+            : extractNumericPrice(a.price_text) || 0;
+
         const priceB =
-          typeof b.numeric_price === "number" ? b.numeric_price : extractNumericPrice(b.price_text) || 0;
+          typeof b.numeric_price === "number"
+            ? b.numeric_price
+            : extractNumericPrice(b.price_text) || 0;
 
         const interestCountA = getTagArray(a.interest_tags).filter((tag) =>
           selectedInterests.includes(tag)
         ).length;
+
         const interestCountB = getTagArray(b.interest_tags).filter((tag) =>
           selectedInterests.includes(tag)
         ).length;
@@ -700,10 +716,10 @@ export default function ShopPage() {
                         key={interest}
                         type="button"
                         onClick={() => toggleInterest(interest)}
-                        className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold transition ${
+                        className={`inline-flex h-11 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${
                           selected
-                            ? "border border-[#3c4d39] bg-[#2f3b2d] text-white"
-                            : "border border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
+                            ? "border-[#3c4d39] bg-[#2f3b2d] text-white"
+                            : "border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
                         }`}
                       >
                         {interest}
