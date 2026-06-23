@@ -5,6 +5,7 @@ import Link from "next/link";
 import Script from "next/script";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
+import { useCurrencyFormatter } from "../lib/useCurrencyFormatter";
 
 const INTEREST_OPTIONS = [
   "Home",
@@ -160,6 +161,19 @@ function getCardAspectRatio(product, imageRatios) {
   return product?.image_url ? 0.9 : 1;
 }
 
+function getDisplayPrice(product, formatCurrency) {
+  const numericPrice =
+    typeof product?.numeric_price === "number"
+      ? product.numeric_price
+      : extractNumericPrice(product?.price_text);
+
+  if (typeof numericPrice === "number" && Number.isFinite(numericPrice)) {
+    return formatCurrency(numericPrice);
+  }
+
+  return product?.price_text || "Price unavailable";
+}
+
 function ShopCard({
   product,
   imageRatios,
@@ -167,11 +181,13 @@ function ShopCard({
   onViewItem,
   isSavingHint,
   isOpeningLink,
+  formatCurrency,
 }) {
   const ratio = getCardAspectRatio(product, imageRatios);
   const interestTags = getTagArray(product.interest_tags);
   const occasionTags = getTagArray(product.occasion_tags);
   const displayTags = [...interestTags.slice(0, 1), ...occasionTags.slice(0, 1)].slice(0, 2);
+  const displayPrice = getDisplayPrice(product, formatCurrency);
 
   return (
     <article
@@ -213,7 +229,7 @@ function ShopCard({
         </div>
 
         <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-          {product.price_text || "Price unavailable"}
+          {displayPrice}
         </div>
       </div>
 
@@ -328,6 +344,7 @@ function EmptyState({ selectedOccasion, selectedInterests, onClear }) {
 
 export default function ShopPage() {
   const supabase = createClient();
+  const { formatCurrency } = useCurrencyFormatter();
 
   const [currentUser, setCurrentUser] = useState(null);
   const [products, setProducts] = useState([]);
@@ -484,8 +501,7 @@ export default function ShopPage() {
   function toggleInterest(interest) {
     setSelectedInterests((current) => {
       if (current.includes(interest)) {
-        const next = current.filter((item) => item !== interest);
-        return next.length ? next : [];
+        return current.filter((item) => item !== interest);
       }
 
       return [...current, interest].slice(0, 5);
@@ -772,6 +788,7 @@ export default function ShopPage() {
                         onViewItem={handleViewItem}
                         isSavingHint={savingHintId === product.id}
                         isOpeningLink={openingLinkId === product.id}
+                        formatCurrency={formatCurrency}
                       />
                     </div>
                   ))}
