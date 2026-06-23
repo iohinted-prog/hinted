@@ -355,7 +355,7 @@ export default function SettingsPage() {
             </button>
 
             <Link
-              href="/"
+              href="/feed"
               className="inline-flex h-[52px] items-center justify-center rounded-full border border-slate-300 bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#faf6f3]"
             >
               Cancel
