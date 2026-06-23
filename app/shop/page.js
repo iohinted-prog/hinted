@@ -143,7 +143,7 @@ function errorToMessage(value) {
   return String(value);
 }
 
-function getInterestArray(value) {
+function getTagArray(value) {
   if (Array.isArray(value)) return value.filter(Boolean);
   if (typeof value === "string" && value.trim()) {
     return value
@@ -163,7 +163,7 @@ function getProfileInterestTags(profile) {
   ];
 
   for (const candidate of candidates) {
-    const parsed = getInterestArray(candidate);
+    const parsed = getTagArray(candidate);
     if (parsed.length) return parsed;
   }
 
@@ -183,7 +183,9 @@ function detectCurrency(raw) {
   if (!text) return null;
   if (text.includes("£")) return "GBP";
   if (text.includes("€")) return "EUR";
-  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) return "USD";
+  if (text.includes("$") && !text.includes("A$") && !text.includes("C$") && !text.includes("NZ$")) {
+    return "USD";
+  }
   if (/A\$/i.test(text)) return "AUD";
   if (/NZ\$/i.test(text)) return "NZD";
   if (/C\$/i.test(text)) return "CAD";
@@ -209,7 +211,7 @@ function formatPriceLabel(price, rawPrice, currency = ACTIVE_CURRENCY) {
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
       currency,
-      maximumFractionDigits: price % 1 === 0 ? 0 : 2,
+      maximumFractionDigits: Number(price) % 1 === 0 ? 0 : 2,
     }).format(Number(price));
   } catch {
     return `£${Math.round(Number(price))}`;
@@ -248,14 +250,6 @@ function buildHintInsertPayload(product, userId) {
   };
 }
 
-function splitIntoColumns(items, columnCount = 3) {
-  const columns = Array.from({ length: columnCount }, () => []);
-  items.forEach((item, index) => {
-    columns[index % columnCount].push(item);
-  });
-  return columns;
-}
-
 function loadImageAspectRatio(src) {
   return new Promise((resolve) => {
     if (!src) {
@@ -278,33 +272,29 @@ function loadImageAspectRatio(src) {
   });
 }
 
-function fallbackCardRatio(product, index) {
-  const presets = [0.82, 1.12, 0.92, 0.76, 1.05, 0.88];
-  if (product?.image_url) return presets[index % presets.length];
-  return 1;
-}
-
-function getCardAspectRatio(product, imageRatios, index) {
-  const imageRatio = imageRatios[product.id];
-  if (imageRatio && Number.isFinite(imageRatio)) {
-    if (imageRatio > 1.3) return 1.1;
-    if (imageRatio < 0.8) return 0.78;
-    return 0.92;
+function getCardAspectRatio(product, imageRatios) {
+  const ratio = imageRatios[product.id];
+  if (ratio && Number.isFinite(ratio)) {
+    if (ratio > 1.35) return 1.12;
+    if (ratio < 0.78) return 0.78;
+    return 0.9;
   }
-  return fallbackCardRatio(product, index);
+  return product?.image_url ? 0.9 : 1;
 }
 
-function ShopCard({ product, imageRatios, index, onAddToHints, isSavingHintId }) {
-  const ratio = getCardAspectRatio(product, imageRatios, index);
+function ShopCard({ product, imageRatios, onAddToHints, isSaving }) {
   const outboundUrl = getOutboundUrl(product);
-  const isSaving = isSavingHintId === product.id;
+  const ratio = getCardAspectRatio(product, imageRatios);
+  const interestTags = getTagArray(product.interest_tags);
+  const occasionTags = getTagArray(product.occasion_tags);
+  const displayTags = [...interestTags.slice(0, 1), ...occasionTags.slice(0, 1)].slice(0, 2);
 
   return (
     <article
-      className="group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.68)] transition-all duration-300 hover:-translate-y-1"
+      className="group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 hover:-translate-y-1"
       style={{
         aspectRatio: ratio,
-        maxHeight: "min(560px, 72vh)",
+        maxHeight: "min(540px, 68vh)",
         boxShadow:
           "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
       }}
@@ -322,12 +312,13 @@ function ShopCard({ product, imageRatios, index, onAddToHints, isSavingHintId })
           <div className="absolute inset-0 bg-gradient-to-br from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]" />
         )}
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(16,12,10,0.84)] via-[rgba(16,12,10,0.32)] to-[rgba(255,255,255,0.04)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.40)_30%,rgba(16,12,10,0.10)_55%,rgba(255,255,255,0)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.18)] to-transparent" />
       </div>
 
-      <div className="absolute left-4 right-4 top-4 z-20 flex items-start justify-between gap-3">
+      <div className="absolute left-4 right-4 top-4 z-30 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {getInterestArray(product.interest_tags).slice(0, 2).map((tag) => (
+          {displayTags.map((tag) => (
             <span
               key={`${product.id}-${tag}`}
               className="rounded-full border border-white/45 bg-white/76 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-md"
@@ -346,40 +337,38 @@ function ShopCard({ product, imageRatios, index, onAddToHints, isSavingHintId })
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 p-4 sm:p-5">
-        <div className="flex items-end justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <h3
-              className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 sm:p-5">
+        <div className="min-w-0">
+          <h3
+            className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
+            style={{
+              display: "-webkit-box",
+              WebkitBoxOrient: "vertical",
+              WebkitLineClamp: 2,
+              lineClamp: 2,
+              textShadow: "0 1px 2px rgba(0,0,0,0.24)",
+            }}
+          >
+            {product.title || "Gift idea"}
+          </h3>
+
+          <p className="mt-1 truncate text-[13px] text-white/80">
+            {product.retailer || normaliseRetailer(outboundUrl)}
+          </p>
+
+          {product.short_note ? (
+            <p
+              className="mt-3 overflow-hidden text-[13px] leading-6 text-white/84"
               style={{
                 display: "-webkit-box",
                 WebkitBoxOrient: "vertical",
-                WebkitLineClamp: 2,
-                lineClamp: 2,
-                textShadow: "0 1px 2px rgba(0,0,0,0.24)",
+                WebkitLineClamp: 3,
+                lineClamp: 3,
               }}
             >
-              {product.title || "Gift idea"}
-            </h3>
-
-            <p className="mt-1 truncate text-[13px] text-white/80">
-              {product.retailer || normaliseRetailer(outboundUrl)}
+              {product.short_note}
             </p>
-
-            {product.short_note ? (
-              <p
-                className="mt-3 overflow-hidden text-[13px] leading-6 text-white/84"
-                style={{
-                  display: "-webkit-box",
-                  WebkitBoxOrient: "vertical",
-                  WebkitLineClamp: ratio < 0.84 ? 2 : 3,
-                  lineClamp: ratio < 0.84 ? 2 : 3,
-                }}
-              >
-                {product.short_note}
-              </p>
-            ) : null}
-          </div>
+          ) : null}
         </div>
 
         <div className="pointer-events-auto mt-4 flex flex-wrap items-center gap-2">
@@ -417,7 +406,7 @@ function ShopSkeleton() {
         <div key={item} className="mb-6 break-inside-avoid">
           <div
             className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
-            style={{ aspectRatio: item % 2 ? 0.82 : 1.04, maxHeight: "min(560px, 72vh)" }}
+            style={{ aspectRatio: item % 2 ? 0.82 : 1.02, maxHeight: "min(540px, 68vh)" }}
           >
             <div className="h-full w-full animate-pulse bg-[#f2ebe5]" />
           </div>
@@ -433,9 +422,11 @@ function EmptyState({ selectedOccasion, selectedInterests, onClear }) {
       <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e9] text-xl text-[#df7c59]">
         ✦
       </div>
+
       <h3 className="mt-4 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
         Nothing matched just yet
       </h3>
+
       <p className="mx-auto mt-3 max-w-[40ch] text-[14px] leading-7 text-slate-500">
         We could not find anything for {selectedOccasion || "this occasion"}
         {selectedInterests.length ? ` with ${selectedInterests.join(", ")}` : ""}. Try clearing one
@@ -457,7 +448,6 @@ export default function ShopPage() {
   const supabase = createClient();
 
   const [currentUser, setCurrentUser] = useState(null);
-  const [profile, setProfile] = useState(null);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState("");
@@ -499,8 +489,6 @@ export default function ShopPage() {
           .maybeSingle();
 
         if (!active) return;
-
-        setProfile(profileData || null);
 
         const profileInterests = getProfileInterestTags(profileData);
         if (profileInterests.length) {
@@ -573,51 +561,49 @@ export default function ShopPage() {
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    const visible = products.filter((product) => {
-      const interestTags = getInterestArray(product.interest_tags);
-      const occasionTags = getInterestArray(product.occasion_tags);
+    return [...products]
+      .filter((product) => {
+        const interestTags = getTagArray(product.interest_tags);
+        const occasionTags = getTagArray(product.occasion_tags);
 
-      const matchesInterest =
-        selectedInterests.length === 0 ||
-        selectedInterests.some((interest) => interestTags.includes(interest));
+        const matchesInterest =
+          selectedInterests.length === 0 ||
+          selectedInterests.some((interest) => interestTags.includes(interest));
 
-      const matchesOccasion = !selectedOccasion || occasionTags.includes(selectedOccasion);
+        const matchesOccasion = !selectedOccasion || occasionTags.includes(selectedOccasion);
 
-      const searchable = [
-        product.title,
-        product.retailer,
-        product.short_note,
-        ...interestTags,
-        ...occasionTags,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
+        const searchable = [
+          product.title,
+          product.retailer,
+          product.short_note,
+          ...interestTags,
+          ...occasionTags,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
 
-      const matchesQuery = !query || searchable.includes(query);
+        const matchesQuery = !query || searchable.includes(query);
 
-      return matchesInterest && matchesOccasion && matchesQuery;
-    });
+        return matchesInterest && matchesOccasion && matchesQuery;
+      })
+      .sort((a, b) => {
+        const priceA =
+          typeof a.numeric_price === "number" ? a.numeric_price : extractNumericPrice(a.price_text) || 0;
+        const priceB =
+          typeof b.numeric_price === "number" ? b.numeric_price : extractNumericPrice(b.price_text) || 0;
 
-    return visible.sort((a, b) => {
-      const priceA =
-        typeof a.numeric_price === "number" ? a.numeric_price : extractNumericPrice(a.price_text) || 0;
-      const priceB =
-        typeof b.numeric_price === "number" ? b.numeric_price : extractNumericPrice(b.price_text) || 0;
+        const interestCountA = getTagArray(a.interest_tags).filter((tag) =>
+          selectedInterests.includes(tag)
+        ).length;
+        const interestCountB = getTagArray(b.interest_tags).filter((tag) =>
+          selectedInterests.includes(tag)
+        ).length;
 
-      const interestCountA = getInterestArray(a.interest_tags).filter((tag) =>
-        selectedInterests.includes(tag)
-      ).length;
-      const interestCountB = getInterestArray(b.interest_tags).filter((tag) =>
-        selectedInterests.includes(tag)
-      ).length;
-
-      if (interestCountA !== interestCountB) return interestCountB - interestCountA;
-      return priceA - priceB;
-    });
+        if (interestCountA !== interestCountB) return interestCountB - interestCountA;
+        return priceA - priceB;
+      });
   }, [products, searchQuery, selectedInterests, selectedOccasion]);
-
-  const productColumns = useMemo(() => splitIntoColumns(filteredProducts, 3), [filteredProducts]);
 
   function toggleInterest(interest) {
     setSelectedInterests((current) =>
@@ -837,7 +823,7 @@ export default function ShopPage() {
               className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
               style={{
                 backgroundImage:
-                  "linear-gradient(to right, rgba(214, 195, 184, 0.22) 1px, transparent 1px), linear-gradient(to bottom, rgba(214, 195, 184, 0.22) 1px, transparent 1px)",
+                  "linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px), linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)",
                 backgroundSize: "76px 76px",
                 backgroundPosition: "center center",
               }}
@@ -848,14 +834,13 @@ export default function ShopPage() {
                 <ShopSkeleton />
               ) : filteredProducts.length ? (
                 <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
-                  {productColumns.flat().map((product, index) => (
+                  {filteredProducts.map((product) => (
                     <div key={product.id} className="mb-6 break-inside-avoid">
                       <ShopCard
                         product={product}
                         imageRatios={imageRatios}
-                        index={index}
                         onAddToHints={handleAddToHints}
-                        isSavingHintId={savingHintId}
+                        isSaving={savingHintId === product.id}
                       />
                     </div>
                   ))}
