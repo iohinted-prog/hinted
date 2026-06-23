@@ -7,7 +7,6 @@ import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 import AppHeader from "../components/AppHeader";
 import AppFooter from "../components/AppFooter";
 
-
 const INTEREST_OPTIONS = [
   "Home",
   "Food",
