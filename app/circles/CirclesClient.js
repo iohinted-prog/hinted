@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
-import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter.js";
+import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
@@ -32,12 +32,6 @@ const relationshipOptions = [
   "Roommate",
   "Best friend",
   "Other",
-];
-
-const calendarEvents = [
-  { id: 1, title: "Sarah's Birthday", date: "2026-06-29", type: "Birthday" },
-  { id: 2, title: "Mum & Dad Anniversary", date: "2026-07-10", type: "Anniversary" },
-  { id: 3, title: "James Promotion Dinner", date: "2026-07-16", type: "Milestone" },
 ];
 
 const exampleCircle = {
@@ -188,7 +182,10 @@ function fundingModeToLabel(value) {
 }
 
 function getAvatarState(status) {
-  return String(status || "").toLowerCase() === "accepted" ? "accepted" : "invitee";
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "accepted") return "accepted";
+  if (normalized === "paid") return "accepted";
+  return "invitee";
 }
 
 function getStatusLabel(status) {
@@ -231,8 +228,8 @@ function buildContactRecordFromRow(row) {
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship || "Friend"),
     email: row?.email || "",
-    phone: "",
-    birthday: "",
+    phone: row?.phone || "",
+    birthday: row?.birthday || "",
     status: getAvatarState(row?.status),
     raw: row,
   };
@@ -276,18 +273,19 @@ function calculateCircleTotals(itemAmount) {
 }
 
 function extractHintAmount(hint) {
-  const candidates = [hint?.amount, hint?.price, hint?.targetAmount, hint?.priceAmount];
+  const directCandidates = [hint?.numeric_price, hint?.amount, hint?.price, hint?.targetAmount];
 
-  for (const candidate of candidates) {
-    const amount = Number(String(candidate ?? "").replace(/[^\d.]/g, ""));
+  for (const candidate of directCandidates) {
+    const amount = Number(candidate);
     if (Number.isFinite(amount) && amount > 0) {
       return roundCurrency(amount);
     }
   }
 
-  const textCandidates = [hint?.title, hint?.url];
+  const textCandidates = [hint?.price_text];
+
   for (const text of textCandidates) {
-    const match = String(text || "").match(/(?:£|\$|€|A\$|NZ\$|C\$|R)?\s*(\d+(?:\.\d{1,2})?)/);
+    const match = String(text || "").match(/(\d+(?:\.\d{1,2})?)/);
     if (match?.[1]) {
       const amount = Number(match[1]);
       if (Number.isFinite(amount) && amount > 0) {
@@ -305,6 +303,7 @@ function extractPreviewAmount(preview) {
     preview?.amount,
     preview?.targetAmount,
     preview?.priceAmount,
+    preview?.numeric_price,
   ];
 
   for (const candidate of directCandidates) {
@@ -314,15 +313,10 @@ function extractPreviewAmount(preview) {
     }
   }
 
-  const textCandidates = [
-    preview?.priceText,
-    preview?.subtitle,
-    preview?.description,
-    preview?.title,
-  ];
+  const textCandidates = [preview?.priceText, preview?.price_text];
 
   for (const text of textCandidates) {
-    const match = String(text || "").match(/(?:£|\$|€|A\$|NZ\$|C\$|R)?\s*(\d+(?:\.\d{1,2})?)/);
+    const match = String(text || "").match(/(\d+(?:\.\d{1,2})?)/);
     if (match?.[1]) {
       const amount = Number(match[1]);
       if (Number.isFinite(amount) && amount > 0) {
@@ -426,9 +420,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
       goalType:
-        totalTarget > 0 && fullItemTitle !== "Shared contribution pot"
-          ? "item"
-          : "amount",
+        circleRow.item_title && circleRow.item_title !== "Shared contribution pot" ? "item" : "amount",
     },
     raw: circleRow,
     invites: inviteRows,
@@ -942,6 +934,7 @@ function CreateCircleModal({
   const visibleHints = isSelfSelected ? ownHints : [];
   const amountMode = form.goalType === "amount";
   const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
+  const hasRealEvents = safeCalendarEvents.length > 0;
 
   useEffect(() => {
     if (form.goalType !== "item") return;
@@ -952,6 +945,7 @@ function CreateCircleModal({
         setForm((prev) => ({
           ...prev,
           goalValue: String(extracted),
+          currency: selectedHint?.currency || prev.currency,
         }));
       }
     }
@@ -962,6 +956,7 @@ function CreateCircleModal({
         setForm((prev) => ({
           ...prev,
           goalValue: String(extracted),
+          currency: linkPreview?.currency || prev.currency,
         }));
       }
     }
@@ -987,7 +982,7 @@ function CreateCircleModal({
             <div className="mt-4 flex gap-3">
               <button
                 type="button"
-                onClick={() => setEventMode("calendar")}
+                onClick={() => setEventMode(hasRealEvents ? "calendar" : "new")}
                 className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
                   eventMode === "calendar"
                     ? "bg-[#2f3b2d] text-white"
@@ -1009,7 +1004,7 @@ function CreateCircleModal({
               </button>
             </div>
 
-            {eventMode === "calendar" ? (
+            {eventMode === "calendar" && hasRealEvents ? (
               <div className="mt-4 space-y-3">
                 {safeCalendarEvents.map((event) => (
                   <label
@@ -1023,7 +1018,7 @@ function CreateCircleModal({
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{event.title}</p>
                       <p className="mt-1 text-[13px] text-slate-500">
-                        {event.type} · {event.date}
+                        {event.type} · {event.event_date}
                       </p>
                     </div>
                     <input
@@ -1036,8 +1031,8 @@ function CreateCircleModal({
                         setForm((prev) => ({
                           ...prev,
                           eventTitle: event.title,
-                          eventDate: event.date,
-                          deadline: event.date,
+                          eventDate: event.event_date,
+                          deadline: event.event_date,
                         }));
                       }}
                     />
@@ -1046,6 +1041,12 @@ function CreateCircleModal({
               </div>
             ) : (
               <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                {!hasRealEvents ? (
+                  <div className="rounded-[18px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500 sm:col-span-2">
+                    No calendar events available yet, so you can create this event manually.
+                  </div>
+                ) : null}
+
                 <label className="space-y-2 sm:col-span-2">
                   <span className="text-sm font-medium text-slate-700">Event title</span>
                   <input
@@ -1279,6 +1280,9 @@ function CreateCircleModal({
                                     </p>
                                     <p className="mt-1 text-[13px] text-slate-500">
                                       {hint.is_private ? "Private" : "Public"}
+                                      {hint.numeric_price
+                                        ? ` · ${formatCurrency(Number(hint.numeric_price), hint.currency || form.currency || "GBP")}`
+                                        : ""}
                                     </p>
                                     <p className="mt-2 text-[12px] leading-5 text-slate-500">
                                       {hint.url || "No link saved"}
@@ -1365,7 +1369,7 @@ function CreateCircleModal({
                 {formatCurrency(liveTotals.totalAmount, form.currency || "GBP")}
               </p>
               <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                *includes our 2% service fee so you can avoid the awkward reminders
+                When you create this circle, we will add our 2% fee for helping you avoid those awkward interactions. This will be split by all members.
               </p>
             </div>
           </div>
@@ -1958,20 +1962,13 @@ export default function CirclesClient() {
   const supabase = createClient();
   const { formatCurrency } = useCurrencyFormatter();
 
-  const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
-  const safeDefaultEvent = safeCalendarEvents[0] || {
-    id: "",
-    title: "",
-    date: "",
-    type: "Event",
-  };
-
   const [sessionUser, setSessionUser] = useState(null);
   const [profile, setProfile] = useState(null);
 
   const [contacts, setContacts] = useState([]);
   const [realCircles, setRealCircles] = useState([]);
   const [ownHints, setOwnHints] = useState([]);
+  const [calendarEvents, setCalendarEvents] = useState([]);
 
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
   const [isLoadingCircles, setIsLoadingCircles] = useState(true);
@@ -1994,7 +1991,7 @@ export default function CirclesClient() {
   const [deleteCircleError, setDeleteCircleError] = useState("");
 
   const [eventMode, setEventMode] = useState("calendar");
-  const [selectedEventId, setSelectedEventId] = useState(String(safeDefaultEvent.id || ""));
+  const [selectedEventId, setSelectedEventId] = useState("");
   const [selectedPeople, setSelectedPeople] = useState([]);
   const [selectedHintOwnerId, setSelectedHintOwnerId] = useState(SELF_SELECTOR_ID);
   const [linkPreview, setLinkPreview] = useState(null);
@@ -2002,9 +1999,9 @@ export default function CirclesClient() {
   const [isCreatingCircle, setIsCreatingCircle] = useState(false);
 
   const [form, setForm] = useState({
-    eventTitle: safeDefaultEvent.title || "",
-    eventDate: safeDefaultEvent.date || "",
-    deadline: safeDefaultEvent.date || "",
+    eventTitle: "",
+    eventDate: "",
+    deadline: "",
     goalType: "item",
     goalValue: "",
     currency: "GBP",
@@ -2019,34 +2016,34 @@ export default function CirclesClient() {
     return [exampleCircle];
   }, [realCircles]);
 
-  const resetCircleForm = useCallback(() => {
-    const fallbackEvent = safeCalendarEvents[0] || {
-      id: "",
-      title: "",
-      date: "",
-      type: "Event",
-    };
+  const resetCircleForm = useCallback(
+    (events = calendarEvents, currentProfile = profile) => {
+      const safeEvents = Array.isArray(events) ? events : [];
+      const fallbackEvent = safeEvents[0] || null;
+      const fallbackCurrency = currentProfile?.currency || "GBP";
 
-    setEventMode("calendar");
-    setSelectedEventId(String(fallbackEvent.id || ""));
-    setSelectedPeople([]);
-    setSelectedHintOwnerId(SELF_SELECTOR_ID);
-    setLinkPreview(null);
-    setCircleError("");
-    setCircleSuccess("");
-    setForm({
-      eventTitle: fallbackEvent.title || "",
-      eventDate: fallbackEvent.date || "",
-      deadline: fallbackEvent.date || "",
-      goalType: "item",
-      goalValue: "",
-      currency: "GBP",
-      fundingMode: "flexible",
-      itemSource: "hint",
-      selectedHintId: "",
-      itemUrl: "",
-    });
-  }, [safeCalendarEvents]);
+      setEventMode(fallbackEvent ? "calendar" : "new");
+      setSelectedEventId(String(fallbackEvent?.id || ""));
+      setSelectedPeople([]);
+      setSelectedHintOwnerId(SELF_SELECTOR_ID);
+      setLinkPreview(null);
+      setCircleError("");
+      setCircleSuccess("");
+      setForm({
+        eventTitle: fallbackEvent?.title || "",
+        eventDate: fallbackEvent?.event_date || "",
+        deadline: fallbackEvent?.event_date || "",
+        goalType: "item",
+        goalValue: "",
+        currency: fallbackCurrency,
+        fundingMode: "flexible",
+        itemSource: "hint",
+        selectedHintId: "",
+        itemUrl: "",
+      });
+    },
+    [calendarEvents, profile]
+  );
 
   const loadProfile = useCallback(
     async (userId) => {
@@ -2093,11 +2090,33 @@ export default function CirclesClient() {
     [supabase]
   );
 
+  const loadCalendarEvents = useCallback(
+    async (userId) => {
+      const { data, error } = await supabase
+        .from("calendar_events")
+        .select("*")
+        .eq("user_id", userId)
+        .order("event_date", { ascending: true })
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw new Error(normalizeSupabaseError(error, "Failed to load calendar events."));
+      }
+
+      const rows = data || [];
+      setCalendarEvents(rows);
+      return rows;
+    },
+    [supabase]
+  );
+
   const loadOwnHints = useCallback(
     async (userId) => {
       const { data, error } = await supabase
         .from("hints")
-        .select("id, user_id, title, url, image_url, source, created_at, is_private")
+        .select(
+          "id, user_id, title, url, image_url, source, created_at, is_private, price_text, numeric_price, currency"
+        )
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -2195,10 +2214,16 @@ export default function CirclesClient() {
         await loadContacts(user.id);
         if (!active) return;
 
+        const loadedEvents = await loadCalendarEvents(user.id);
+        if (!active) return;
+
         await loadOwnHints(user.id);
         if (!active) return;
 
         await loadCircles(user.id, currentProfile);
+        if (!active) return;
+
+        resetCircleForm(loadedEvents, currentProfile);
       } catch (error) {
         if (active) {
           setPageError(error?.message || "Failed to load the Circles page.");
@@ -2213,7 +2238,7 @@ export default function CirclesClient() {
     return () => {
       active = false;
     };
-  }, [supabase, loadProfile, loadContacts, loadOwnHints, loadCircles]);
+  }, [supabase, loadProfile, loadContacts, loadCalendarEvents, loadOwnHints, loadCircles, resetCircleForm]);
 
   const handleFetchPreview = async () => {
     if (!form.itemUrl.trim()) {
@@ -2263,8 +2288,6 @@ export default function CirclesClient() {
         siteName: form.itemUrl,
         url: form.itemUrl,
       });
-
-      setCircleError(error?.message || "Failed to fetch link preview.");
     } finally {
       setIsFetchingPreview(false);
     }
@@ -2409,7 +2432,7 @@ export default function CirclesClient() {
 
     const selectedEvent =
       eventMode === "calendar"
-        ? safeCalendarEvents.find((event) => String(event.id) === String(selectedEventId))
+        ? calendarEvents.find((event) => String(event.id) === String(selectedEventId))
         : null;
 
     const eventTitle =
@@ -2419,8 +2442,13 @@ export default function CirclesClient() {
 
     const eventDate =
       eventMode === "calendar"
-        ? selectedEvent?.date || form.eventDate || ""
+        ? selectedEvent?.event_date || form.eventDate || ""
         : form.eventDate || "";
+
+    const occasionType =
+      eventMode === "calendar"
+        ? selectedEvent?.type || "birthday"
+        : "event";
 
     if (!sessionUser?.id) {
       setCircleError("You must be signed in to create a circle.");
@@ -2505,10 +2533,15 @@ export default function CirclesClient() {
           return;
         }
 
-        itemTitle = buildStoredItemTitle(linkPreview?.title || "Shared item");
+        itemTitle = buildStoredItemTitle(
+          linkPreview?.title && linkPreview.title !== "Preview unavailable"
+            ? linkPreview.title
+            : "Shared item"
+        );
         itemUrl = linkPreview?.url || form.itemUrl.trim();
         itemImageUrl = linkPreview?.image || null;
-        itemDescription = linkPreview?.description || null;
+        itemDescription =
+          linkPreview?.title === "Preview unavailable" ? null : linkPreview?.description || null;
         itemTargetAmount = totals.itemAmount;
         organisingFeeAmount = totals.feeAmount;
         totalTargetAmount = totals.totalAmount;
@@ -2526,7 +2559,7 @@ export default function CirclesClient() {
       user_id: sessionUser.id,
       recipient_contact_id: selectedRecipientContact?.id || null,
       title: eventTitle.trim(),
-      occasion_type: eventMode === "calendar" ? selectedEvent?.type || "Event" : "Event",
+      occasion_type: occasionType,
       event_date: safeIsoDate(eventDate),
       deadline_at: safeIsoTimestampEndOfDay(form.deadline || eventDate),
       source_type: sourceType,
@@ -2568,10 +2601,10 @@ export default function CirclesClient() {
       const inviteRows = selectedPeople.map((person) => ({
         circle_id: insertedCircle.id,
         user_id: sessionUser.id,
-        contact_id: null,
+        contact_id: person.id || null,
         invite_name: person.name || null,
-        invite_email: person.email.trim().toLowerCase(),
-        status: "invitee",
+        invite_email: String(person.email || "").trim().toLowerCase(),
+        status: "pending",
         reminder_count: 0,
       }));
 
@@ -2746,7 +2779,10 @@ export default function CirclesClient() {
 
                   <button
                     type="button"
-                    onClick={() => setIsCreateOpen(true)}
+                    onClick={() => {
+                      resetCircleForm();
+                      setIsCreateOpen(true);
+                    }}
                     className="inline-flex h-12 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg"
                   >
                     Create new circle
@@ -2784,7 +2820,7 @@ export default function CirclesClient() {
         }}
         onSubmit={handleCreateCircle}
         contacts={contacts}
-        calendarEvents={safeCalendarEvents}
+        calendarEvents={calendarEvents}
         selectedPeople={selectedPeople}
         setSelectedPeople={setSelectedPeople}
         eventMode={eventMode}
