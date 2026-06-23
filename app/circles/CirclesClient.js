@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
-import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
+import { useCurrencyFormatter } from "../lib/useCurrencyFormatter";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
@@ -251,13 +251,7 @@ function buildStoredItemTitle(value) {
 }
 
 function extractHintAmount(hint) {
-  const candidates = [
-    hint?.numeric_price,
-    hint?.amount,
-    hint?.price,
-    hint?.targetAmount,
-    hint?.priceAmount,
-  ];
+  const candidates = [hint?.amount, hint?.price, hint?.targetAmount, hint?.priceAmount];
 
   for (const candidate of candidates) {
     const cleaned = String(candidate ?? "").replace(/[^\d.]/g, "");
@@ -1348,14 +1342,11 @@ function CreateCircleModal({
   const ownerOptions = [buildSelfRecord(selfProfile), ...contacts];
   const selectedOwner =
     ownerOptions.find((option) => String(option.id) === String(selectedHintOwnerId)) || null;
-  const isSelfSelected = String(selectedHintOwnerId) === SELF_SELECTOR_ID;
-  const visibleHints = isSelfSelected ? ownHints : [];
+  const visibleHints = String(selectedHintOwnerId) === SELF_SELECTOR_ID ? ownHints : [];
   const amountMode = form.goalType === "amount";
 
   const liveBaseAmount = parseAmount(form.goalValue);
   const liveTotals = calculateCircleTotals(liveBaseAmount);
-
-  const selectedHint = visibleHints.find((hint) => hint.id === form.selectedHintId) || null;
 
   function handleSelectHint(hint) {
     const hintAmount = extractHintAmount(hint);
@@ -1365,15 +1356,14 @@ function CreateCircleModal({
       ...prev,
       selectedHintId: hint.id,
       goalValue: nextAmount,
-      currency: hint?.currency || prev.currency,
+      currency: prev.currency,
     }));
 
     setLinkPreview({
       title: hint?.title || "Shared item",
-      description: hint?.description || "",
+      description: "",
       image: hint?.image_url || "",
       url: hint?.url || "",
-      currency: hint?.currency || form.currency,
     });
   }
 
@@ -2098,7 +2088,7 @@ export default function CirclesClient() {
     try {
       const { data, error } = await supabase
         .from("hints")
-        .select("id, user_id, title, url, image_url, description, created_at, is_private, price_text, numeric_price, amount, price, currency")
+        .select("id, user_id, title, url, image_url, created_at, is_private, amount, price")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
@@ -2106,7 +2096,7 @@ export default function CirclesClient() {
 
       setOwnHints(data || []);
       return data || [];
-    } catch {
+    } catch (error) {
       setOwnHints([]);
       return [];
     }
@@ -2273,7 +2263,6 @@ export default function CirclesClient() {
       setForm((prev) => ({
         ...prev,
         goalValue: previewAmount > 0 ? String(previewAmount) : "",
-        currency: data?.currency || prev.currency,
       }));
     } catch {
       setLinkPreview({
@@ -2476,7 +2465,7 @@ export default function CirclesClient() {
         itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
         itemUrl = selectedHint.url || null;
         itemImageUrl = selectedHint.image_url || null;
-        itemDescription = selectedHint.description || null;
+        itemDescription = null;
         selectedHintId = selectedHint.id;
         sourceType = selectedHint.is_private ? "organiser_private_hint" : "recipient_public_hint";
       } else {
