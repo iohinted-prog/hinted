@@ -4,28 +4,11 @@ import { useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 
 function getBaseUrl() {
-  const envSiteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (typeof window !== "undefined") {
-    const origin = window.location?.origin || "";
-    const hostname = window.location?.hostname || "";
-
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-      return origin || "http://localhost:3000";
-    }
-
-    if (envSiteUrl) {
-      return envSiteUrl.endsWith("/") ? envSiteUrl.slice(0, -1) : envSiteUrl;
-    }
-
-    return origin || "http://localhost:3000";
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
   }
 
-  if (envSiteUrl) {
-    return envSiteUrl.endsWith("/") ? envSiteUrl.slice(0, -1) : envSiteUrl;
-  }
-
-  return "http://localhost:3000";
+  return process.env.NEXT_PUBLIC_SITE_URL || "";
 }
 
 function buildRedirectTo(nextPath = "/onboarding") {
@@ -46,47 +29,45 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
   const [loadingProvider, setLoadingProvider] = useState(null);
   const [pageError, setPageError] = useState("");
 
-  async function handleSocialSignIn(provider) {
+  async function handleGoogleSignIn() {
     try {
       setPageError("");
-      setLoadingProvider(provider);
-      rememberProvider(provider);
-
-      const redirectTo = buildRedirectTo("/onboarding");
-
-      const options = {
-        redirectTo,
-      };
-
-      if (provider === "azure") {
-        options.scopes = "email";
-      }
+      setLoadingProvider("google");
+      rememberProvider("google");
 
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options,
+        provider: "google",
+        options: {
+          redirectTo: buildRedirectTo("/onboarding"),
+        },
       });
 
       if (error) throw error;
     } catch (error) {
-      if (provider === "google") {
-        setPageError(error?.message || "Google sign in failed.");
-      } else if (provider === "azure") {
-        setPageError(error?.message || "Microsoft sign in failed.");
-      } else {
-        setPageError(error?.message || "Sign in failed.");
-      }
-
+      setPageError(error?.message || "Google sign in failed.");
       setLoadingProvider(null);
     }
   }
 
-  function handleGoogleSignIn() {
-    return handleSocialSignIn("google");
-  }
+  async function handleMicrosoftSignIn() {
+    try {
+      setPageError("");
+      setLoadingProvider("azure");
+      rememberProvider("azure");
 
-  function handleMicrosoftSignIn() {
-    return handleSocialSignIn("azure");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          scopes: "email",
+          redirectTo: buildRedirectTo("/onboarding"),
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      setPageError(error?.message || "Microsoft sign in failed.");
+      setLoadingProvider(null);
+    }
   }
 
   if (variant === "hero-primary") {
