@@ -86,14 +86,40 @@ function getPrimaryContactField(person, field) {
   return items[0]?.value || items[0]?.displayName || "";
 }
 
+function getStoredProviderLabel() {
+  if (typeof window === "undefined") return "";
+
+  try {
+    const provider = window.sessionStorage.getItem("hinted_auth_provider") || "";
+
+    if (provider === "google") return "Google";
+    if (provider === "azure" || provider === "azuread") return "Microsoft";
+    return "";
+  } catch (_) {
+    return "";
+  }
+}
+
 function getProviderLabel(user) {
+  const providers = Array.isArray(user?.app_metadata?.providers)
+    ? user.app_metadata.providers
+    : [];
+
+  if (providers.includes("azure") || providers.includes("azuread")) {
+    return "Microsoft";
+  }
+
+  if (providers.includes("google")) {
+    return "Google";
+  }
+
   const provider =
-    user?.app_metadata?.provider ||
     user?.identities?.[0]?.provider ||
+    user?.app_metadata?.provider ||
     "";
 
-  if (provider === "google") return "Google";
   if (provider === "azure" || provider === "azuread") return "Microsoft";
+  if (provider === "google") return "Google";
   return "your account";
 }
 
@@ -144,7 +170,8 @@ export default function OnboardingPage() {
       const googleAvatar = getGoogleAvatar(metadata);
 
       if (isActive) {
-        setProviderLabel(getProviderLabel(user));
+        const storedProviderLabel = getStoredProviderLabel();
+        setProviderLabel(storedProviderLabel || getProviderLabel(user));
       }
 
       const { data: existingProfile, error: profileError } = await supabase
@@ -936,3 +963,4 @@ export default function OnboardingPage() {
     </>
   );
 }
+</query>
