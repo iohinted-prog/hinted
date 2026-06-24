@@ -139,11 +139,41 @@ const lowerReminders = [
 ];
 
 const calendarDays = [
-  "25","26","27","28","29","30","31",
-  "1","2","3","4","5","6","7",
-  "8","9","10","11","12","13","14",
-  "15","16","17","18","19","20","21",
-  "22","23","24","25","26","27","28",
+  "25",
+  "26",
+  "27",
+  "28",
+  "29",
+  "30",
+  "31",
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "13",
+  "14",
+  "15",
+  "16",
+  "17",
+  "18",
+  "19",
+  "20",
+  "21",
+  "22",
+  "23",
+  "24",
+  "25",
+  "26",
+  "27",
+  "28",
 ];
 
 const circleContributors = [
@@ -156,7 +186,8 @@ const circleContributors = [
 const shopTiles = [
   {
     title: "Curated for birthdays",
-    subtitle: "Soft, tasteful picks across John Lewis, Amazon, Airbnb, and more.",
+    subtitle:
+      "Soft, tasteful picks across John Lewis, Amazon, Airbnb, and more.",
     price: "From £28",
     tone: "from-[#f3ddd1] to-[#ddb39f]",
     badge: "Shop",
@@ -176,6 +207,19 @@ const shopTiles = [
     badge: "Curated",
   },
 ];
+
+function LandingLogo() {
+  return (
+    <div className="flex items-center gap-3.5">
+      <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
+        🎁
+      </div>
+      <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
+        Hinted<span className="text-[#f36f64]">.io</span>
+      </div>
+    </div>
+  );
+}
 
 function AvatarStack() {
   const avatars = [
@@ -221,11 +265,11 @@ function HintCard({ title, text, image, tag, tag2, starred, rotate }) {
           <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2 py-0.5 text-[10px] font-medium text-slate-500">
             {tag}
           </span>
-          {tag2 && (
+          {tag2 ? (
             <span className="rounded-full border border-slate-200 bg-[#faf9f7] px-2 py-0.5 text-[10px] font-medium text-slate-500">
               {tag2}
             </span>
-          )}
+          ) : null}
         </div>
 
         <div className="mt-2.5 flex items-center justify-between">
@@ -295,6 +339,22 @@ function FeedItem({ item }) {
   );
 }
 
+function AvatarStackMini() {
+  return (
+    <div className="flex items-center">
+      {circleContributors.map(([label, colors], index) => (
+        <div
+          key={label}
+          className={`-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#f6faf3] bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
+          style={{ zIndex: circleContributors.length - index }}
+        >
+          {label}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CircleTeaserCard() {
   return (
     <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
@@ -313,7 +373,8 @@ function CircleTeaserCard() {
       </div>
 
       <p className="mt-3 max-w-[48ch] text-sm leading-6 text-slate-600">
-        Build a circle around a wedding, birthday, or milestone, invite people in, and watch the contribution pot fill up before the date arrives.
+        Build a circle around a wedding, birthday, or milestone, invite people in,
+        and watch the contribution pot fill up before the date arrives.
       </p>
 
       <div className="mt-5 rounded-[26px] border border-[#e7eee2] bg-[#f6faf3] p-4">
@@ -367,22 +428,6 @@ function CircleTeaserCard() {
   );
 }
 
-function AvatarStackMini() {
-  return (
-    <div className="flex items-center">
-      {circleContributors.map(([label, colors], index) => (
-        <div
-          key={label}
-          className={`-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#f6faf3] bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
-          style={{ zIndex: circleContributors.length - index }}
-        >
-          {label}
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function ShopTeaserCard() {
   return (
     <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
@@ -401,7 +446,8 @@ function ShopTeaserCard() {
       </div>
 
       <p className="mt-3 max-w-[48ch] text-sm leading-6 text-slate-600">
-        Shop brings together thoughtful picks from trusted brands, so you can save ideas to your hints board or choose something worth funding in a circle.
+        Shop brings together thoughtful picks from trusted brands, so you can save
+        ideas to your hints board or choose something worth funding in a circle.
       </p>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-3">
@@ -451,7 +497,8 @@ function DemoVideoSection() {
             A guided walkthrough is coming here.
           </h2>
           <p className="mt-4 max-w-[58ch] text-[16px] leading-7 text-slate-600">
-            This section will house a short demo video showing how Hinted connects reminders, hints, circles, and curated shopping in one flow.
+            This section will house a short demo video showing how Hinted connects
+            reminders, hints, circles, and curated shopping in one flow.
           </p>
 
           <div className="mt-6 space-y-3 text-sm text-slate-600">
@@ -505,16 +552,9 @@ export default function HomePage() {
     <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
         <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
-          <div className="flex items-center gap-3.5">
-            <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
-              🎁
-            </div>
-            <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
-              Hinted<span className="text-[#f36f64]">.io</span>
-            </div>
-          </div>
+          <LandingLogo />
 
-          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex"></nav>
+          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex" />
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
             <GoogleAuthButtons variant="header-login" />
@@ -526,7 +566,9 @@ export default function HomePage() {
           <div className="py-2 lg:pl-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2.5 text-[14px] font-bold text-[#eb7b58] shadow-sm">
               <span>♡</span>
-              <span>Gifting, reminders, circles, and curated shopping in one place</span>
+              <span>
+                Gifting, reminders, circles, and curated shopping in one place
+              </span>
             </div>
 
             <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
@@ -536,7 +578,9 @@ export default function HomePage() {
             </h1>
 
             <p className="mt-7 max-w-[560px] text-[16px] leading-8 text-slate-500 sm:text-[18px]">
-              Hinted helps you remember important moments, collect better gift ideas, plan shared presents with friends, and browse curated picks when you need them.
+              Hinted helps you remember important moments, collect better gift
+              ideas, plan shared presents with friends, and browse curated picks
+              when you need them.
             </p>
 
             <div className="mt-8 max-w-[540px] rounded-[28px] border border-slate-200 bg-white p-6 shadow-xl md:p-7">
@@ -546,7 +590,8 @@ export default function HomePage() {
                     Join Hinted with Google
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
-                    Keep your circles, hints, reminders, and shop saves connected with one secure Google sign in.
+                    Keep your circles, hints, reminders, and shop saves connected
+                    with one secure Google sign in.
                   </p>
                 </div>
                 <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
@@ -559,27 +604,36 @@ export default function HomePage() {
 
                 <div className="rounded-[22px] border border-[#f3e4db] bg-[#fff8f4] p-4">
                   <p className="text-sm leading-6 text-slate-600">
-                    New here? Use the same Google button to create your account. Returning users can log in the exact same way.
+                    New here? Use the same Google button to create your account.
+                    Returning users can log in the exact same way.
                   </p>
                 </div>
               </div>
 
               <p className="mt-4 text-xs leading-5 text-slate-500">
                 By continuing, you agree to Hinted’s{" "}
-                <Link href="/terms" className="font-medium text-slate-700 underline underline-offset-2">
+                <Link
+                  href="/terms"
+                  className="font-medium text-slate-700 underline underline-offset-2"
+                >
                   Terms
                 </Link>{" "}
                 and{" "}
-                <Link href="/privacy" className="font-medium text-slate-700 underline underline-offset-2">
+                <Link
+                  href="/privacy"
+                  className="font-medium text-slate-700 underline underline-offset-2"
+                >
                   Privacy Policy
-                </Link>.
+                </Link>
+                .
               </p>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3.5 text-[15px] text-slate-500">
               <AvatarStack />
               <p className="max-w-[320px]">
-                Join thoughtful gifters staying on top of birthdays, milestones, and group surprises.
+                Join thoughtful gifters staying on top of birthdays, milestones,
+                and group surprises.
               </p>
             </div>
           </div>
@@ -593,7 +647,9 @@ export default function HomePage() {
                       M
                     </div>
                     <div>
-                      <div className="text-sm font-semibold tracking-tight text-slate-900">Maya</div>
+                      <div className="text-sm font-semibold tracking-tight text-slate-900">
+                        Maya
+                      </div>
                       <div className="text-xs text-slate-500">Hints</div>
                     </div>
                   </div>
@@ -609,7 +665,8 @@ export default function HomePage() {
                     Your hints.
                   </h2>
                   <p className="mt-2 text-[14px] leading-6 text-slate-600">
-                    Keep the useful details that help you remember people, conversations, gift ideas, and follow-ups.
+                    Keep the useful details that help you remember people,
+                    conversations, gift ideas, and follow-ups.
                   </p>
 
                   <div className="mt-5 grid grid-cols-3 gap-3">
@@ -654,7 +711,9 @@ export default function HomePage() {
                 Calendar and reminders
               </h2>
               <p className="mt-3 max-w-[680px] text-[16px] leading-7 text-slate-600">
-                Track birthdays, anniversaries, and follow-ups in one calm view, then branch into circles and curated shopping when it is time to act.
+                Track birthdays, anniversaries, and follow-ups in one calm view,
+                then branch into circles and curated shopping when it is time to
+                act.
               </p>
             </div>
             <button
@@ -743,7 +802,9 @@ export default function HomePage() {
                   >
                     <div
                       className={`text-sm font-semibold ${
-                        index < 7 || index > 30 ? "text-slate-300" : "text-slate-700"
+                        index < 7 || index > 30
+                          ? "text-slate-300"
+                          : "text-slate-700"
                       }`}
                     >
                       {day}
@@ -758,7 +819,9 @@ export default function HomePage() {
 
             <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-slate-900">Upcoming reminders</h3>
+                <h3 className="text-base font-semibold text-slate-900">
+                  Upcoming reminders
+                </h3>
                 <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
                   3 soon
                 </span>
@@ -786,9 +849,12 @@ export default function HomePage() {
               </div>
 
               <div className="mt-5 rounded-[24px] bg-[#2f5d50] p-5 text-white">
-                <p className="text-xs uppercase tracking-[0.14em] text-white/60">Gift prompt</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-white/60">
+                  Gift prompt
+                </p>
                 <p className="mt-2 text-sm leading-7 text-white/90">
-                  Sarah saved "ceramic dinnerware" and "weekend city break" to her wishlist.
+                  Sarah saved "ceramic dinnerware" and "weekend city break" to
+                  her wishlist.
                 </p>
                 <button
                   className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
@@ -819,7 +885,10 @@ export default function HomePage() {
               <Link href="/terms" className="transition hover:text-slate-900">
                 Terms
               </Link>
-              <a href="mailto:iohinted@gmail.com" className="transition hover:text-slate-900">
+              <a
+                href="mailto:iohinted@gmail.com"
+                className="transition hover:text-slate-900"
+              >
                 Contact
               </a>
             </div>
