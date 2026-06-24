@@ -86,6 +86,17 @@ function getPrimaryContactField(person, field) {
   return items[0]?.value || items[0]?.displayName || "";
 }
 
+function getProviderLabel(user) {
+  const provider =
+    user?.app_metadata?.provider ||
+    user?.identities?.[0]?.provider ||
+    "";
+
+  if (provider === "google") return "Google";
+  if (provider === "azure" || provider === "azuread") return "Microsoft";
+  return "your account";
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -104,6 +115,7 @@ export default function OnboardingPage() {
   const [errors, setErrors] = useState({});
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [providerLabel, setProviderLabel] = useState("your account");
   const [contactSearch, setContactSearch] = useState("");
   const [contactResults, setContactResults] = useState([]);
   const [searchingContacts, setSearchingContacts] = useState(false);
@@ -130,6 +142,10 @@ export default function OnboardingPage() {
       const metadata = user.user_metadata || {};
       const googleName = getGoogleName(metadata);
       const googleAvatar = getGoogleAvatar(metadata);
+
+      if (isActive) {
+        setProviderLabel(getProviderLabel(user));
+      }
 
       const { data: existingProfile, error: profileError } = await supabase
         .from("profiles")
@@ -574,7 +590,7 @@ export default function OnboardingPage() {
                     />
                     <div>
                       <p className="text-sm font-medium text-slate-900">
-                        Signed in with Google
+                        Signed in with {providerLabel}
                       </p>
                       <p className="text-sm text-slate-500">
                         We’ll use this profile photo on your account when available.
