@@ -33,8 +33,6 @@ const OCCASION_OPTIONS = [
   "Just because",
 ];
 
-const LOGGED_OUT_PREVIEW_LIMIT = 18;
-
 function errorToMessage(value) {
   if (!value) return "Something went wrong.";
   if (typeof value === "string") return value;
@@ -179,7 +177,6 @@ function ShopCard({
   isSavingHint,
   isOpeningLink,
   formatCurrency,
-  isLoggedOut,
 }) {
   const ratio = getCardAspectRatio(product, imageRatios);
   const interestTags = getTagArray(product.interest_tags);
@@ -278,7 +275,7 @@ function ShopCard({
             disabled={isSavingHint}
             className="rounded-full border border-[#ffb38f] bg-[#ff875d] px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md hover:bg-[#f47145] disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSavingHint ? "Adding..." : isLoggedOut ? "Sign in to save" : "Add to hints"}
+            {isSavingHint ? "Adding..." : "Add to hints"}
           </button>
 
           <button
@@ -358,8 +355,6 @@ export default function ShopPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [imageRatios, setImageRatios] = useState({});
 
-  const isLoggedOut = !currentUser;
-
   useEffect(() => {
     let active = true;
 
@@ -391,8 +386,6 @@ export default function ShopPage() {
           if (profileInterests.length) {
             setSelectedInterests(profileInterests.slice(0, 4));
           }
-        } else {
-          setSelectedInterests([]);
         }
 
         const response = await fetch("/api/products", { cache: "no-store" });
@@ -458,15 +451,10 @@ export default function ShopPage() {
     };
   }, [products, imageRatios]);
 
-  const visibleProducts = useMemo(() => {
-    if (!isLoggedOut) return products;
-    return products.slice(0, LOGGED_OUT_PREVIEW_LIMIT);
-  }, [products, isLoggedOut]);
-
   const filteredProducts = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return [...visibleProducts]
+    return [...products]
       .filter((product) => {
         const interestTags = getTagArray(product.interest_tags);
         const occasionTags = getTagArray(product.occasion_tags);
@@ -516,14 +504,9 @@ export default function ShopPage() {
         if (interestCountA !== interestCountB) return interestCountB - interestCountA;
         return priceA - priceB;
       });
-  }, [visibleProducts, searchQuery, selectedInterests, selectedOccasion]);
+  }, [products, searchQuery, selectedInterests, selectedOccasion]);
 
   function toggleInterest(interest) {
-    if (isLoggedOut) {
-      window.location.href = "/#signup";
-      return;
-    }
-
     setSelectedInterests((current) => {
       if (current.includes(interest)) {
         return current.filter((item) => item !== interest);
@@ -541,7 +524,7 @@ export default function ShopPage() {
 
   async function handleAddToHints(product) {
     if (!currentUser?.id) {
-      window.location.href = "/#signup";
+      setPageError("You must be signed in to save something from Shop.");
       return;
     }
 
@@ -652,21 +635,6 @@ export default function ShopPage() {
                   off-site to the retailer or add it straight into your hints for later.
                 </p>
 
-                {isLoggedOut ? (
-                  <div className="mt-5 rounded-[22px] border border-[#f3e4db] bg-[#fff8f4] p-4">
-                    <p className="text-sm leading-6 text-slate-600">
-                      You are browsing the top 18 bestselling preview picks. Sign in from the home
-                      page to unlock interest matching and save ideas to your hints.
-                    </p>
-                    <Link
-                      href="/#signup"
-                      className="mt-4 inline-flex rounded-full bg-[#ff875d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#f47145]"
-                    >
-                      Sign in to unlock more
-                    </Link>
-                  </div>
-                ) : null}
-
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <input
                     type="text"
@@ -700,14 +668,10 @@ export default function ShopPage() {
                         type="button"
                         onClick={() => toggleInterest(interest)}
                         className={`inline-flex h-11 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${
-                          isLoggedOut
-                            ? "cursor-pointer border-[#efe2d9] bg-[#faf6f3] text-slate-400"
-                            : selected
-                              ? "border-[#3c4d39] bg-[#2f3b2d] text-white"
-                              : "border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
+                          selected
+                            ? "border-[#3c4d39] bg-[#2f3b2d] text-white"
+                            : "border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
                         }`}
-                        aria-disabled={isLoggedOut}
-                        title={isLoggedOut ? "Sign in on the homepage to unlock interests" : undefined}
                       >
                         {interest}
                       </button>
@@ -731,8 +695,8 @@ export default function ShopPage() {
                       1. Browse
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Gifts are filtered by the occasion you are shopping for, and signed-in users
-                      can also unlock interest-based matching.
+                      Gifts are filtered by the interests you choose and the occasion you are
+                      shopping for.
                     </p>
                   </div>
 
@@ -785,42 +749,21 @@ export default function ShopPage() {
               {isLoading ? (
                 <ShopSkeleton />
               ) : filteredProducts.length ? (
-                <>
-                  <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
-                    {filteredProducts.map((product) => (
-                      <div key={product.id} className="mb-6 break-inside-avoid">
-                        <ShopCard
-                          product={product}
-                          imageRatios={imageRatios}
-                          onAddToHints={handleAddToHints}
-                          onViewItem={handleViewItem}
-                          isSavingHint={savingHintId === product.id}
-                          isOpeningLink={openingLinkId === product.id}
-                          formatCurrency={formatCurrency}
-                          isLoggedOut={isLoggedOut}
-                        />
-                      </div>
-                    ))}
-                  </div>
-
-                  {isLoggedOut ? (
-                    <div className="mt-6 rounded-[28px] border border-[#f0dfd6] bg-white px-6 py-6 text-center shadow-sm">
-                      <p className="text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
-                        Want the full shop?
-                      </p>
-                      <p className="mx-auto mt-2 max-w-[48ch] text-sm leading-6 text-slate-500">
-                        You are viewing 18 bestselling preview picks. Sign in on the homepage to
-                        unlock the full curated shop, interest filters, and hint saving.
-                      </p>
-                      <Link
-                        href="/#signup"
-                        className="mt-4 inline-flex rounded-full bg-[#ff875d] px-5 py-3 text-sm font-semibold text-white hover:bg-[#f47145]"
-                      >
-                        Go to sign up
-                      </Link>
+                <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
+                  {filteredProducts.map((product) => (
+                    <div key={product.id} className="mb-6 break-inside-avoid">
+                      <ShopCard
+                        product={product}
+                        imageRatios={imageRatios}
+                        onAddToHints={handleAddToHints}
+                        onViewItem={handleViewItem}
+                        isSavingHint={savingHintId === product.id}
+                        isOpeningLink={openingLinkId === product.id}
+                        formatCurrency={formatCurrency}
+                      />
                     </div>
-                  ) : null}
-                </>
+                  ))}
+                </div>
               ) : (
                 <EmptyState
                   selectedOccasion={selectedOccasion}
