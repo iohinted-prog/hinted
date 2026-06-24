@@ -1,5 +1,8 @@
 import Link from "next/link";
 import GoogleAuthButtons from "./components/GoogleAuthButtons";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 
 export const metadata = {
   title: "Hinted.io | Never forget. Always thoughtful.",
@@ -547,7 +550,41 @@ function DemoVideoSection() {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const cookieStore = await cookies();
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profileError) {
+      if (profile?.onboarding_completed === true) {
+        redirect("/feed");
+      }
+
+      redirect("/onboarding");
+    }
+  }
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
