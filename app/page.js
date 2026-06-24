@@ -35,15 +35,5 @@ export default async function Page() {
     return <HomePageClient />;
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  if (!profile || !profile.onboarding_completed) {
-    redirect("/onboarding");
-  }
-
   redirect("/feed");
 }
