@@ -43,7 +43,7 @@ function getInitials(fullName = "", email = "") {
   );
 }
 
-export default function AppShell({ children, active = "" }) {
+export default function AppShell({ children }) {
   const pathname = usePathname();
   const supabase = createClient();
 
@@ -109,10 +109,10 @@ export default function AppShell({ children, active = "" }) {
   }
 
   const navItems = [
-    { href: "/feed", label: "Feed", key: "feed" },
-    { href: "/hints", label: "Hints", key: "hints" },
-    { href: "/circles", label: "Circles", key: "circles" },
-    { href: "/shop", label: "Shop", key: "shop" },
+    { href: "/feed", label: "Feed" },
+    { href: "/hints", label: "Hints" },
+    { href: "/circles", label: "Circles" },
+    { href: "/shop", label: "Shop" },
   ];
 
   return (
@@ -129,11 +129,12 @@ export default function AppShell({ children, active = "" }) {
           <div className="flex items-center gap-3 sm:gap-4">
             <nav className="flex items-center gap-2 sm:gap-3">
               {navItems.map((item) => {
-                const isActive = active === item.key;
+                const isActive =
+                  pathname === item.href || pathname.startsWith(`${item.href}/`);
 
                 return (
                   <Link
-                    key={item.key}
+                    key={item.href}
                     href={item.href}
                     className={
                       isActive
@@ -191,16 +192,10 @@ export default function AppShell({ children, active = "" }) {
           </p>
 
           <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-            <Link
-              href="/for-brands"
-              className="transition hover:text-slate-900"
-            >
+            <Link href="/for-brands" className="transition hover:text-slate-900">
               For Brands
             </Link>
-            <Link
-              href="/contact"
-              className="transition hover:text-slate-900"
-            >
+            <Link href="/contact" className="transition hover:text-slate-900">
               Contact
             </Link>
           </div>
