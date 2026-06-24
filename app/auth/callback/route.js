@@ -4,16 +4,18 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = requestUrl.searchParams.get("next") ?? "/onboarding";
+  const next = requestUrl.searchParams.get("next") ?? "/";
 
   const safeNext =
-    next.startsWith("/") && !next.startsWith("//") ? next : "/onboarding";
+    next.startsWith("/") && !next.startsWith("//") ? next : "/";
 
   if (!code) {
-    return NextResponse.redirect(new URL("/auth/auth-code-error", requestUrl.origin));
+    return NextResponse.redirect(
+      new URL("/auth/auth-code-error", requestUrl.origin)
+    );
   }
 
-  const response = NextResponse.redirect(new URL(safeNext, requestUrl.origin));
+  let response = NextResponse.redirect(new URL(safeNext, requestUrl.origin));
   response.headers.set("Cache-Control", "private, no-store");
 
   const supabase = createServerClient(
@@ -25,6 +27,13 @@ export async function GET(request) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+
+          response = NextResponse.redirect(new URL(safeNext, requestUrl.origin));
+          response.headers.set("Cache-Control", "private, no-store");
+
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
           });
