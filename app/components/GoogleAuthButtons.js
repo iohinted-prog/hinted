@@ -7,18 +7,16 @@ function getBaseUrl() {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin;
   }
-
   return process.env.NEXT_PUBLIC_SITE_URL || "";
 }
 
-function buildRedirectTo(nextPath = "/") {
+function buildRedirectTo() {
   const baseUrl = getBaseUrl();
-  return `${baseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+  return `${baseUrl}/auth/callback`;
 }
 
 function rememberProvider(provider) {
   if (typeof window === "undefined") return;
-
   try {
     window.sessionStorage.setItem("hinted_auth_provider", provider);
   } catch (_) {}
@@ -38,7 +36,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: buildRedirectTo("/"),
+          redirectTo: buildRedirectTo(),
         },
       });
 
@@ -59,7 +57,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
         provider: "azure",
         options: {
           scopes: "email",
-          redirectTo: buildRedirectTo("/"),
+          redirectTo: buildRedirectTo(),
         },
       });
 
@@ -79,7 +77,9 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
           disabled={loadingProvider !== null}
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {loadingProvider === "google" ? "Connecting Google..." : "Continue with Google"}
+          {loadingProvider === "google"
+            ? "Connecting Google..."
+            : "Continue with Google"}
         </button>
 
         <button
