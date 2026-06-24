@@ -4,7 +4,7 @@ import OpenAI from "openai";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const client = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
@@ -27,35 +27,19 @@ function extractJson(text = "") {
   }
 }
 
-function cleanTitle(value = "", fallback = "Saved hint") {
-  const text = String(value || "").trim();
-  return text || fallback;
-}
-
-function cleanRetailer(value = "") {
-  const text = String(value || "").trim();
-  return text || "Idea";
-}
-
-function cleanImage(value = "") {
-  const text = String(value || "").trim();
-  if (!text) return "";
-  return text.startsWith("http://") || text.startsWith("https://") ? text : "";
-}
-
 function parseNumericPrice(value) {
   if (typeof value === "number" && Number.isFinite(value)) return value;
 
   const text = String(value || "").replace(/,/g, "");
   const match = text.match(/(\d+(?:\.\d{1,2})?)/);
+
   if (!match) return null;
 
   const parsed = Number(match[1]);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function formatPriceText(currency = "GBP", amount = null, fallback = "") {
-  if (fallback && String(fallback).trim()) return String(fallback).trim();
+function formatPriceText(currency = "GBP", amount = null) {
   if (amount == null) return "";
 
   const symbols = {
@@ -69,14 +53,49 @@ function formatPriceText(currency = "GBP", amount = null, fallback = "") {
   return `From ${symbol}${Math.round(amount).toLocaleString("en-GB")}`;
 }
 
-function buildImagePrompt(prompt, title) {
-  return [
-    "Create a warm, tasteful, realistic editorial-style image for a gift idea card.",
-    `Gift idea: ${prompt}.`,
-    `Display title: ${title}.`,
-    "Single subject or clear scene, premium lifestyle photography look, soft natural light, clean composition.",
-    "No text, no logos, no watermark, no collage, no split screen.",
-  ].join(" ");
+function mapRetailerLabel(category = "") {
+  const value = String(category || "").toLowerCase();
+
+  if (value.includes("travel")) return "Travel idea";
+  if (value.includes("experience")) return "Experience idea";
+  if (value.includes("fashion")) return "Fashion idea";
+  if (value.includes("home")) return "Home idea";
+  if (value.includes("beauty")) return "Beauty idea";
+  if (value.includes("tech")) return "Tech idea";
+
+  return "Gift idea";
+}
+
+async function searchPexelsPhoto(query) {
+  const apiKey = process.env.PEXELS_API_KEY;
+
+  if (!apiKey) return "";
+
+  const url = new URL("https://api.pexels.com/v1/search");
+  url.searchParams.set("query", query);
+  url.searchParams.set("per_page", "1");
+  url.searchParams.set("orientation", "portrait");
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: apiKey,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    return "";
+  }
+
+  const data = await response.json();
+  const photo = data?.photos?.[0];
+
+  return (
+    photo?.src?.large2x ||
+    photo?.src?.large ||
+    photo?.src?.medium ||
+    ""
+  );
 }
 
 export async function POST(request) {
@@ -99,7 +118,7 @@ export async function POST(request) {
       );
     }
 
-    const textResult = await client.responses.create({
+    const aiResponse = await openai.responses.create({
       model: "gpt-5.5",
       input: [
         {
@@ -108,14 +127,14 @@ export async function POST(request) {
             {
               type: "input_text",
               text:
-                "You create gift hint suggestions for a consumer gifting app. " +
-                "Return one concise JSON object only, no markdown. " +
-                "You must estimate, not pretend to know exact live prices. " +
-                "Choose a short gift-card-friendly title. " +
-                "Allowed keys: title, retailer, priceText, numericPrice, currency. " +
-                "retailer should be a soft label like 'Travel idea', 'Experience idea', 'Home idea', 'Fashion idea', or 'Gift idea'. " +
-                "numericPrice must be a single rough estimate number. " +
-                "priceText must be a human phrase like 'From £1800' or 'Around £120'.",
+                "You create gift hint suggestions for a gifting app. " +
+                "Return one JSON object only, with no markdown. " +
+                "Do not claim live product facts. Use rough estimates only. " +
+                "Keep titles short and card-friendly. " +
+                "Return keys: title, category, searchQuery, numericPrice. " +
+                "category should be one of: travel, experience, fashion, home, beauty, tech, gift. " +
+                "searchQuery should be a short photo-search phrase. " +
+                "numericPrice should be a single rough estimate number in the requested currency.",
             },
           ],
         },
@@ -124,46 +143,33 @@ export async function POST(request) {
           content: [
             {
               type: "input_text",
-              text: `Prompt: ${prompt}\nCurrency: ${currency}`,
+              text: `Idea: ${prompt}\nCurrency: ${currency}`,
             },
           ],
         },
       ],
     });
 
-    const rawText =
-      textResult.output_text ||
-      textResult.output?.map((item) => item?.content?.map((c) => c?.text).join(" ")).join(" ") ||
-      "";
+    const parsed =
+      extractJson(aiResponse.output_text || "") || {};
 
-    const parsed = extractJson(rawText) || {};
-    const title = cleanTitle(parsed.title, prompt);
-    const retailer = cleanRetailer(parsed.retailer);
-    const numericPrice = parseNumericPrice(parsed.numericPrice ?? parsed.priceText);
-    const finalCurrency = String(parsed.currency || currency || "GBP").toUpperCase();
-    const priceText = formatPriceText(finalCurrency, numericPrice, parsed.priceText);
+    const title = String(parsed.title || prompt).trim() || "Saved hint";
+    const category = String(parsed.category || "gift").trim();
+    const searchQuery =
+      String(parsed.searchQuery || title || prompt).trim() || prompt;
+    const numericPrice = parseNumericPrice(parsed.numericPrice);
+    const retailer = mapRetailerLabel(category);
+    const priceText = formatPriceText(currency, numericPrice);
 
-    let image = "";
-
-    try {
-      const imageResult = await client.images.generate({
-        model: "gpt-image-1",
-        prompt: buildImagePrompt(prompt, title),
-        size: "1024x1024",
-      });
-
-      image = imageResult?.data?.[0]?.url || "";
-    } catch {
-      image = "";
-    }
+    const image = await searchPexelsPhoto(searchQuery);
 
     return NextResponse.json({
       title,
       retailer,
-      image: cleanImage(image),
+      image,
       numericPrice,
       priceText,
-      currency: finalCurrency,
+      currency,
       source: "ai-idea",
       needsReview: true,
     });
