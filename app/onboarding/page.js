@@ -88,7 +88,7 @@ function getPrimaryContactField(person, field) {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const hasRedirectedRef = useRef(false);
 
   const [step, setStep] = useState(1);
@@ -103,6 +103,8 @@ export default function OnboardingPage() {
   });
   const [errors, setErrors] = useState({});
   const [profileLoaded, setProfileLoaded] = useState(false);
+  const [authResolved, setAuthResolved] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [avatarUrl, setAvatarUrl] = useState("");
   const [contactSearch, setContactSearch] = useState("");
   const [contactResults, setContactResults] = useState([]);
@@ -116,79 +118,101 @@ export default function OnboardingPage() {
     let isActive = true;
 
     async function loadUserProfile() {
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
 
-      if (userError || !user) {
-        console.error("Could not find logged-in user.");
-        if (isActive) setProfileLoaded(true);
-        return;
+        if (!isActive) return;
+
+        setAuthResolved(true);
+
+        if (userError || !user) {
+          console.error("Could not find logged-in user.", userError?.message || "");
+          setCurrentUser(null);
+          setProfileLoaded(true);
+          return;
+        }
+
+        setCurrentUser(user);
+
+        const metadata = user.user_metadata || {};
+        const googleName = getGoogleName(metadata);
+        const googleAvatar = getGoogleAvatar(metadata);
+
+        const { data: existingProfile, error: profileError } = await supabase
+          .from("profiles")
+          .select(
+            "full_name, avatar_url, birthday, interests, other_interest, onboarding_completed"
+          )
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("Error loading profile:", profileError.message);
+        }
+
+        if (
+          existingProfile?.onboarding_completed === true &&
+          !hasRedirectedRef.current
+        ) {
+          hasRedirectedRef.current = true;
+          router.replace("/feed");
+          return;
+        }
+
+        const existingName = existingProfile?.full_name || "";
+        const existingAvatar = existingProfile?.avatar_url || "";
+        const resolvedName = existingName || googleName || "";
+        const resolvedAvatar = googleAvatar || existingAvatar || "";
+
+        const filteredExistingInterests = Array.isArray(existingProfile?.interests)
+          ? existingProfile.interests.filter((interest) =>
+              interestOptions.includes(interest)
+            )
+          : [];
+
+        const initialInterests =
+          filteredExistingInterests.length >= 2
+            ? filteredExistingInterests
+            : ["Travel", "Food"];
+
+        if (!isActive) return;
+
+        setForm((prev) => ({
+          ...prev,
+          fullName: resolvedName,
+          birthday: existingProfile?.birthday || "",
+          otherInterest: existingProfile?.other_interest || "",
+        }));
+
+        setSelectedInterests(initialInterests);
+        setAvatarUrl(resolvedAvatar);
+
+        const { error: syncError } = await supabase.from("profiles").upsert(
+          {
+            id: user.id,
+            full_name: resolvedName || null,
+            avatar_url: googleAvatar || existingAvatar || null,
+          },
+          { onConflict: "id" }
+        );
+
+        if (syncError) {
+          console.error("Error syncing Google profile:", syncError.message);
+        }
+
+        if (isActive) {
+          setProfileLoaded(true);
+        }
+      } catch (error) {
+        console.error("Error loading onboarding profile:", error);
+        if (isActive) {
+          setAuthResolved(true);
+          setProfileLoaded(true);
+        }
       }
-
-      const metadata = user.user_metadata || {};
-      const googleName = getGoogleName(metadata);
-      const googleAvatar = getGoogleAvatar(metadata);
-
-      const { data: existingProfile, error: profileError } = await supabase
-        .from("profiles")
-        .select(
-          "full_name, avatar_url, birthday, interests, other_interest, onboarding_completed"
-        )
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Error loading profile:", profileError.message);
-      }
-
-      if (existingProfile?.onboarding_completed === true && !hasRedirectedRef.current) {
-        hasRedirectedRef.current = true;
-        router.replace("/feed");
-        return;
-      }
-
-      const existingName = existingProfile?.full_name || "";
-      const existingAvatar = existingProfile?.avatar_url || "";
-      const resolvedName = existingName || googleName || "";
-      const resolvedAvatar = googleAvatar || existingAvatar || "";
-
-      const filteredExistingInterests = Array.isArray(existingProfile?.interests)
-        ? existingProfile.interests.filter((interest) => interestOptions.includes(interest))
-        : [];
-
-      const initialInterests =
-        filteredExistingInterests.length >= 2
-          ? filteredExistingInterests
-          : ["Travel", "Food"];
-
-      if (!isActive) return;
-
-      setForm((prev) => ({
-        ...prev,
-        fullName: resolvedName,
-        birthday: existingProfile?.birthday || "",
-        otherInterest: existingProfile?.other_interest || "",
-      }));
-
-      setSelectedInterests(initialInterests);
-      setAvatarUrl(resolvedAvatar);
-
-      const { error: syncError } = await supabase.from("profiles").upsert(
-        {
-          id: user.id,
-          full_name: resolvedName || null,
-          avatar_url: googleAvatar || existingAvatar || null,
-        },
-        { onConflict: "id" }
-      );
-
-      if (syncError) {
-        console.error("Error syncing Google profile:", syncError.message);
-      }
-
-      if (isActive) setProfileLoaded(true);
     }
 
     loadUserProfile();
@@ -197,6 +221,16 @@ export default function OnboardingPage() {
       isActive = false;
     };
   }, [router, supabase]);
+
+  useEffect(() => {
+    if (!authResolved || !profileLoaded || saving) return;
+    if (hasRedirectedRef.current) return;
+
+    if (!currentUser) {
+      hasRedirectedRef.current = true;
+      router.replace("/");
+    }
+  }, [authResolved, profileLoaded, currentUser, router, saving]);
 
   function updateField(key, value) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -271,7 +305,10 @@ export default function OnboardingPage() {
         nextErrors.inviteEmail = "Add an email to match the name.";
       }
 
-      if ((form.inviteName.trim() || form.inviteEmail.trim()) && selectedRelationships.length === 0) {
+      if (
+        (form.inviteName.trim() || form.inviteEmail.trim()) &&
+        selectedRelationships.length === 0
+      ) {
         nextErrors.relationships = "Choose at least one relationship type.";
       }
     }
@@ -281,18 +318,13 @@ export default function OnboardingPage() {
   }
 
   async function saveProfile(values = {}) {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    if (!currentUser?.id) {
       console.error("Could not find logged-in user.");
       return { ok: false, user: null };
     }
 
     const payload = {
-      id: user.id,
+      id: currentUser.id,
       full_name: form.fullName.trim() || null,
       avatar_url: avatarUrl || null,
       birthday: form.birthday || null,
@@ -309,10 +341,10 @@ export default function OnboardingPage() {
 
     if (error) {
       console.error("Error saving profile:", error.message);
-      return { ok: false, user };
+      return { ok: false, user: currentUser };
     }
 
-    return { ok: true, user };
+    return { ok: true, user: currentUser };
   }
 
   async function saveConnection(profileId) {
@@ -341,6 +373,7 @@ export default function OnboardingPage() {
   }
 
   async function nextStep() {
+    if (saving) return;
     if (!validateStep()) return;
 
     if (step === 1 || step === 2) {
@@ -384,7 +417,7 @@ export default function OnboardingPage() {
         }
       }
 
-      router.push("/feed");
+      router.replace("/feed");
     } catch (error) {
       console.error("Error finishing onboarding:", error);
       setSaving(false);
@@ -464,7 +497,9 @@ export default function OnboardingPage() {
       setContactResults(mapped);
 
       if (mapped.length === 0) {
-        setContactsMessage("No matching Google contacts found. You can still add someone manually.");
+        setContactsMessage(
+          "No matching Google contacts found. You can still add someone manually."
+        );
       }
     } catch (error) {
       console.error("Contact search error:", error);
