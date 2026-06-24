@@ -136,10 +136,7 @@ export default function AccountPageClient() {
         const savedFullName = profile?.full_name || metadataName || "";
         const nameParts = splitName(savedFullName);
 
-        const savedAvatar =
-          profile?.avatar_url ||
-          metadataAvatar ||
-          "";
+        const savedAvatar = profile?.avatar_url || metadataAvatar || "";
 
         setUserId(user.id);
         setEmail(user.email || "");
@@ -193,6 +190,24 @@ export default function AccountPageClient() {
     const file = event.target.files?.[0];
 
     if (!file || !userId) {
+      return;
+    }
+
+    if (!file.type.startsWith("image/")) {
+      setMessageType("error");
+      setMessage("Please choose an image file.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMessageType("error");
+      setMessage("Please choose an image under 5MB.");
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       return;
     }
 
@@ -255,12 +270,17 @@ export default function AccountPageClient() {
       console.error("Photo upload error:", error);
       setPhotoPreview(avatarUrl || "");
       setMessageType("error");
-      setMessage("We couldn't upload that photo right now.");
+      setMessage(
+        error?.message
+          ? `We couldn't upload that photo right now: ${error.message}`
+          : "We couldn't upload that photo right now."
+      );
     } finally {
       setUploadingPhoto(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
+      URL.revokeObjectURL(localPreview);
     }
   }
 
