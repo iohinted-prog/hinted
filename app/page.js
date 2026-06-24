@@ -476,7 +476,7 @@ function ShopTeaserCard() {
       </div>
 
       <Link
-        href="/gift-shop"
+        href="/shop"
         className="mt-5 inline-flex rounded-full border border-[#e8d9cf] bg-white px-5 py-3 text-sm font-semibold text-slate-700"
       >
         Preview shop
@@ -554,15 +554,15 @@ export default function HomePage() {
         <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
           <LandingLogo />
 
-          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex">
-            <Link href="/gift-shop" className="transition hover:text-slate-900">
-              Shop
-            </Link>
-          </nav>
+          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex" />
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
-            <GoogleAuthButtons variant="header-login" />
-            <GoogleAuthButtons variant="header-get-started" />
+            <a
+              href="#signup"
+              className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg transition hover:translate-y-[-1px]"
+            >
+              Get started
+            </a>
           </div>
         </header>
 
@@ -777,7 +777,6 @@ export default function HomePage() {
                     type="button"
                   >
                     →
-
                   </button>
                 </div>
               </div>
