@@ -1,92 +1,107 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 
+function getBaseUrl() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+
+  return process.env.NEXT_PUBLIC_SITE_URL || "";
+}
+
+function buildRedirectTo(nextPath = "/onboarding") {
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
+}
+
 export default function GoogleAuthButtons({ variant = "hero-primary" }) {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const [loadingProvider, setLoadingProvider] = useState(null);
+  const [pageError, setPageError] = useState("");
 
-  const isLogin = variant === "header-login";
-  const nextPath = isLogin ? "/feed" : "/onboarding";
+  async function handleGoogleSignIn() {
+    try {
+      setPageError("");
+      setLoadingProvider("google");
 
-  const buildRedirectTo = () => {
-    const origin = window.location.origin;
-    return `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}`;
-  };
-
-  const handleGoogleAuth = async () => {
-    if (loadingProvider) return;
-
-    setLoadingProvider("google");
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: buildRedirectTo(),
-        scopes: [
-          "openid",
-          "email",
-          "profile",
-          "https://www.googleapis.com/auth/contacts.readonly",
-        ].join(" "),
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: buildRedirectTo("/onboarding"),
         },
-      },
-    });
+      });
 
-    if (error) {
-      console.error("Google sign-in error:", error.message);
+      if (error) throw error;
+    } catch (error) {
+      setPageError(error?.message || "Google sign in failed.");
       setLoadingProvider(null);
     }
-  };
+  }
 
-  const handleMicrosoftAuth = async () => {
-    if (loadingProvider) return;
+  async function handleMicrosoftSignIn() {
+    try {
+      setPageError("");
+      setLoadingProvider("azure");
 
-    setLoadingProvider("azure");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          scopes: "email",
+          redirectTo: buildRedirectTo("/onboarding"),
+        },
+      });
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "azure",
-      options: {
-        redirectTo: buildRedirectTo(),
-        scopes: "email",
-      },
-    });
-
-    if (error) {
-      console.error("Microsoft sign-in error:", error.message);
+      if (error) throw error;
+    } catch (error) {
+      setPageError(error?.message || "Microsoft sign in failed.");
       setLoadingProvider(null);
     }
-  };
+  }
+
+  if (variant === "hero-primary") {
+    return (
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={handleGoogleSignIn}
+          disabled={loadingProvider !== null}
+          className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {loadingProvider === "google" ? "Connecting Google..." : "Continue with Google"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleMicrosoftSignIn}
+          disabled={loadingProvider !== null}
+          className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-[#f8f5f2] disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {loadingProvider === "azure"
+            ? "Connecting Microsoft..."
+            : "Continue with Microsoft"}
+        </button>
+
+        {pageError ? (
+          <p className="rounded-[18px] border border-[#f1d2c6] bg-[#fff4ef] px-4 py-3 text-sm text-[#b85c3e]">
+            {pageError}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   if (variant === "header-login") {
     return (
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={!!loadingProvider}
-          className={`shrink-0 text-[15px] font-semibold ${
-            loadingProvider ? "cursor-not-allowed text-slate-400" : "text-slate-800"
-          }`}
-        >
-          {loadingProvider === "google" ? "Redirecting..." : "Google"}
-        </button>
-
-        <button
-          type="button"
-          onClick={handleMicrosoftAuth}
-          disabled={!!loadingProvider}
-          className={`shrink-0 text-[15px] font-semibold ${
-            loadingProvider ? "cursor-not-allowed text-slate-400" : "text-slate-800"
-          }`}
-        >
-          {loadingProvider === "azure" ? "Redirecting..." : "Microsoft"}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={loadingProvider !== null}
+        className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-[15px] font-semibold text-slate-700 transition hover:bg-[#fff5f0] disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {loadingProvider === "google" ? "Connecting..." : "Log in"}
+      </button>
     );
   }
 
@@ -94,54 +109,14 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
     return (
       <button
         type="button"
-        onClick={handleMicrosoftAuth}
-        disabled={!!loadingProvider}
-        className={`inline-flex h-12 shrink-0 items-center justify-center rounded-full px-6 text-[15px] font-bold text-white shadow-lg ${
-          loadingProvider
-            ? "cursor-not-allowed bg-[#e9a48d]"
-            : "bg-gradient-to-b from-[#ff966f] to-[#ff7e54]"
-        }`}
+        onClick={handleGoogleSignIn}
+        disabled={loadingProvider !== null}
+        className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
       >
-        {loadingProvider === "azure" ? "Redirecting..." : "Get started"}
+        {loadingProvider === "google" ? "Connecting..." : "Get started"}
       </button>
     );
   }
 
-  return (
-    <div className="grid gap-3 sm:grid-cols-2">
-      <button
-        type="button"
-        onClick={handleGoogleAuth}
-        disabled={!!loadingProvider}
-        className={`inline-flex h-[54px] w-full items-center justify-center gap-3 rounded-full px-5 text-sm font-semibold text-white shadow-lg ${
-          loadingProvider
-            ? "cursor-not-allowed bg-[#e9a48d]"
-            : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
-        }`}
-      >
-        <span className="text-base">G</span>
-        <span>
-          {loadingProvider === "google" ? "Redirecting..." : "Continue with Google"}
-        </span>
-      </button>
-
-      <button
-        type="button"
-        onClick={handleMicrosoftAuth}
-        disabled={!!loadingProvider}
-        className={`inline-flex h-[54px] w-full items-center justify-center gap-3 rounded-full border px-5 text-sm font-semibold shadow-lg ${
-          loadingProvider
-            ? "cursor-not-allowed border-[#ead8ce] bg-[#f3e3da] text-slate-400"
-            : "border-[#ead8ce] bg-white text-slate-800"
-        }`}
-      >
-        <span className="text-base">⊞</span>
-        <span>
-          {loadingProvider === "azure"
-            ? "Redirecting..."
-            : "Continue with Microsoft"}
-        </span>
-      </button>
-    </div>
-  );
+  return null;
 }
