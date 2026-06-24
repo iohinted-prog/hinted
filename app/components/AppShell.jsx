@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
@@ -46,10 +46,12 @@ function getInitials(fullName = "", email = "") {
 export default function AppShell({ children }) {
   const pathname = usePathname();
   const supabase = createClient();
+  const menuRef = useRef(null);
 
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => getInitials(fullName, email), [fullName, email]);
 
@@ -111,6 +113,36 @@ export default function AppShell({ children }) {
     };
   }, [supabase, showShell]);
 
+  useEffect(() => {
+    if (!menuOpen) {
+      return;
+    }
+
+    function handlePointerDown(event) {
+      if (!menuRef.current?.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   if (!showShell) {
     return <>{children}</>;
   }
@@ -155,23 +187,62 @@ export default function AppShell({ children }) {
               })}
             </nav>
 
-            <Link
-              href="/account"
-              aria-label="Account"
-              className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
-            >
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt="Your profile"
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-[12px] font-bold text-slate-700">
-                  {initials}
-                </span>
-              )}
-            </Link>
+            <div className="relative" ref={menuRef}>
+              <button
+                type="button"
+                aria-label="Open account menu"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((prev) => !prev)}
+                className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
+              >
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Your profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="text-[12px] font-bold text-slate-700">
+                    {initials}
+                  </span>
+                )}
+              </button>
+
+              {menuOpen ? (
+                <div className="absolute right-0 z-50 mt-3 w-[220px] overflow-hidden rounded-[22px] border border-[#ead8ce] bg-white p-2 shadow-[0_18px_50px_rgba(173,101,72,0.18)]">
+                  <div className="rounded-[18px] bg-[#fff8f4] px-3 py-3">
+                    <p className="truncate text-sm font-semibold text-slate-900">
+                      {fullName || "Your account"}
+                    </p>
+                    <p className="truncate text-xs text-slate-500">
+                      {email || "Signed in"}
+                    </p>
+                  </div>
+
+                  <div className="mt-2 flex flex-col">
+                    <Link
+                      href="/settings"
+                      className="rounded-[16px] px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#fff5f0]"
+                    >
+                      Settings
+                    </Link>
+                    <Link
+                      href="/account"
+                      className="rounded-[16px] px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#fff5f0]"
+                    >
+                      Account
+                    </Link>
+                    <Link
+                      href="/billing"
+                      className="rounded-[16px] px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#fff5f0]"
+                    >
+                      Billing
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           </div>
         </div>
       </header>
