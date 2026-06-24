@@ -723,12 +723,6 @@ export default function HomePage() {
                 act.
               </p>
             </div>
-            <button
-              className="inline-flex rounded-full bg-[#2f5d50] px-5 py-3 text-sm font-semibold text-white"
-              type="button"
-            >
-              View full planner
-            </button>
           </div>
 
           <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_2fr_300px]">
