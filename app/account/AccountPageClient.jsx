@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
 
 function splitName(fullName = "") {
@@ -70,11 +71,14 @@ function formatMemberSince(createdAt) {
 
 export default function AccountPageClient() {
   const supabase = createClient();
+  const router = useRouter();
   const fileInputRef = useRef(null);
 
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
 
@@ -392,6 +396,71 @@ export default function AccountPageClient() {
     }
   }
 
+  async function handleSignOut() {
+    if (saving || uploadingPhoto || signingOut || deletingAccount) {
+      return;
+    }
+
+    setSigningOut(true);
+    setMessage("");
+
+    try {
+      const { error } = await supabase.auth.signOut({ scope: "local" });
+
+      if (error) {
+        throw error;
+      }
+
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setMessageType("error");
+      setMessage("We couldn't sign you out right now.");
+      setSigningOut(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (saving || uploadingPhoto || signingOut || deletingAccount) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete your account? This cannot be undone."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingAccount(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/account/delete", {
+        method: "POST",
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(result?.error || "We couldn't delete your account right now.");
+      }
+
+      await supabase.auth.signOut({ scope: "local" });
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      console.error("Delete account error:", error);
+      setMessageType("error");
+      setMessage(
+        error?.message || "We couldn't delete your account right now."
+      );
+      setDeletingAccount(false);
+    }
+  }
+
   if (!profileLoaded) {
     return (
       <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -472,9 +541,9 @@ export default function AccountPageClient() {
               <button
                 type="button"
                 onClick={handleChoosePhoto}
-                disabled={uploadingPhoto}
+                disabled={uploadingPhoto || signingOut || deletingAccount}
                 className={`mt-4 inline-flex h-11 items-center justify-center rounded-full px-5 text-sm font-semibold text-white ${
-                  uploadingPhoto
+                  uploadingPhoto || signingOut || deletingAccount
                     ? "cursor-not-allowed bg-[#7c8b79]"
                     : "bg-[#2f3b2d] hover:bg-[#253120]"
                 }`}
@@ -485,7 +554,7 @@ export default function AccountPageClient() {
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                disabled={uploadingPhoto}
+                disabled={uploadingPhoto || signingOut || deletingAccount}
                 className="mt-3 inline-flex h-10 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-sm font-medium text-slate-700 hover:bg-[#fff5f0] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Remove
@@ -605,6 +674,34 @@ export default function AccountPageClient() {
                 />
               </div>
 
+              <div className="rounded-[22px] border border-[#f1dfd6] bg-[#fff8f4] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c97a5d]">
+                  Session
+                </p>
+                <div className="mt-3 flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    disabled={saving || uploadingPhoto || signingOut || deletingAccount}
+                    className="inline-flex h-[48px] items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 hover:bg-[#faf6f3] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {signingOut ? "Signing out..." : "Log out"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={saving || uploadingPhoto || signingOut || deletingAccount}
+                    className="inline-flex h-[48px] items-center justify-center rounded-full border border-red-200 bg-red-50 px-5 text-sm font-medium text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {deletingAccount ? "Deleting account..." : "Delete account"}
+                  </button>
+                </div>
+                <p className="mt-3 text-xs leading-5 text-slate-500">
+                  Logging out only ends this session. Deleting your account permanently removes your access and profile data.
+                </p>
+              </div>
+
               {message ? (
                 <div
                   className={`rounded-[18px] border px-4 py-3 text-sm ${
@@ -620,9 +717,9 @@ export default function AccountPageClient() {
               <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="submit"
-                  disabled={saving || uploadingPhoto}
+                  disabled={saving || uploadingPhoto || signingOut || deletingAccount}
                   className={`inline-flex h-[52px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
-                    saving || uploadingPhoto
+                    saving || uploadingPhoto || signingOut || deletingAccount
                       ? "cursor-not-allowed bg-[#e9a48d]"
                       : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
                   }`}
