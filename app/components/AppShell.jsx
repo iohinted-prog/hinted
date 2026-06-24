@@ -53,7 +53,13 @@ export default function AppShell({ children }) {
 
   const initials = useMemo(() => getInitials(fullName, email), [fullName, email]);
 
-  const showShell = pathname !== "/" && pathname !== "/home";
+  const hideChrome =
+    pathname === "/" ||
+    pathname === "/home" ||
+    pathname === "/gift-shop" ||
+    pathname.startsWith("/gift-shop/");
+
+  const showShell = !hideChrome;
 
   useEffect(() => {
     if (!showShell) {
