@@ -27,7 +27,7 @@ import AvatarMenu from "../components/AvatarMenu";
 
 const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
-const CARD_MAX_HEIGHT = "min(540px, 68vh)";
+const CARD_MAX_HEIGHT = "min(620px, 74vh)";
 const TIMEOUT_MODAL_MESSAGE =
   "We tried to get the title, image, and price, but this shop asked you to add them instead.";
 
@@ -68,6 +68,7 @@ const demoHints = [
     url: "https://www.airbnb.co.uk/",
     position: 0,
     needsReview: false,
+    demoRatio: 0.76,
   },
   {
     id: "demo-2",
@@ -83,6 +84,7 @@ const demoHints = [
     url: "https://www.amazon.co.uk/",
     position: 1,
     needsReview: false,
+    demoRatio: 1.18,
   },
   {
     id: "demo-3",
@@ -98,6 +100,7 @@ const demoHints = [
     url: "https://www.johnlewis.com/",
     position: 2,
     needsReview: false,
+    demoRatio: 0.88,
   },
   {
     id: "demo-4",
@@ -113,21 +116,23 @@ const demoHints = [
     url: "https://www.booking.com/",
     position: 3,
     needsReview: false,
+    demoRatio: 0.7,
   },
   {
     id: "demo-5",
-    title: "Cashmere throw",
-    retailer: "thewhitecompany.com",
-    numericPrice: 95,
+    title: "Espresso machine",
+    retailer: "sageappliances.com",
+    numericPrice: 399,
     currency: "GBP",
     image:
-      "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+      "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#d6e7eb] via-[#b5ced7] to-[#8fb3c5]",
     starred: false,
     private: false,
-    url: "https://www.thewhitecompany.com/",
+    url: "https://www.sageappliances.com/",
     position: 4,
     needsReview: false,
+    demoRatio: 1.22,
   },
   {
     id: "demo-6",
@@ -143,96 +148,55 @@ const demoHints = [
     url: "https://www.spabreaks.com/",
     position: 5,
     needsReview: false,
+    demoRatio: 0.82,
   },
   {
     id: "demo-7",
-    title: "Espresso machine",
-    retailer: "sageappliances.com",
-    numericPrice: 399,
+    title: "Cashmere throw",
+    retailer: "thewhitecompany.com",
+    numericPrice: 110,
     currency: "GBP",
     image:
-      "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#d6e7eb] via-[#b5ced7] to-[#8fb3c5]",
+      "https://images.unsplash.com/photo-1517705008128-361805f42e86?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
     starred: false,
     private: false,
-    url: "https://www.sageappliances.com/",
+    url: "https://www.thewhitecompany.com/",
     position: 6,
     needsReview: false,
+    demoRatio: 0.93,
   },
   {
     id: "demo-8",
-    title: "Paris getaway",
+    title: "City break",
     retailer: "eurostar.com",
-    numericPrice: 260,
+    numericPrice: 210,
     currency: "GBP",
     image:
-      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1200&q=80",
+      "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
     starred: false,
     private: false,
     url: "https://www.eurostar.com/",
     position: 7,
     needsReview: false,
+    demoRatio: 0.72,
   },
   {
     id: "demo-9",
-    title: "Gold necklace",
+    title: "Gold hoops",
     retailer: "missoma.com",
-    numericPrice: 165,
+    numericPrice: 89,
     currency: "GBP",
     image:
       "https://images.unsplash.com/photo-1617038220319-276d3cfab638?auto=format&fit=crop&w=1200&q=80",
     fallbackGradient: "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
-    starred: true,
+    starred: false,
     private: false,
     url: "https://www.missoma.com/",
     position: 8,
     needsReview: false,
-  },
-  {
-    id: "demo-10",
-    title: "Flowers subscription",
-    retailer: "bloomandwild.com",
-    numericPrice: 30,
-    currency: "GBP",
-    image:
-      "https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
-    starred: false,
-    private: false,
-    url: "https://www.bloomandwild.com/",
-    position: 9,
-    needsReview: false,
-  },
-  {
-    id: "demo-11",
-    title: "Cooking class",
-    retailer: "virginexperiencedays.co.uk",
-    numericPrice: 89,
-    currency: "GBP",
-    image:
-      "https://images.unsplash.com/photo-1556911220-bff31c812dba?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
-    starred: false,
-    private: false,
-    url: "https://www.virginexperiencedays.co.uk/",
-    position: 10,
-    needsReview: false,
-  },
-  {
-    id: "demo-12",
-    title: "Leather weekend bag",
-    retailer: "aspinaloflondon.com",
-    numericPrice: 450,
-    currency: "GBP",
-    image:
-      "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1200&q=80",
-    fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
-    starred: true,
-    private: false,
-    url: "https://www.aspinaloflondon.com/",
-    position: 11,
-    needsReview: false,
+    demoRatio: 1.12,
   },
 ];
 
@@ -452,6 +416,7 @@ function loadImageAspectRatio(src) {
 }
 
 function fallbackCardRatio(hint) {
+  if (hint?.demoRatio && Number.isFinite(hint.demoRatio)) return hint.demoRatio;
   if (hint?.image) return 0.82;
   return 1;
 }
@@ -1194,12 +1159,14 @@ export default function HintsClient() {
   const visibleHints = hints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
   const columns = useMemo(() => splitIntoColumns(visibleHints, 3), [visibleHints]);
+  const demoColumns = useMemo(() => splitIntoColumns(demoHints, 3), []);
 
   useEffect(() => {
     let cancelled = false;
 
     async function measureRatios() {
-      const itemsWithImages = visibleHints.filter((hint) => hint.image && !imageRatios[hint.id]);
+      const combinedVisible = [...visibleHints, ...demoHints];
+      const itemsWithImages = combinedVisible.filter((hint) => hint.image && !imageRatios[hint.id]);
       if (!itemsWithImages.length) return;
 
       const nextEntries = await Promise.all(
@@ -1480,23 +1447,13 @@ export default function HintsClient() {
       setIsAddModalOpen(true);
       setLink("");
     } catch (err) {
-      if (err?.code === "PREVIEW_TIMEOUT" || err?.message === "PREVIEW_TIMEOUT") {
-        const manualDraft = buildManualDraft(trimmed);
+      const manualDraft = buildManualDraft(trimmed);
 
-        setPendingHint(manualDraft);
-        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
-        setAddModalNotice(TIMEOUT_MODAL_MESSAGE);
-        setIsAddModalOpen(true);
-        setLink("");
-      } else {
-        const manualDraft = buildManualDraft(trimmed);
-
-        setPendingHint(manualDraft);
-        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
-        setAddModalNotice(TIMEOUT_MODAL_MESSAGE);
-        setIsAddModalOpen(true);
-        setLink("");
-      }
+      setPendingHint(manualDraft);
+      setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
+      setAddModalNotice(TIMEOUT_MODAL_MESSAGE);
+      setIsAddModalOpen(true);
+      setLink("");
     } finally {
       setIsAdding(false);
       closeBusy();
@@ -1677,12 +1634,16 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="columns-1 gap-6 md:columns-3">
-                {[1, 2, 3].map((i) => (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
                   <div key={i} className="mb-6 break-inside-avoid">
                     <div
                       className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
-                      style={{ aspectRatio: i === 1 ? "0.78" : "1", maxHeight: CARD_MAX_HEIGHT }}
+                      style={{
+                        aspectRatio:
+                          i === 1 ? "0.76" : i === 2 ? "1.18" : i === 3 ? "0.88" : i === 4 ? "0.7" : i === 5 ? "1.22" : "0.82",
+                        maxHeight: CARD_MAX_HEIGHT,
+                      }}
                     >
                       <div className="skeleton h-full w-full" />
                     </div>
@@ -1739,18 +1700,24 @@ export default function HintsClient() {
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="columns-1 gap-6 md:columns-3">
-                {demoHints.map((hint) => (
-                  <div key={hint.id} className="mb-6 break-inside-avoid">
-                    <HintCard
-                      hint={hint}
-                      imageRatios={imageRatios}
-                      onEdit={() => {}}
-                      onToggleStarred={() => {}}
-                      onTogglePrivate={() => {}}
-                      isDragging={false}
-                      formatCurrency={formatCurrency}
-                    />
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                {demoColumns.map((columnHints, columnIndex) => (
+                  <div key={`demo-column-${columnIndex}`} className="space-y-0">
+                    {columnHints.map((hint) => (
+                      <div key={hint.id} className="mb-6 break-inside-avoid">
+                        <HintCard
+                          hint={hint}
+                          imageRatios={imageRatios}
+                          onEdit={() => {}}
+                          onToggleStarred={() => {}}
+                          onTogglePrivate={() => {}}
+                          isDragging={false}
+                          dragHandleAttributes={{}}
+                          dragHandleListeners={{}}
+                          formatCurrency={formatCurrency}
+                        />
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
