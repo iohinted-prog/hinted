@@ -557,6 +557,12 @@ export default function HomePage() {
           <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex" />
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
+            <Link
+              href="/shop"
+              className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-[15px] font-semibold text-slate-700 transition hover:bg-[#fff5f0]"
+            >
+              Gift Shop
+            </Link>
             <a
               href="#signup"
               className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg transition hover:translate-y-[-1px]"
