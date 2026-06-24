@@ -11,7 +11,7 @@ function getBaseUrl() {
   return process.env.NEXT_PUBLIC_SITE_URL || "";
 }
 
-function buildRedirectTo(nextPath = "/onboarding") {
+function buildRedirectTo(nextPath = "/") {
   const baseUrl = getBaseUrl();
   return `${baseUrl}/auth/callback?next=${encodeURIComponent(nextPath)}`;
 }
@@ -38,7 +38,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: buildRedirectTo("/onboarding"),
+          redirectTo: buildRedirectTo("/"),
         },
       });
 
@@ -59,7 +59,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
         provider: "azure",
         options: {
           scopes: "email",
-          redirectTo: buildRedirectTo("/onboarding"),
+          redirectTo: buildRedirectTo("/"),
         },
       });
 
