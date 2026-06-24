@@ -963,4 +963,3 @@ export default function OnboardingPage() {
     </>
   );
 }
-</query>
