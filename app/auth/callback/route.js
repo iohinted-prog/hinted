@@ -2,26 +2,24 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 function getSiteUrl(requestUrl) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "");
-  return siteUrl || requestUrl.origin;
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || requestUrl.origin
+  );
 }
 
 export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const next = requestUrl.searchParams.get("next") ?? "/onboarding";
-
   const safeNext =
     next.startsWith("/") && !next.startsWith("//") ? next : "/onboarding";
-
   const siteUrl = getSiteUrl(requestUrl);
 
   if (!code) {
     return NextResponse.redirect(new URL("/auth/auth-code-error", siteUrl));
   }
 
-  const response = NextResponse.redirect(new URL(safeNext, siteUrl));
-  response.headers.set("Cache-Control", "private, no-store");
+  const response = NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -47,5 +45,7 @@ export async function GET(request) {
     return NextResponse.redirect(new URL("/auth/auth-code-error", siteUrl));
   }
 
-  return response;
+  return NextResponse.redirect(new URL(safeNext, siteUrl), {
+    headers: response.headers,
+  });
 }
