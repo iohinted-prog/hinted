@@ -30,19 +30,17 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
       setPageError("");
       setLoadingProvider(provider);
 
-      const options =
-        provider === "azure"
-          ? {
-              scopes: "openid email profile",
-              redirectTo: buildRedirectTo("/onboarding"),
-            }
-          : {
-              redirectTo: buildRedirectTo("/onboarding"),
-            };
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
-        options,
+        options:
+          provider === "azure"
+            ? {
+                scopes: "openid email profile",
+                redirectTo: buildRedirectTo("/onboarding"),
+              }
+            : {
+                redirectTo: buildRedirectTo("/onboarding"),
+              },
       });
 
       if (error) throw error;
@@ -57,14 +55,6 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
     }
   }
 
-  const googleLabel =
-    loadingProvider === "google" ? "Connecting Google..." : "Continue with Google";
-
-  const microsoftLabel =
-    loadingProvider === "azure"
-      ? "Connecting Microsoft..."
-      : "Continue with Microsoft";
-
   if (variant === "hero-primary") {
     return (
       <div className="space-y-3">
@@ -74,7 +64,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
           disabled={loadingProvider !== null}
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {googleLabel}
+          {loadingProvider === "google" ? "Connecting Google..." : "Continue with Google"}
         </button>
 
         <button
@@ -83,7 +73,9 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
           disabled={loadingProvider !== null}
           className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-[#f8f5f2] disabled:cursor-not-allowed disabled:opacity-70"
         >
-          {microsoftLabel}
+          {loadingProvider === "azure"
+            ? "Connecting Microsoft..."
+            : "Continue with Microsoft"}
         </button>
 
         {pageError ? (
