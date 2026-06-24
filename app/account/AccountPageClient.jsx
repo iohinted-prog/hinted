@@ -96,6 +96,7 @@ export default function AccountPageClient() {
     phone: "",
     birthday: "",
     bio: "",
+    marketingOptIn: false,
   });
 
   const resolvedName = useMemo(
@@ -125,7 +126,7 @@ export default function AccountPageClient() {
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("full_name, avatar_url, birthday, phone, bio")
+          .select("full_name, avatar_url, birthday, phone, bio, marketing_opt_in")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -154,6 +155,7 @@ export default function AccountPageClient() {
           phone: profile?.phone || "",
           birthday: profile?.birthday || "",
           bio: profile?.bio || "",
+          marketingOptIn: !!profile?.marketing_opt_in,
         });
       } catch (error) {
         console.error("Account load error:", error);
@@ -247,6 +249,7 @@ export default function AccountPageClient() {
           birthday: form.birthday || null,
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
+          marketing_opt_in: !!form.marketingOptIn,
         },
         { onConflict: "id" }
       );
@@ -305,6 +308,7 @@ export default function AccountPageClient() {
           birthday: form.birthday || null,
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
+          marketing_opt_in: !!form.marketingOptIn,
         },
         { onConflict: "id" }
       );
@@ -361,6 +365,7 @@ export default function AccountPageClient() {
           birthday: form.birthday || null,
           phone: form.phone.trim() || null,
           bio: form.bio.trim() || null,
+          marketing_opt_in: !!form.marketingOptIn,
         },
         { onConflict: "id" }
       );
@@ -672,6 +677,25 @@ export default function AccountPageClient() {
                   placeholder="Add a few words that help friends recognise you."
                   className="mt-2 w-full rounded-[18px] border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-[#f36f64]/50 focus:ring-4 focus:ring-[#f36f64]/10"
                 />
+              </div>
+
+              <div className="rounded-[22px] border border-[#f1dfd6] bg-[#fff8f4] p-4">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={form.marketingOptIn}
+                    onChange={(e) => updateField("marketingOptIn", e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 text-[#f36f64] focus:ring-[#f36f64]/30"
+                  />
+                  <span>
+                    <span className="block text-sm font-medium text-slate-900">
+                      Email me occasional updates and thoughtful ideas
+                    </span>
+                    <span className="mt-1 block text-xs leading-6 text-slate-500">
+                      You can unsubscribe at any time.
+                    </span>
+                  </span>
+                </label>
               </div>
 
               <div className="rounded-[22px] border border-[#f1dfd6] bg-[#fff8f4] p-4">
