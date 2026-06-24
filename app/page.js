@@ -35,7 +35,7 @@ const hints = [
     id: 3,
     title: "Cast-iron casserole dish",
     text: "From: johnlewis.com · ~£85",
-    image: "from-[#ead8cf] to-[#cfa690]",
+    image: "from-[#d9d7c7] to-[#b8aa8a]",
     tag: "Home",
     tag2: "Cooking",
     starred: false,
@@ -45,7 +45,7 @@ const hints = [
     id: 4,
     title: "Kindle or similar e-reader",
     text: "From: amazon.co.uk · ~£100",
-    image: "from-[#f0ddd7] to-[#d8b2a3]",
+    image: "from-[#d7e4d5] to-[#9eb293]",
     tag: "Books",
     tag2: "Everyday",
     starred: false,
@@ -65,7 +65,7 @@ const hints = [
     id: 6,
     title: "Nice pourover coffee set",
     text: "From: hasbean.co.uk · ~£60",
-    image: "from-[#f3e1d7] to-[#d8b7a2]",
+    image: "from-[#dce7e0] to-[#b0c5ba]",
     tag: "Home",
     tag2: "Coffee",
     starred: false,
@@ -100,7 +100,7 @@ const feedItems = [
     id: 3,
     type: "circle",
     avatar: "MF",
-    avatarColors: "from-[#f1c9bc] to-[#d98a73]",
+    avatarColors: "from-[#98a47d] to-[#5f7046]",
     name: "Max & Fiona",
     action: "Wedding Circle Pot is 80% full",
     detail: "£320 of £400 raised · 4 contributors",
@@ -134,7 +134,7 @@ const lowerReminders = [
   {
     title: "James Promotion",
     date: "July 6",
-    colors: "from-[#f1c9bc] to-[#d98a73]",
+    colors: "from-[#98a47d] to-[#5f7046]",
   },
 ];
 
@@ -178,7 +178,7 @@ const calendarDays = [
 
 const circleContributors = [
   ["CG", "from-[#efcdbf] to-[#bb8168]"],
-  ["MF", "from-[#f1c9bc] to-[#d98a73]"],
+  ["MF", "from-[#98a47d] to-[#5f7046]"],
   ["JM", "from-[#dcc4b5] to-[#b78972]"],
   ["SL", "from-[#e7cab8] to-[#b97d66]"],
 ];
@@ -196,14 +196,14 @@ const shopTiles = [
     title: "Best under £50",
     subtitle: "A practical edit for easy wins that still feel personal.",
     price: "12 picks",
-    tone: "from-[#f2dfd4] to-[#d7b4a5]",
+    tone: "from-[#ebe4d7] to-[#ccbda2]",
     badge: "Edit",
   },
   {
     title: "Luxury classics",
     subtitle: "Higher-value gifts worth saving to a circle or a board.",
     price: "Premium",
-    tone: "from-[#f6e2dc] to-[#e2b29f]",
+    tone: "from-[#dce7e0] to-[#a8bba8]",
     badge: "Curated",
   },
 ];
@@ -226,7 +226,7 @@ function AvatarStack() {
     ["AB", "from-[#efcdbf] to-[#bb8168]"],
     ["JM", "from-[#dcc4b5] to-[#b78972]"],
     ["SL", "from-[#e7cab8] to-[#b97d66]"],
-    ["PT", "from-[#f1c9bc] to-[#d98a73]"],
+    ["PT", "from-[#98a47d] to-[#5f7046]"],
   ];
 
   return (
@@ -301,14 +301,14 @@ function FeedItem({ item }) {
     item.type === "reminder"
       ? "bg-[#fff3ee]"
       : item.type === "circle"
-        ? "bg-[#fff1ec]"
+        ? "bg-[#f0f7ee]"
         : "bg-[#fff7f2]";
 
   const typeText =
     item.type === "reminder"
       ? "text-[#d97652]"
       : item.type === "circle"
-        ? "text-[#cf6f59]"
+        ? "text-[#4f7440]"
         : "text-[#8b6a5a]";
 
   return (
@@ -345,7 +345,7 @@ function AvatarStackMini() {
       {circleContributors.map(([label, colors], index) => (
         <div
           key={label}
-          className={`-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#fff6f1] bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
+          className={`-ml-2.5 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-[#f6faf3] bg-gradient-to-b text-[11px] font-bold text-white first:ml-0 ${colors}`}
           style={{ zIndex: circleContributors.length - index }}
         >
           {label}
@@ -360,14 +360,14 @@ function CircleTeaserCard() {
     <article className="rounded-[30px] border border-[#efdcd2] bg-white p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#c1836f]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#8f9a78]">
             Circles
           </p>
           <h3 className="mt-2 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
             Plan shared gifts together.
           </h3>
         </div>
-        <span className="rounded-full bg-[#fff1ea] px-3 py-1 text-[11px] font-semibold text-[#c96f56]">
+        <span className="rounded-full bg-[#edf4e9] px-3 py-1 text-[11px] font-semibold text-[#5c7147]">
           Group gifting
         </span>
       </div>
@@ -377,10 +377,10 @@ function CircleTeaserCard() {
         and watch the contribution pot fill up before the date arrives.
       </p>
 
-      <div className="mt-5 rounded-[26px] border border-[#f1ddd4] bg-[#fff8f4] p-4">
+      <div className="mt-5 rounded-[26px] border border-[#e7eee2] bg-[#f6faf3] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.14em] text-[#b68473]">
+            <p className="text-xs uppercase tracking-[0.14em] text-[#83906b]">
               Max & Fiona wedding
             </p>
             <p className="mt-1 text-[20px] font-semibold tracking-[-0.03em] text-slate-900">
@@ -390,25 +390,25 @@ function CircleTeaserCard() {
           <AvatarStackMini />
         </div>
 
-        <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#f3ddd3]">
-          <div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#f09a7d] to-[#d97652]" />
+        <div className="mt-4 h-3 overflow-hidden rounded-full bg-[#dde8d4]">
+          <div className="h-full w-[80%] rounded-full bg-gradient-to-r from-[#9cad84] to-[#5f7046]" />
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[20px] bg-white/90 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#b58678]">
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">
               Deadline
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-900">July 12</p>
           </div>
-          <div className="rounded-[20px] bg-white/90 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#b58678]">
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">
               Contributors
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-900">4 active</p>
           </div>
-          <div className="rounded-[20px] bg-white/90 p-3">
-            <p className="text-[11px] uppercase tracking-[0.14em] text-[#b58678]">
+          <div className="rounded-[20px] bg-white/80 p-3">
+            <p className="text-[11px] uppercase tracking-[0.14em] text-[#8a9772]">
               Goal
             </p>
             <p className="mt-1 text-sm font-semibold text-slate-900">
@@ -420,7 +420,7 @@ function CircleTeaserCard() {
 
       <Link
         href="/#signup"
-        className="mt-5 inline-flex rounded-full bg-[#ff875d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#f47145]"
+        className="mt-5 inline-flex rounded-full bg-[#2f5d50] px-5 py-3 text-sm font-semibold text-white"
       >
         Explore circles
       </Link>
@@ -467,7 +467,7 @@ function ShopTeaserCard() {
               <p className="mt-1 text-[13px] leading-5 text-slate-500">
                 {tile.subtitle}
               </p>
-              <p className="mt-3 text-[13px] font-semibold text-[#d97652]">
+              <p className="mt-3 text-[13px] font-semibold text-[#2f5d50]">
                 {tile.price}
               </p>
             </div>
@@ -477,7 +477,7 @@ function ShopTeaserCard() {
 
       <Link
         href="/gift-shop"
-        className="mt-5 inline-flex rounded-full border border-[#ffcfbc] bg-[#fff3ec] px-5 py-3 text-sm font-semibold text-[#c86647] transition hover:bg-[#ffe9df]"
+        className="mt-5 inline-flex rounded-full border border-[#e8d9cf] bg-white px-5 py-3 text-sm font-semibold text-slate-700"
       >
         Preview shop
       </Link>
@@ -509,7 +509,7 @@ function DemoVideoSection() {
               <span>See a birthday coming up in the calendar.</span>
             </div>
             <div className="flex items-center gap-3">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff0ea] text-[#d56f59]">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#edf4e9] text-[#5d7446]">
                 2
               </span>
               <span>Open saved hints or start a circle with friends.</span>
@@ -524,8 +524,8 @@ function DemoVideoSection() {
         </div>
 
         <div className="rounded-[32px] border border-[#efdfd6] bg-[#fff8f4] p-4">
-          <div className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[28px] border border-dashed border-[#e8cfc1] bg-gradient-to-br from-[#fff4ed] via-[#fffaf7] to-[#fff1ea]">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,205,191,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(244,154,123,0.20),transparent_32%)]" />
+          <div className="relative flex min-h-[340px] items-center justify-center overflow-hidden rounded-[28px] border border-dashed border-[#e8cfc1] bg-gradient-to-br from-[#fff4ed] via-[#fffaf7] to-[#f4f7f1]">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(239,205,191,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(152,164,125,0.22),transparent_32%)]" />
             <div className="relative z-10 flex flex-col items-center text-center">
               <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-[0_18px_40px_rgba(145,100,76,0.12)]">
                 <span className="ml-1 text-3xl text-[#d77958]">▶</span>
@@ -692,7 +692,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="mt-5 flex flex-wrap items-center gap-3">
-                    <div className="rounded-full bg-[#ff875d] px-4 py-2 text-sm font-semibold text-white shadow-sm">
+                    <div className="rounded-full bg-[#2f5d50] px-4 py-2 text-sm font-semibold text-white">
                       Add hint
                     </div>
                     <div className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600">
@@ -724,7 +724,7 @@ export default function HomePage() {
               </p>
             </div>
             <button
-              className="inline-flex rounded-full bg-[#ff875d] px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#f47145]"
+              className="inline-flex rounded-full bg-[#2f5d50] px-5 py-3 text-sm font-semibold text-white"
               type="button"
             >
               View full planner
@@ -855,7 +855,7 @@ export default function HomePage() {
                 ))}
               </div>
 
-              <div className="mt-5 rounded-[24px] bg-gradient-to-br from-[#ff946f] to-[#d97652] p-5 text-white">
+              <div className="mt-5 rounded-[24px] bg-[#2f5d50] p-5 text-white">
                 <p className="text-xs uppercase tracking-[0.14em] text-white/60">
                   Gift prompt
                 </p>
