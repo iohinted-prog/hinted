@@ -109,6 +109,58 @@ const PRODUCTS = [
     occasionTags: ["Graduation", "Birthday"],
     category: "Books · Keepsake",
   },
+  {
+    id: "9",
+    title: "Cashmere scarf",
+    retailer: "johnlewis.com",
+    price: "£69",
+    image:
+      "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?auto=format&fit=crop&w=1200&q=80",
+    shortNote:
+      "Classic, useful, and elevated enough to feel special without being hard to get right.",
+    interestTags: ["Fashion"],
+    occasionTags: ["Birthday", "Thank you"],
+    category: "Fashion · Accessories",
+  },
+  {
+    id: "10",
+    title: "Fresh flower subscription",
+    retailer: "bloomandwild.com",
+    price: "From £30",
+    image:
+      "https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=1200&q=80",
+    shortNote:
+      "A lovely way to stretch the moment beyond the day itself with something beautiful arriving later.",
+    interestTags: ["Home", "Wellness"],
+    occasionTags: ["Anniversary", "Thank you"],
+    category: "Home · Flowers",
+  },
+  {
+    id: "11",
+    title: "Leather travel wallet",
+    retailer: "etsy.com",
+    price: "£34",
+    image:
+      "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1200&q=80",
+    shortNote:
+      "Practical, polished, and easy to personalise for frequent travellers and honeymoon plans.",
+    interestTags: ["Travel", "Fashion"],
+    occasionTags: ["Wedding", "Just because"],
+    category: "Travel · Accessories",
+  },
+  {
+    id: "12",
+    title: "Portable projector",
+    retailer: "amazon.co.uk",
+    price: "£89",
+    image:
+      "https://images.unsplash.com/photo-1520342868574-5fa3804e551c?auto=format&fit=crop&w=1200&q=80",
+    shortNote:
+      "A fun home gift for film nights, cosy hosting, and low-effort evenings that still feel memorable.",
+    interestTags: ["Tech", "Home"],
+    occasionTags: ["Housewarming", "Birthday"],
+    category: "Tech · Home",
+  },
 ];
 
 const INTEREST_OPTIONS = [
@@ -140,14 +192,14 @@ const OCCASION_OPTIONS = [
 
 function LandingLogo() {
   return (
-    <div className="flex items-center gap-3.5">
+    <Link href="/" className="flex items-center gap-3.5">
       <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
         🎁
       </div>
       <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
         Hinted<span className="text-[#f36f64]">.io</span>
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -232,13 +284,6 @@ function ShopCard({ product }) {
           >
             Sign in to save
           </Link>
-
-          <Link
-            href="/#signup"
-            className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
-          >
-            Sign in to see more
-          </Link>
         </div>
       </div>
     </article>
@@ -320,15 +365,11 @@ export default function GiftShopPage() {
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-      <div className="mx-auto max-w-[1380px] px-5 pb-16 pt-6 md:px-8">
+      <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
         <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
           <LandingLogo />
 
-          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex">
-            <Link href="/" className="transition hover:text-slate-900">
-              Home
-            </Link>
-          </nav>
+          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex" />
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
             <GoogleAuthButtons variant="header-login" />
@@ -345,13 +386,13 @@ export default function GiftShopPage() {
                 </div>
 
                 <h1 className="mt-3 text-[34px] font-semibold tracking-[-0.06em] text-slate-900 sm:text-[40px]">
-                  Browse thoughtful gift ideas before you sign in.
+                  Find a gift that feels thoughtful, not last-minute.
                 </h1>
 
                 <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
-                  Explore a public preview of Shop, filter by occasion or interests,
-                  and then sign in to unlock more products, saving, and your full
-                  personalised gifting flow.
+                  Explore a handpicked edit of gift ideas for birthdays, weddings,
+                  housewarmings, thank-yous, and more. Search by interest, browse by
+                  occasion, and discover presents that feel personal before you even sign in.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -416,48 +457,48 @@ export default function GiftShopPage() {
 
               <aside className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5 shadow-sm">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Public preview
+                  Why Hinted
                 </p>
 
                 <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                  Sign in to see more
+                  Better gifting starts with better ideas
                 </h2>
 
                 <div className="mt-4 space-y-3">
                   <div className="rounded-[20px] bg-[#faf7f4] p-4">
                     <span className="inline-flex rounded-full bg-[#fff4ee] px-2.5 py-1 text-[11px] font-semibold text-[#df7b59]">
-                      Browse
+                      Curated
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Filter the public collection by interest, occasion, and search terms.
+                      Skip endless tabs and start with gift ideas chosen to feel useful, tasteful, and genuinely giftable.
                     </p>
                   </div>
 
                   <div className="rounded-[20px] bg-[#faf7f4] p-4">
                     <span className="inline-flex rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-semibold text-[#5676b3]">
-                      Sign in
+                      Personal
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Unlock more gift ideas, saving to hints, and personalised recommendations.
+                      Browse by occasion and interest to get closer to something that actually suits the person you are buying for.
                     </p>
                   </div>
 
                   <div className="rounded-[20px] bg-[#faf7f4] p-4">
                     <span className="inline-flex rounded-full bg-[#edf6eb] px-2.5 py-1 text-[11px] font-semibold text-[#4a7a3a]">
-                      Save
+                      Ready when you are
                     </span>
                     <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Signed-in users can save good finds and carry them into reminders and circles.
+                      Create an account to save standout finds, revisit them later, and turn good ideas into well-timed gifts.
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-5 rounded-[20px] bg-[#fffaf7] p-4">
                   <p className="text-sm font-semibold text-slate-900">
-                    This page is intentionally limited
+                    Want the full experience?
                   </p>
                   <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                    Sign in to see more products, use the full shop experience, and save ideas to your account.
+                    Sign in to unlock more products, save ideas, and build your own thoughtful gifting shortlist.
                   </p>
 
                   <div className="mt-4">
@@ -479,13 +520,6 @@ export default function GiftShopPage() {
                 Showing up to 6 items before sign-in.
               </p>
             </div>
-
-            <Link
-              href="/#signup"
-              className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f5d50] px-5 text-sm font-semibold text-white"
-            >
-              Sign in to see more
-            </Link>
           </div>
 
           <div className="relative rounded-[36px] border border-[#efe0d7] bg-[#fffdfb] p-3 shadow-[0_12px_32px_rgba(176,118,86,0.08)] sm:p-5">
