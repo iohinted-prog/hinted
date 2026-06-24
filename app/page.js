@@ -576,12 +576,8 @@ export default async function HomePage() {
       .eq("id", user.id)
       .maybeSingle();
 
-    if (!profileError) {
-      if (profile?.onboarding_completed === true) {
-        redirect("/feed");
-      }
-
-      redirect("/onboarding");
+    if (!profileError && profile?.onboarding_completed === true) {
+      redirect("/feed");
     }
   }
 
