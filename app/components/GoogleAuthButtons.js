@@ -4,15 +4,11 @@ import { useMemo, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 
 function getBaseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  }
-
   if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin.replace(/\/$/, "");
+    return window.location.origin;
   }
 
-  return "";
+  return process.env.NEXT_PUBLIC_SITE_URL || "";
 }
 
 function buildRedirectTo(nextPath = "/onboarding") {
@@ -25,32 +21,41 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
   const [loadingProvider, setLoadingProvider] = useState(null);
   const [pageError, setPageError] = useState("");
 
-  async function signInWithProvider(provider) {
+  async function handleGoogleSignIn() {
     try {
       setPageError("");
-      setLoadingProvider(provider);
+      setLoadingProvider("google");
 
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options:
-          provider === "azure"
-            ? {
-                scopes: "openid email profile",
-                redirectTo: buildRedirectTo("/onboarding"),
-              }
-            : {
-                redirectTo: buildRedirectTo("/onboarding"),
-              },
+        provider: "google",
+        options: {
+          redirectTo: buildRedirectTo("/onboarding"),
+        },
       });
 
       if (error) throw error;
     } catch (error) {
-      setPageError(
-        error?.message ||
-          (provider === "azure"
-            ? "Microsoft sign in failed."
-            : "Google sign in failed.")
-      );
+      setPageError(error?.message || "Google sign in failed.");
+      setLoadingProvider(null);
+    }
+  }
+
+  async function handleMicrosoftSignIn() {
+    try {
+      setPageError("");
+      setLoadingProvider("azure");
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "azure",
+        options: {
+          scopes: "email",
+          redirectTo: buildRedirectTo("/onboarding"),
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      setPageError(error?.message || "Microsoft sign in failed.");
       setLoadingProvider(null);
     }
   }
@@ -60,7 +65,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
       <div className="space-y-3">
         <button
           type="button"
-          onClick={() => signInWithProvider("google")}
+          onClick={handleGoogleSignIn}
           disabled={loadingProvider !== null}
           className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-5 text-sm font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
         >
@@ -69,7 +74,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
 
         <button
           type="button"
-          onClick={() => signInWithProvider("azure")}
+          onClick={handleMicrosoftSignIn}
           disabled={loadingProvider !== null}
           className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-[#f8f5f2] disabled:cursor-not-allowed disabled:opacity-70"
         >
@@ -91,7 +96,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
     return (
       <button
         type="button"
-        onClick={() => signInWithProvider("google")}
+        onClick={handleGoogleSignIn}
         disabled={loadingProvider !== null}
         className="inline-flex h-12 shrink-0 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-[15px] font-semibold text-slate-700 transition hover:bg-[#fff5f0] disabled:cursor-not-allowed disabled:opacity-70"
       >
@@ -104,7 +109,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
     return (
       <button
         type="button"
-        onClick={() => signInWithProvider("google")}
+        onClick={handleGoogleSignIn}
         disabled={loadingProvider !== null}
         className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-6 text-[15px] font-bold text-white shadow-lg transition hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-70"
       >
