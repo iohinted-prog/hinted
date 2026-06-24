@@ -1,5 +1,5 @@
 import Link from "next/link";
-import GoogleAuthButtons from "./components/GoogleAuthButtons";
+import AuthButtons from "./components/AuthButtons";
 
 export const metadata = {
   title: "Hinted.io | Never forget. Always thoughtful.",
@@ -561,8 +561,8 @@ export default function HomePage() {
           </nav>
 
           <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
-            <GoogleAuthButtons variant="header-login" />
-            <GoogleAuthButtons variant="header-get-started" />
+            <AuthButtons variant="header-login" />
+            <AuthButtons variant="header-get-started" />
           </div>
         </header>
 
@@ -594,24 +594,24 @@ export default function HomePage() {
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                    Join Hinted with Google
+                    Join Hinted
                   </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Keep your circles, hints, reminders, and shop saves connected
-                    with one secure Google sign in.
+                    with a secure sign in.
                   </p>
                 </div>
                 <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
-                  Google only
+                  Google or Microsoft
                 </div>
               </div>
 
               <div className="space-y-4">
-                <GoogleAuthButtons variant="hero-primary" />
+                <AuthButtons variant="hero-primary" />
 
                 <div className="rounded-[22px] border border-[#f3e4db] bg-[#fff8f4] p-4">
                   <p className="text-sm leading-6 text-slate-600">
-                    New here? Use the same Google button to create your account.
+                    New here? Use Google or Microsoft to create your account.
                     Returning users can log in the exact same way.
                   </p>
                 </div>
