@@ -413,10 +413,10 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       recommendedContribution,
       note:
         circleRow.funding_mode === "all_or_nothing"
-          ? "This circle will only proceed if the target is reached by the deadline."
+          ? "This circle will only proceed if the target is reached by the deadline. Once it is filled, the organiser gets the money sent back to them to make the purchase."
           : circleRow.funding_mode === "organiser_covers"
-            ? "If the target is not reached, the organiser can choose to cover the gap."
-            : "This circle can stay flexible if fewer people join than expected.",
+            ? "If the target is not reached, the organiser can choose to cover the gap. Once it is filled, the organiser gets the money sent back to them to make the purchase."
+            : "This circle can stay flexible if fewer people join than expected. Once it is filled, the organiser gets the money sent back to them to make the purchase.",
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
       goalType:
@@ -541,40 +541,59 @@ function ModalShell({
   maxWidth = "max-w-[1120px]",
   hideHeaderBorder = false,
 }) {
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [open]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
-      <div
-        className={`max-h-[92vh] w-full overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] ${maxWidth}`}
-      >
+    <div className="fixed inset-0 z-50 bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
+      <div className="flex min-h-full items-center justify-center">
         <div
-          className={`flex items-center justify-between px-6 py-5 ${
-            hideHeaderBorder ? "" : "border-b border-[#efe0d7]"
-          }`}
+          className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[34px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] ${maxWidth}`}
         >
-          <div>
-            {eyebrow ? (
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
-                {eyebrow}
-              </p>
-            ) : null}
-            <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
-              {title}
-            </h2>
+          <div
+            className={`flex shrink-0 items-center justify-between px-6 py-5 ${
+              hideHeaderBorder ? "" : "border-b border-[#efe0d7]"
+            }`}
+          >
+            <div>
+              {eyebrow ? (
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
+                  {eyebrow}
+                </p>
+              ) : null}
+              <h2 className="mt-1 text-[28px] font-semibold tracking-[-0.05em] text-slate-900">
+                {title}
+              </h2>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white text-slate-500 hover:bg-[#fff2eb]"
+              aria-label="Close window"
+              type="button"
+            >
+              ✕
+            </button>
           </div>
 
-          <button
-            onClick={onClose}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white text-slate-500 hover:bg-[#fff2eb]"
-            aria-label="Close window"
-            type="button"
-          >
-            ✕
-          </button>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {children}
+          </div>
         </div>
-
-        {children}
       </div>
     </div>
   );
@@ -629,7 +648,9 @@ function MemberPill({ member, currency = "GBP", formatCurrency }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-900">{member.name}</p>
           <div className="mt-1 flex items-center gap-2">
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles}`}>
+            <span
+              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${statusStyles}`}
+            >
               {statusLabel}
             </span>
             <span className="text-[11px] text-slate-400">
@@ -736,17 +757,17 @@ function PotTypeGuide() {
   const potTypes = [
     {
       title: "Flexible pot",
-      text: "Anyone invited can join and contribute what they want.",
+      text: "Anyone invited can join and contribute what they want. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
       colors: "bg-[#edf6eb] text-[#4a7a3a]",
     },
     {
       title: "All-or-nothing",
-      text: "The circle only goes ahead if the target is reached by the deadline.",
+      text: "The circle only goes ahead if the target is reached by the deadline. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
       colors: "bg-[#fff3ee] text-[#d57a58]",
     },
     {
       title: "Organizer covers gap",
-      text: "The organiser can choose to top up the missing amount.",
+      text: "The organiser can choose to top up the missing amount. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
       colors: "bg-[#eef4ff] text-[#5676b3]",
     },
   ];
@@ -760,10 +781,19 @@ function PotTypeGuide() {
         How pot types work
       </h2>
 
+      <div className="mt-3 rounded-[20px] border border-[#f2e1d8] bg-[#fff8f4] p-4">
+        <p className="text-[13px] leading-6 text-slate-600">
+          When a pot reaches its full target, the organiser gets the money sent back to them so
+          they can make the purchase for the group.
+        </p>
+      </div>
+
       <div className="mt-5 space-y-3">
         {potTypes.map((type) => (
           <div key={type.title} className="rounded-[20px] bg-[#faf7f4] p-4">
-            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${type.colors}`}>
+            <span
+              className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${type.colors}`}
+            >
               {type.title}
             </span>
             <p className="mt-3 text-[13px] leading-6 text-slate-600">{type.text}</p>
@@ -1789,7 +1819,7 @@ function CreateCircleModal({
   return (
     <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
       <div className="grid gap-0 lg:grid-cols-[1.06fr_0.94fr]">
-        <div className="max-h-[calc(92vh-90px)] space-y-6 overflow-y-auto p-6">
+        <div className="min-h-0 space-y-6 p-6 lg:border-r lg:border-[#efe0d7]">
           <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">1. Choose the event</p>
 
@@ -2240,7 +2270,7 @@ function CreateCircleModal({
           ) : null}
         </div>
 
-        <div className="max-h-[calc(92vh-90px)] overflow-y-auto border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
+        <div className="min-h-0 border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
           <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">5. Add people</p>
             <p className="mt-1 text-[13px] leading-6 text-slate-500">
@@ -2847,7 +2877,7 @@ export default function CirclesClient() {
     const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
     if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
       throw new Error("A valid email address is required.");
-      }
+    }
 
     const insertPayload = {
       user_id: sessionUser.id,
