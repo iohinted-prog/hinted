@@ -351,12 +351,7 @@ function buildSelfRecord(profile) {
   };
 }
 
-function buildCircleViewModel(
-  circleRow,
-  inviteRows = [],
-  currentUserName = "You",
-  raisedAmount = 0
-) {
+function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You") {
   const members = [
     {
       name: currentUserName || "You",
@@ -402,7 +397,7 @@ function buildCircleViewModel(
       previewDescription: circleRow.item_description || "",
       target: totalTarget,
       currency: circleRow.currency || "GBP",
-      raised: Number(raisedAmount || 0),
+      raised: 0,
       note:
         circleRow.funding_mode === "all_or_nothing"
           ? "This circle will only proceed if the target is reached by the deadline."
@@ -896,22 +891,1063 @@ function CurrencyAmountInput({
   );
 }
 
-/* Keep your existing AddContactModal, DeleteContactModal, DeleteCircleModal,
-   and CreateCircleModal exactly as they were. */
-function AddContactModal(props) {
-  return null;
+function AddContactModal({ open, onClose, onSave, supabase, modalKey }) {
+  const [contactSearch, setContactSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [contactResults, setContactResults] = useState([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [contactsMessage, setContactsMessage] = useState("");
+  const [selectedRelationships, setSelectedRelationships] = useState(["Friend"]);
+  const [form, setForm] = useState({ name: "", email: "" });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    const timer = setTimeout(() => setDebouncedSearch(contactSearch.trim()), 250);
+    return () => clearTimeout(timer);
+  }, [contactSearch, open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!debouncedSearch) {
+      setContactResults([]);
+      setContactsMessage("");
+      setSearchingContacts(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function runSearch() {
+      setSearchingContacts(true);
+      setContactsMessage("");
+
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const providerToken = session?.provider_token;
+
+        if (!providerToken) {
+          if (!cancelled) {
+            setContactResults([]);
+            setContactsMessage("We couldn’t access your linked Google contacts right now.");
+          }
+          return;
+        }
+
+        const url = new URL("https://people.googleapis.com/v1/people:searchContacts");
+        url.searchParams.set("query", debouncedSearch);
+        url.searchParams.set("pageSize", "8");
+        url.searchParams.set("readMask", "names,emailAddresses");
+
+        const response = await fetch(url.toString(), {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result?.error?.message || "Couldn’t search contacts.");
+        }
+
+        const people = Array.isArray(result.results) ? result.results : [];
+        const mapped = people
+          .map((item) => item.person)
+          .filter(Boolean)
+          .map((person, index) => ({
+            id: person.resourceName || String(index),
+            name: getPrimaryContactField(person, "names"),
+            email: getPrimaryContactField(person, "emailAddresses"),
+          }))
+          .filter((person) => person.name || person.email);
+
+        if (!cancelled) {
+          setContactResults(mapped);
+          setContactsMessage(mapped.length ? "" : "No matching Google contacts found.");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setContactResults([]);
+          setContactsMessage(error?.message || "Couldn’t search contacts.");
+        }
+      } finally {
+        if (!cancelled) setSearchingContacts(false);
+      }
+    }
+
+    runSearch();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedSearch, open, supabase, modalKey]);
+
+  function selectContact(contact) {
+    setForm({
+      name: contact.name || "",
+      email: contact.email || "",
+    });
+    setContactSearch(contact.name || contact.email || "");
+    setContactResults([]);
+    setContactsMessage("");
+    setSaveError("");
+  }
+
+  function toggleRelationship(relationship) {
+    setSelectedRelationships((prev) => {
+      if (prev.includes(relationship)) {
+        if (prev.length === 1) return prev;
+        return prev.filter((item) => item !== relationship);
+      }
+      return [...prev, relationship];
+    });
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) {
+      setSaveError("Contact name is required.");
+      return;
+    }
+
+    const cleanedEmail = form.email.trim().toLowerCase();
+
+    if (!cleanedEmail) {
+      setSaveError("Email is required.");
+      return;
+    }
+
+    if (!isValidEmail(cleanedEmail)) {
+      setSaveError("Enter a valid email address.");
+      return;
+    }
+
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await onSave({
+        name: form.name.trim(),
+        email: cleanedEmail,
+        relationshipTypes: selectedRelationships,
+      });
+      onClose();
+    } catch (error) {
+      setSaveError(error?.message || "Failed to save contact.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Contact"
+      title="Add a contact"
+      maxWidth="max-w-[760px]"
+      hideHeaderBorder
+    >
+      <div className="border-t border-[#efe0d7] px-6 py-6">
+        <div className="rounded-[28px] border border-dashed border-[#e5d8cf] bg-[#fffdfa] p-5">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
+            Bring someone in quickly
+          </p>
+          <h3 className="mt-3 text-[18px] font-semibold tracking-[-0.03em] text-slate-900">
+            Add from Gmail or type their email
+          </h3>
+          <p className="mt-3 max-w-[62ch] text-[15px] leading-8 text-slate-500">
+            Use the onboarding-style flow here to browse contacts from your linked Google account, or add someone manually now so they are ready for hints and circles.
+          </p>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <input
+              type="text"
+              value={contactSearch}
+              onChange={(e) => setContactSearch(e.target.value)}
+              placeholder="Search Gmail contacts"
+              className="h-[46px] w-full rounded-full border border-[#ead8ce] bg-white px-5 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </div>
+
+          {searchingContacts ? (
+            <p className="mt-3 text-xs text-slate-500">Searching contacts...</p>
+          ) : null}
+
+          {contactResults.length > 0 ? (
+            <div className="mt-3 overflow-hidden rounded-[20px] border border-[#efe1d9] bg-white">
+              {contactResults.map((contact) => (
+                <button
+                  key={contact.id}
+                  type="button"
+                  onClick={() => selectContact(contact)}
+                  className="flex w-full items-center justify-between border-b border-slate-100 px-4 py-3 text-left last:border-b-0 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-slate-900">{contact.name || "No name"}</p>
+                    <p className="text-xs text-slate-500">{contact.email || "No email"}</p>
+                  </div>
+                  <span className="text-xs font-semibold text-[#ea7451]">Use</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {contactsMessage ? (
+            <p className="mt-3 text-xs text-slate-500">{contactsMessage}</p>
+          ) : null}
+        </div>
+
+        <div className="mt-6 space-y-5">
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Name</span>
+            <input
+              type="text"
+              value={form.name}
+              onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+              placeholder="Maya"
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-slate-900">Email</span>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              placeholder="maya@example.com"
+              className="mt-2 h-[48px] w-full rounded-[18px] border border-[#d9dce3] bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-[#f19b7e]"
+            />
+          </label>
+
+          <div>
+            <span className="block text-sm font-medium text-slate-900">Relationship</span>
+            <div className="mt-3 flex flex-wrap gap-2.5">
+              {relationshipOptions.map((relationship) => {
+                const selected = selectedRelationships.includes(relationship);
+
+                return (
+                  <button
+                    key={relationship}
+                    type="button"
+                    onClick={() => toggleRelationship(relationship)}
+                    className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
+                      selected
+                        ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
+                        : "border-[#d9dce3] bg-white text-slate-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {relationship}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {saveError ? (
+            <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+              {saveError}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-[44px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || !form.name.trim() || !form.email.trim()}
+            className={`inline-flex h-[44px] items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
+              saving || !form.name.trim() || !form.email.trim()
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+            }`}
+          >
+            {saving ? "Saving..." : "Save contact"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
 }
 
-function DeleteContactModal(props) {
-  return null;
+function DeleteContactModal({
+  open,
+  onClose,
+  onConfirm,
+  contact,
+  isDeleting,
+  errorMessage,
+}) {
+  const [typedName, setTypedName] = useState("");
+
+  useEffect(() => {
+    if (!open) setTypedName("");
+  }, [open]);
+
+  if (!open || !contact) return null;
+
+  const expectedName = String(contact.name || "").trim();
+  const matches = typedName.trim() === expectedName;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Delete contact"
+      title={`Delete ${contact.name}`}
+      maxWidth="max-w-[620px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently remove the contact.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            Type <span className="font-semibold text-slate-900">{expectedName}</span> to confirm.
+          </p>
+        </div>
+
+        <label className="block">
+          <span className="block text-sm font-medium text-slate-900">Type the contact name</span>
+          <input
+            type="text"
+            value={typedName}
+            onChange={(e) => setTypedName(e.target.value)}
+            placeholder={expectedName}
+            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+          />
+        </label>
+
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting || !matches}
+            onClick={() => onConfirm(contact)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting || !matches
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
+            }`}
+          >
+            {isDeleting ? "Deleting..." : "Delete contact"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
 }
 
-function DeleteCircleModal(props) {
-  return null;
+function DeleteCircleModal({
+  open,
+  onClose,
+  onConfirm,
+  circle,
+  isDeleting,
+  errorMessage,
+}) {
+  if (!open || !circle) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Delete circle"
+      title={`Delete ${circle.name}`}
+      maxWidth="max-w-[720px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#efc0ba] bg-[#fff4f2] p-4">
+          <p className="text-sm font-semibold text-[#b14f43]">This will permanently delete the entire circle.</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-600">
+            This removes the circle itself and its invites.
+          </p>
+        </div>
+
+        <div className="rounded-[20px] bg-[#fffaf7] p-4">
+          <p className="text-sm font-semibold text-slate-900">Circle summary</p>
+          <p className="mt-2 text-[13px] text-slate-600">
+            {circle.name} · {circle.subtitle}
+          </p>
+        </div>
+
+        {errorMessage ? (
+          <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            disabled={isDeleting}
+            onClick={() => onConfirm(circle)}
+            className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white ${
+              isDeleting
+                ? "cursor-not-allowed bg-[#e9a48d]"
+                : "bg-[#b14f43]"
+            }`}
+          >
+            {isDeleting ? "Deleting..." : "Delete circle"}
+          </button>
+        </div>
+      </div>
+    </ModalShell>
+  );
 }
 
-function CreateCircleModal(props) {
-  return null;
+function CreateCircleModal({
+  open,
+  onClose,
+  onSubmit,
+  contacts,
+  calendarEvents,
+  selectedPeople,
+  setSelectedPeople,
+  eventMode,
+  setEventMode,
+  selectedEventId,
+  setSelectedEventId,
+  form,
+  setForm,
+  linkPreview,
+  setLinkPreview,
+  isFetchingPreview,
+  handleFetchPreview,
+  selectedHintOwnerId,
+  setSelectedHintOwnerId,
+  errorMessage,
+  isSubmitting,
+  ownHints,
+  publicHintsByContact,
+  selfProfile,
+  formatCurrency,
+}) {
+  if (!open) return null;
+
+  const safeCalendarEvents = Array.isArray(calendarEvents) ? calendarEvents : [];
+  const ownerOptions = [buildSelfRecord(selfProfile), ...contacts];
+  const selectedOwner =
+    ownerOptions.find((option) => String(option.id) === String(selectedHintOwnerId)) || null;
+
+  const selectedOwnerPublicHints =
+    selectedOwner && selectedOwner.type !== "self"
+      ? publicHintsByContact?.[selectedOwner.id] || []
+      : [];
+
+  const visibleHints = String(selectedHintOwnerId) === SELF_SELECTOR_ID ? ownHints : selectedOwnerPublicHints;
+  const amountMode = form.goalType === "amount";
+
+  const liveBaseAmount = parseAmount(form.goalValue);
+  const liveTotals = calculateCircleTotals(liveBaseAmount);
+
+  function handleSelectHint(hint) {
+    const hintAmount = extractHintAmount(hint);
+    const nextAmount = hintAmount > 0 ? String(hintAmount) : "";
+
+    setForm((prev) => ({
+      ...prev,
+      selectedHintId: hint.id,
+      goalValue: nextAmount,
+      currency: hint?.currency || prev.currency,
+    }));
+
+    setLinkPreview({
+      title: hint?.title || "Shared item",
+      description: hint?.retailer || "",
+      image: hint?.image_url || "",
+      url: hint?.url || "",
+    });
+  }
+
+  return (
+    <ModalShell open={open} onClose={onClose} eyebrow="New circle" title="Create a circle around an event">
+      <div className="grid gap-0 lg:grid-cols-[1.06fr_0.94fr]">
+        <div className="max-h-[calc(92vh-90px)] space-y-6 overflow-y-auto p-6">
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">1. Choose the event</p>
+
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEventMode("calendar")}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                  eventMode === "calendar"
+                    ? "bg-[#2f3b2d] text-white"
+                    : "border border-[#ead8ce] bg-white text-slate-700"
+                }`}
+              >
+                From calendar
+              </button>
+              <button
+                type="button"
+                onClick={() => setEventMode("new")}
+                className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                  eventMode === "new"
+                    ? "bg-[#2f3b2d] text-white"
+                    : "border border-[#ead8ce] bg-white text-slate-700"
+                }`}
+              >
+                New event
+              </button>
+            </div>
+
+            {eventMode === "calendar" ? (
+              <div className="mt-4 max-h-[280px] space-y-3 overflow-y-auto pr-1">
+                {safeCalendarEvents.map((event) => (
+                  <label
+                    key={event.id}
+                    className={`flex cursor-pointer items-center justify-between rounded-[20px] border p-4 ${
+                      String(event.id) === String(selectedEventId)
+                        ? "border-[#f0a384] bg-[#fff4ee]"
+                        : "border-[#efe1d9] bg-[#fffdfa]"
+                    }`}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+                      <p className="mt-1 text-[13px] text-slate-500">
+                        {event.type} · {event.event_date}
+                      </p>
+                    </div>
+                    <input
+                      type="radio"
+                      name="calendarEvent"
+                      className="h-4 w-4 accent-[#f36f64]"
+                      checked={String(event.id) === String(selectedEventId)}
+                      onChange={() => {
+                        setSelectedEventId(String(event.id));
+                        setForm((prev) => ({
+                          ...prev,
+                          eventDate: event.event_date,
+                          deadline: prev.deadline || event.event_date,
+                          occasionType: event.type || prev.occasionType,
+                          title: prev.title?.trim() ? prev.title : event.title,
+                        }));
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 sm:col-span-2">
+                  <span className="text-sm font-medium text-slate-700">Event title</span>
+                  <input
+                    type="text"
+                    value={form.eventTitle}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        eventTitle: e.target.value,
+                        title: prev.title?.trim() ? prev.title : e.target.value,
+                      }))
+                    }
+                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                    placeholder="Summer birthday dinner"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Event date</span>
+                  <input
+                    type="date"
+                    value={form.eventDate}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        eventDate: e.target.value,
+                        deadline: prev.deadline || e.target.value,
+                      }))
+                    }
+                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">2. Circle details</p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">Circle name</span>
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                  placeholder="Jules birthday circle"
+                />
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">Contribution deadline</span>
+                <input
+                  type="date"
+                  value={form.deadline}
+                  onChange={(e) => setForm((prev) => ({ ...prev, deadline: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                />
+              </label>
+
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">If people do not join</span>
+                <select
+                  value={form.fundingMode}
+                  onChange={(e) => setForm((prev) => ({ ...prev, fundingMode: e.target.value }))}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                >
+                  <option value="flexible">Flexible pot</option>
+                  <option value="all_or_nothing">All-or-nothing</option>
+                  <option value="organiser_covers">Organizer covers gap</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">3. Goal type</p>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2">
+                <span className="text-sm font-medium text-slate-700">What are you aiming for?</span>
+                <select
+                  value={form.goalType}
+                  onChange={(e) => {
+                    const nextValue = e.target.value;
+                    setForm((prev) => ({
+                      ...prev,
+                      goalType: nextValue,
+                      itemSource: nextValue === "amount" ? "" : prev.itemSource || "hint",
+                      selectedHintId: nextValue === "amount" ? "" : prev.selectedHintId,
+                      itemUrl: nextValue === "amount" ? "" : prev.itemUrl,
+                    }));
+                    if (nextValue === "amount") {
+                      setLinkPreview(null);
+                    }
+                  }}
+                  className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                >
+                  <option value="item">Specific item</option>
+                  <option value="amount">Target amount</option>
+                </select>
+              </label>
+
+              {form.goalType === "amount" ? (
+                <CurrencyAmountInput
+                  currency={form.currency}
+                  amount={form.goalValue}
+                  onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
+                  onAmountChange={(value) => setForm((prev) => ({ ...prev, goalValue: value }))}
+                  label="Target amount"
+                />
+              ) : (
+                <div className="space-y-2">
+                  <span className="text-sm font-medium text-slate-700">Amount</span>
+                  <div className="flex h-12 w-full items-center rounded-[18px] border border-[#efe1d9] bg-[#faf7f5] px-4 text-sm text-slate-500">
+                    Clicking different hints will update the amount below.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!amountMode ? (
+            <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+              <div>
+                <p className="text-sm font-semibold text-slate-900">4. Choose the item</p>
+                <p className="mt-1 text-[13px] leading-6 text-slate-500">
+                  Pick the person on the left, then choose one hint or paste a link.
+                </p>
+              </div>
+
+              <div className="mt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      itemSource: "hint",
+                      itemUrl: "",
+                      selectedHintId: "",
+                      goalValue: "",
+                    }));
+                    setLinkPreview(null);
+                  }}
+                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                    form.itemSource === "hint"
+                      ? "bg-[#2f3b2d] text-white"
+                      : "border border-[#ead8ce] bg-white text-slate-700"
+                  }`}
+                >
+                  From hints
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      itemSource: "url",
+                      selectedHintId: "",
+                      goalValue: prev.itemSource === "url" ? prev.goalValue : "",
+                    }));
+                    setLinkPreview(null);
+                  }}
+                  className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                    form.itemSource === "url"
+                      ? "bg-[#2f3b2d] text-white"
+                      : "border border-[#ead8ce] bg-white text-slate-700"
+                  }`}
+                >
+                  Paste a link
+                </button>
+              </div>
+
+              {form.itemSource === "hint" ? (
+                <div className="mt-4 grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-3">
+                    <p className="px-2 pb-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-slate-400">
+                      People
+                    </p>
+
+                    <div className="max-h-[320px] space-y-2 overflow-y-auto pr-1">
+                      {ownerOptions.map((person) => {
+                        const selected = String(person.id) === String(selectedHintOwnerId);
+
+                        return (
+                          <button
+                            key={person.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedHintOwnerId(person.id);
+                              setForm((prev) => ({
+                                ...prev,
+                                selectedHintId: "",
+                                goalValue: "",
+                              }));
+                              setLinkPreview(null);
+                            }}
+                            className={`flex w-full items-center gap-3 rounded-[18px] border px-3 py-3 text-left transition ${
+                              selected
+                                ? "border-[#f0a384] bg-[#fff4ee]"
+                                : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
+                            }`}
+                          >
+                            <div className={getAvatarClasses(person.colors, person.status)}>
+                              {person.initials}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-slate-900">{person.name}</p>
+                              <p className="text-[12px] text-slate-500">{person.role}</p>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-[#efe1d9] bg-[#fffdfa] p-4">
+                    {selectedOwner ? (
+                      <>
+                        <div className="flex items-center gap-3">
+                          <div className={getAvatarClasses(selectedOwner.colors, selectedOwner.status, "lg")}>
+                            {selectedOwner.initials}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                              {selectedOwner.type === "self" ? "Your hints" : `${selectedOwner.name}'s hints`}
+                            </p>
+                            <p className="text-[13px] text-slate-500">
+                              {selectedOwner.type === "self"
+                                ? "Private and public hints from your own account."
+                                : selectedOwner.hasHintedAccount
+                                  ? "Public hints from this hinted account."
+                                  : "This contact is not linked to a hinted account yet, so their public hints cannot be loaded."}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 max-h-[320px] space-y-3 overflow-y-auto pr-1">
+                          {visibleHints.length ? (
+                            visibleHints.map((hint) => (
+                              <label
+                                key={hint.id}
+                                className={`flex cursor-pointer items-start justify-between rounded-[20px] border p-4 ${
+                                  form.selectedHintId === hint.id
+                                    ? "border-[#f0a384] bg-[#fff4ee]"
+                                    : "border-[#efe1d9] bg-white"
+                                }`}
+                              >
+                                <div className="min-w-0 pr-4">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {hint.title}
+                                  </p>
+                                  <p className="mt-1 text-[13px] text-slate-500">
+                                    {selectedOwner.type === "self"
+                                      ? hint.is_private
+                                        ? "Private"
+                                        : "Public"
+                                      : "Public"}
+                                    {hint.retailer ? ` · ${hint.retailer}` : ""}
+                                    {extractHintAmount(hint) > 0
+                                      ? ` · ${formatCurrency(extractHintAmount(hint), hint.currency || form.currency || "GBP")}`
+                                      : ""}
+                                  </p>
+                                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                                    {hint.url || "No link saved"}
+                                  </p>
+                                </div>
+
+                                <input
+                                  type="radio"
+                                  name="selectedHint"
+                                  className="mt-1 h-4 w-4 accent-[#f36f64]"
+                                  checked={form.selectedHintId === hint.id}
+                                  onChange={() => handleSelectHint(hint)}
+                                />
+                              </label>
+                            ))
+                          ) : selectedOwner.type === "self" ? (
+                            <div className="rounded-[18px] bg-white p-4 text-sm text-slate-500">
+                              No hints available yet.
+                            </div>
+                          ) : selectedOwner.hasHintedAccount ? (
+                            <div className="rounded-[18px] border border-dashed border-[#e5d8cf] bg-white p-5 text-sm leading-6 text-slate-500">
+                              No public hints yet for this contact.
+                            </div>
+                          ) : (
+                            <div className="rounded-[18px] border border-dashed border-[#e5d8cf] bg-white p-5 text-sm leading-6 text-slate-500">
+                              This contact is not linked to a hinted user account yet.
+                            </div>
+                          )}
+                        </div>
+
+                        {form.itemSource === "hint" && linkPreview ? (
+                          <div className="mt-4">
+                            <PotPreviewCard
+                              image={linkPreview.image}
+                              title={linkPreview.title}
+                              url={linkPreview.url}
+                            />
+                          </div>
+                        ) : null}
+                      </>
+                    ) : (
+                      <div className="flex h-full min-h-[220px] items-center justify-center rounded-[18px] bg-white p-6 text-center text-sm text-slate-500">
+                        Select a person to continue.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <input
+                      type="url"
+                      value={form.itemUrl}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, itemUrl: e.target.value }))
+                      }
+                      placeholder="Paste product or experience link"
+                      className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleFetchPreview}
+                      className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-5 text-sm font-semibold text-white shadow-lg"
+                    >
+                      {isFetchingPreview ? "Fetching..." : "Fetch preview"}
+                    </button>
+                  </div>
+
+                  {linkPreview ? (
+                    <PotPreviewCard
+                      image={linkPreview.image}
+                      title={linkPreview.title}
+                      url={linkPreview.url}
+                    />
+                  ) : null}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">Total target</p>
+            <p className="mt-1 text-[13px] leading-6 text-slate-500">
+              This is the amount shown on the circle.
+            </p>
+
+            <div className="mt-4 space-y-4 rounded-[18px] bg-[#fff4ee] p-4">
+              {form.goalType === "item" ? (
+                <CurrencyAmountInput
+                  currency={form.currency}
+                  amount={form.goalValue}
+                  onCurrencyChange={(value) => setForm((prev) => ({ ...prev, currency: value }))}
+                  onAmountChange={(value) => setForm((prev) => ({ ...prev, goalValue: value }))}
+                  label="Item target"
+                />
+              ) : null}
+
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                  Total
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  {formatCurrency(liveTotals.totalAmount, form.currency || "GBP")}
+                </p>
+                <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                  When you create this circle, we will add our 2% fee for helping you avoid those awkward interactions. This will be split by all members.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {errorMessage ? (
+            <div className="rounded-[20px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+              {errorMessage}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="max-h-[calc(92vh-90px)] overflow-y-auto border-t border-[#efe0d7] bg-[#fff7f2] p-6 lg:border-l lg:border-t-0">
+          <div className="rounded-[24px] border border-dashed border-[#e6d7cd] bg-white p-5">
+            <p className="text-sm font-semibold text-slate-900">5. Add people</p>
+            <p className="mt-1 text-[13px] leading-6 text-slate-500">
+              Invite people now. They only become full members after they accept.
+            </p>
+
+            <div className="mt-4 min-h-[120px] rounded-[20px] bg-[#fffaf7] p-4">
+              {selectedPeople.length ? (
+                <div className="flex flex-wrap gap-3">
+                  {selectedPeople.map((person) => (
+                    <div
+                      key={person.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
+                    >
+                      <div className={getAvatarClasses(person.colors, person.status, "sm")}>
+                        {person.initials}
+                      </div>
+                      <span className="text-sm font-medium text-slate-700">{person.name}</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedPeople((prev) =>
+                            prev.filter((item) => item.id !== person.id)
+                          )
+                        }
+                        className="text-slate-400 hover:text-slate-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400">No one added yet.</p>
+              )}
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {contacts.map((contact) => {
+                const alreadyAdded = selectedPeople.some((person) => person.id === contact.id);
+
+                return (
+                  <div
+                    key={contact.id}
+                    className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={getAvatarClasses(contact.colors, contact.status)}>
+                        {contact.initials}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+                        <p className="text-[12px] text-slate-500">
+                          {contact.role}
+                          {contact.email ? ` · ${contact.email}` : ""}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedPeople((prev) =>
+                          alreadyAdded ? prev : [...prev, contact]
+                        )
+                      }
+                      className={`inline-flex h-9 items-center justify-center rounded-full px-3 text-[12px] font-semibold ${
+                        alreadyAdded
+                          ? "bg-[#edf6eb] text-[#4a7a3a]"
+                          : "border border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
+                      }`}
+                    >
+                      {alreadyAdded ? "Added" : "Invite"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-12 flex-1 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={isSubmitting}
+                className={`inline-flex h-12 flex-1 items-center justify-center rounded-full px-6 text-sm font-semibold text-white shadow-lg ${
+                  isSubmitting
+                    ? "cursor-not-allowed bg-[#e9a48d]"
+                    : "bg-gradient-to-b from-[#ff946d] to-[#f36f64]"
+                }`}
+              >
+                {isSubmitting ? "Creating..." : "Create circle"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </ModalShell>
+  );
 }
 
 export default function CirclesClient() {
@@ -1196,36 +2232,20 @@ export default function CirclesClient() {
 
       const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
       let inviteMap = {};
-      let totalsByCircleId = {};
 
       if (circleIds.length > 0) {
-        const [
-          { data: inviteData, error: inviteError },
-          { data: totalsData, error: totalsError },
-        ] = await Promise.all([
-          supabase.from("circle_invites").select("*").in("circle_id", circleIds),
-          supabase
-            .from("circle_contribution_totals")
-            .select("circle_id, amount_raised, paid_contributions_count")
-            .in("circle_id", circleIds),
-        ]);
+        const { data: inviteData, error: inviteError } = await supabase
+          .from("circle_invites")
+          .select("*")
+          .in("circle_id", circleIds);
 
         if (inviteError) {
           throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
         }
 
-        if (totalsError) {
-          throw new Error(normalizeSupabaseError(totalsError, "Failed to load circle contribution totals."));
-        }
-
         inviteMap = (inviteData || []).reduce((acc, invite) => {
           if (!acc[invite.circle_id]) acc[invite.circle_id] = [];
           acc[invite.circle_id].push(invite);
-          return acc;
-        }, {});
-
-        totalsByCircleId = (totalsData || []).reduce((acc, row) => {
-          acc[row.circle_id] = Number(row.amount_raised || 0);
           return acc;
         }, {});
       }
@@ -1237,12 +2257,7 @@ export default function CirclesClient() {
         "You";
 
       const mapped = (circlesData || []).map((circle) =>
-        buildCircleViewModel(
-          circle,
-          inviteMap[circle.id] || [],
-          currentUserName,
-          totalsByCircleId[circle.id] || 0
-        )
+        buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
       );
 
       setRealCircles(mapped);
@@ -1333,9 +2348,92 @@ export default function CirclesClient() {
     setIsAddContactOpen(false);
   }
 
-  async function handleFetchPreview() {}
+  async function handleFetchPreview() {
+    if (!form.itemUrl.trim()) {
+      setCircleError("Paste a product or experience link first.");
+      return;
+    }
 
-  async function handleSaveContact() {}
+    try {
+      setIsFetchingPreview(true);
+      setCircleError("");
+      setLinkPreview(null);
+
+      const response = await fetch("/api/link-preview", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: form.itemUrl.trim() }),
+      });
+
+      const rawText = await response.text();
+      let data = null;
+
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          throw new Error("Link preview API returned an invalid response.");
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error(data?.error || `Failed to fetch preview (${response.status}).`);
+      }
+
+      const previewAmount = extractPreviewAmount(data);
+      setLinkPreview(data || null);
+      setForm((prev) => ({
+        ...prev,
+        goalValue: previewAmount > 0 ? String(previewAmount) : "",
+      }));
+    } catch {
+      setLinkPreview({
+        title: "Preview unavailable",
+        description:
+          "We could not pull a preview from that link yet, but you can still use the URL.",
+        image: "",
+        url: form.itemUrl.trim(),
+      });
+      setForm((prev) => ({
+        ...prev,
+        goalValue: "",
+      }));
+    } finally {
+      setIsFetchingPreview(false);
+    }
+  }
+
+  async function handleSaveContact(contactPayload) {
+    setContactError("");
+
+    if (!sessionUser?.id) {
+      throw new Error("You must be signed in to save contacts.");
+    }
+
+    const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
+    if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
+      throw new Error("A valid email address is required.");
+    }
+
+    const insertPayload = {
+      user_id: sessionUser.id,
+      name: contactPayload.name,
+      email: cleanedEmail,
+      role:
+        Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
+          ? contactPayload.relationshipTypes[0]
+          : "Friend",
+      status: "accepted",
+    };
+
+    const { error } = await supabase.from("contacts").insert(insertPayload);
+    if (error) throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
+
+    const reloadedContacts = await loadContacts(sessionUser.id);
+    await loadPublicHintsForContacts(reloadedContacts);
+  }
 
   function openDeleteContactModal(contact) {
     setDeleteContactError("");
@@ -1349,7 +2447,32 @@ export default function CirclesClient() {
     setIsDeleteCircleOpen(true);
   }
 
-  async function handleConfirmDeleteContact() {}
+  async function handleConfirmDeleteContact(contact) {
+    setIsDeletingContact(true);
+    setDeleteContactError("");
+
+    try {
+      const { error } = await supabase.from("contacts").delete().eq("id", contact.id);
+      if (error) throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
+
+      setContacts((prev) => prev.filter((item) => item.id !== contact.id));
+      setPublicHintsByContact((prev) => {
+        const next = { ...prev };
+        delete next[contact.id];
+        return next;
+      });
+      setSelectedPeople((prev) => prev.filter((item) => item.id !== contact.id));
+      if (String(selectedHintOwnerId) === String(contact.id)) {
+        setSelectedHintOwnerId(SELF_SELECTOR_ID);
+      }
+      setSelectedContactToDelete(null);
+      setIsDeleteContactOpen(false);
+    } catch (error) {
+      setDeleteContactError(error?.message || "Failed to delete contact.");
+    } finally {
+      setIsDeletingContact(false);
+    }
+  }
 
   async function handleConfirmDeleteCircle(circle) {
     setIsDeletingCircle(true);
@@ -1384,7 +2507,213 @@ export default function CirclesClient() {
     }
   }
 
-  async function handleCreateCircle() {}
+  async function handleCreateCircle() {
+    setCircleError("");
+    setCircleSuccess("");
+
+    const selectedEvent =
+      eventMode === "calendar"
+        ? mergedCalendarEvents.find((event) => String(event.id) === String(selectedEventId))
+        : null;
+
+    const fallbackEventTitle =
+      eventMode === "calendar"
+        ? selectedEvent?.title || form.eventTitle || ""
+        : form.eventTitle?.trim() || "";
+
+    const finalCircleTitle = form.title?.trim() || fallbackEventTitle;
+
+    const eventDate =
+      eventMode === "calendar"
+        ? selectedEvent?.event_date || form.eventDate || ""
+        : form.eventDate || "";
+
+    const occasionType =
+      eventMode === "calendar"
+        ? selectedEvent?.type || form.occasionType || "Event"
+        : form.occasionType || "Event";
+
+    if (!sessionUser?.id) {
+      setCircleError("You must be signed in to create a circle.");
+      return;
+    }
+
+    if (!finalCircleTitle.trim()) {
+      setCircleError("Circle name is required.");
+      return;
+    }
+
+    if (!safeIsoDate(eventDate)) {
+      setCircleError("Event date is required.");
+      return;
+    }
+
+    if (!safeIsoTimestampEndOfDay(form.deadline || eventDate)) {
+      setCircleError("Contribution deadline is required.");
+      return;
+    }
+
+    const manualAmount = parseAmount(form.goalValue);
+    if (manualAmount <= 0) {
+      setCircleError("Target amount must be greater than 0.");
+      return;
+    }
+
+    const contactsWithoutEmail = selectedPeople.filter(
+      (person) => !String(person.email || "").trim() || !isValidEmail(person.email)
+    );
+
+    if (contactsWithoutEmail.length > 0) {
+      setCircleError("Every invited contact must have a valid email address.");
+      return;
+    }
+
+    const selectedOwnerIsSelf = String(selectedHintOwnerId) === SELF_SELECTOR_ID;
+    const selectedHintSourceList = selectedOwnerIsSelf
+      ? ownHints
+      : publicHintsByContact?.[selectedHintOwnerId] || [];
+
+    const selectedHint =
+      selectedHintSourceList.find((hint) => String(hint.id) === String(form.selectedHintId)) || null;
+
+    const selectedRecipientContact =
+      !selectedOwnerIsSelf
+        ? contacts.find((contact) => String(contact.id) === String(selectedHintOwnerId)) || null
+        : null;
+
+    const totals = calculateCircleTotals(manualAmount);
+
+    let itemTitle = "Shared contribution pot";
+    let itemUrl = null;
+    let itemImageUrl = null;
+    let itemDescription = null;
+    let selectedHintId = null;
+    let sourceType = "external_link";
+
+    if (form.goalType === "item") {
+      if (form.itemSource === "hint") {
+        if (!selectedHint) {
+          setCircleError("Choose a hint or switch to pasted link.");
+          return;
+        }
+
+        if (!selectedOwnerIsSelf && !selectedRecipientContact?.matchedProfileId) {
+          setCircleError("This contact is not linked to hinted yet.");
+          return;
+        }
+
+        itemTitle = buildStoredItemTitle(selectedHint.title || "Shared item");
+        itemUrl = selectedHint.url || null;
+        itemImageUrl = selectedHint.image_url || null;
+        itemDescription = selectedHint.retailer || null;
+        selectedHintId = selectedHint.id;
+        sourceType = selectedOwnerIsSelf
+          ? selectedHint.is_private
+            ? "organiser_private_hint"
+            : "recipient_public_hint"
+          : "recipient_public_hint";
+      } else {
+        if (!form.itemUrl.trim()) {
+          setCircleError("Paste a product or experience link.");
+          return;
+        }
+
+        itemTitle = buildStoredItemTitle(
+          linkPreview?.title && linkPreview.title !== "Preview unavailable"
+            ? linkPreview.title
+            : "Shared item"
+        );
+        itemUrl = linkPreview?.url || form.itemUrl.trim();
+        itemImageUrl = linkPreview?.image || null;
+        itemDescription =
+          linkPreview?.title === "Preview unavailable" ? null : linkPreview?.description || null;
+        sourceType = "external_link";
+      }
+    }
+
+    const circleInsertPayload = {
+      user_id: sessionUser.id,
+      recipient_contact_id: selectedRecipientContact?.id || null,
+      title: finalCircleTitle.trim(),
+      occasion_type: occasionType,
+      event_date: safeIsoDate(eventDate),
+      deadline_at: safeIsoTimestampEndOfDay(form.deadline || eventDate),
+      source_type: sourceType,
+      hint_id: selectedHintId,
+      item_title: itemTitle,
+      item_url: itemUrl,
+      item_image_url: itemImageUrl,
+      item_description: itemDescription,
+      currency: form.currency || "GBP",
+      item_target_amount: totals.itemAmount,
+      organising_fee_amount: totals.feeAmount,
+      total_target_amount: totals.totalAmount,
+      fee_mode: "included_in_target",
+      payout_mode: "release_to_organiser",
+      funding_mode: fundingModeToDb(form.fundingMode),
+      status: "draft",
+    };
+
+    setIsCreatingCircle(true);
+
+    try {
+      const { data: insertedRows, error: insertCircleError } = await supabase
+        .from("circles")
+        .insert(circleInsertPayload)
+        .select("*");
+
+      if (insertCircleError) {
+        throw new Error(normalizeSupabaseError(insertCircleError, "Failed to insert into circles."));
+      }
+
+      const insertedCircle = Array.isArray(insertedRows) ? insertedRows[0] : null;
+      if (!insertedCircle?.id) {
+        throw new Error("Circle was inserted, but the new row could not be returned.");
+      }
+
+      const inviteRows = selectedPeople.map((person) => ({
+        circle_id: insertedCircle.id,
+        user_id: sessionUser.id,
+        contact_id: person.id || null,
+        invite_name: person.name || null,
+        invite_email: String(person.email || "").trim().toLowerCase(),
+        status: "pending",
+        reminder_count: 0,
+      }));
+
+      let insertedInvites = [];
+      if (inviteRows.length > 0) {
+        const { data: inviteData, error: inviteError } = await supabase
+          .from("circle_invites")
+          .insert(inviteRows)
+          .select("*");
+
+        if (inviteError) {
+          throw new Error(
+            normalizeSupabaseError(inviteError, "Circle created but invite insert failed.")
+          );
+        }
+
+        insertedInvites = inviteData || [];
+      }
+
+      const currentUserName =
+        getGoogleName(profile || {}) ||
+        profile?.full_name ||
+        profile?.invite_name ||
+        "You";
+
+      const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
+      setRealCircles((prev) => [mappedCircle, ...prev]);
+      setCircleSuccess("Circle created successfully.");
+      setIsCreateOpen(false);
+      initialiseCircleForm(profile, mergedCalendarEvents);
+    } catch (error) {
+      setCircleError(error?.message || "Failed to create circle.");
+    } finally {
+      setIsCreatingCircle(false);
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
