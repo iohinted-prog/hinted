@@ -108,14 +108,52 @@ const eventTypeStyles = {
     label: "Birthday",
   },
   anniversary: {
-    dot: "bg-[#d69aae]",
-    pill: "bg-[#fff2f6] text-[#b85c79]",
+    dot: "bg-[#9ec5fe]",
+    pill: "bg-[#eef6ff] text-[#4d7fc6]",
     label: "Anniversary",
   },
   celebration: {
-    dot: "bg-[#e6aa54]",
-    pill: "bg-[#fff7e8] text-[#af7b14]",
+    dot: "bg-[#9acb8f]",
+    pill: "bg-[#eef8ea] text-[#4f8750]",
     label: "Celebration",
+  },
+};
+
+const specialEventStyles = {
+  valentines: {
+    dot: "bg-[#f49ab6]",
+    pill: "bg-[#fff1f6] text-[#c85a86]",
+    label: "Valentine’s",
+  },
+  christmas: {
+    dot: "bg-[#d95c5c]",
+    pill: "bg-[#fff1f1] text-[#b24545]",
+    label: "Christmas",
+  },
+  halloween: {
+    dot: "bg-[#f0a14a]",
+    pill: "bg-[#fff5e8] text-[#be741d]",
+    label: "Halloween",
+  },
+  mothersDay: {
+    dot: "bg-[#caa6ff]",
+    pill: "bg-[#f6f0ff] text-[#8660c7]",
+    label: "Mother’s Day",
+  },
+  fathersDay: {
+    dot: "bg-[#7bb6d9]",
+    pill: "bg-[#edf7fd] text-[#4f87a8]",
+    label: "Father’s Day",
+  },
+  easter: {
+    dot: "bg-[#f0c86a]",
+    pill: "bg-[#fff8e7] text-[#b28718]",
+    label: "Easter",
+  },
+  newYears: {
+    dot: "bg-[#8a8fa8]",
+    pill: "bg-[#f2f4f8] text-[#5f667f]",
+    label: "New Year",
   },
 };
 
@@ -295,6 +333,20 @@ function buildReminderHeadline({ title, type, eventDate }) {
   const typeLabel = eventTypeStyles[normalizedType]?.label?.toLowerCase() || "event";
 
   return `${possessiveName(title)} ${typeLabel} is ${distance}`;
+}
+
+function resolveEventStyle(event) {
+  const title = String(event?.title || "").trim().toLowerCase();
+
+  if (title.includes("valentine")) return specialEventStyles.valentines;
+  if (title.includes("christmas") || title.includes("xmas")) return specialEventStyles.christmas;
+  if (title.includes("halloween")) return specialEventStyles.halloween;
+  if (title.includes("mother")) return specialEventStyles.mothersDay;
+  if (title.includes("father")) return specialEventStyles.fathersDay;
+  if (title.includes("easter")) return specialEventStyles.easter;
+  if (title.includes("new year")) return specialEventStyles.newYears;
+
+  return eventTypeStyles[event?.type] || eventTypeStyles.celebration;
 }
 
 function ContactAvatar({ contact }) {
@@ -1010,7 +1062,7 @@ function CalendarPopover({
       <div className="mt-4 space-y-3">
         {events.length > 0 ? (
           events.map((event) => {
-            const style = eventTypeStyles[event.type] || eventTypeStyles.celebration;
+            const style = resolveEventStyle(event);
             const canDelete = event.source === "user";
 
             return (
@@ -1239,8 +1291,8 @@ function MiniCalendar({
           const selected = key === selectedKey;
           const isToday = key === todayKey;
           const dayEvents = eventsByDate[key] || [];
-          const leadType = dayEvents[0]?.type;
-          const dotClass = leadType ? (eventTypeStyles[leadType] || eventTypeStyles.celebration).dot : null;
+          const leadEvent = dayEvents[0];
+          const dotClass = leadEvent ? resolveEventStyle(leadEvent).dot : null;
 
           return (
             <button
