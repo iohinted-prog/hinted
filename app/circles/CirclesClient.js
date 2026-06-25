@@ -90,8 +90,20 @@ const exampleCircle = {
   },
 };
 
+function toMinorUnits(value) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100);
+}
+
+function fromMinorUnits(value) {
+  return Number(value || 0) / 100;
+}
+
 function roundCurrency(value) {
-  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+  return fromMinorUnits(toMinorUnits(value));
+}
+
+function roundCurrencyUp(value) {
+  return Math.ceil((Number(value || 0) - Number.EPSILON) * 100) / 100;
 }
 
 function parseAmount(value) {
@@ -217,18 +229,18 @@ function relationshipLabelFromArray(relationshipTypes) {
 }
 
 function calculateFeeBreakdown(baseAmount) {
-  const safeBaseAmount = roundCurrency(baseAmount);
-  const stripeFeeAmount = roundCurrency(safeBaseAmount * ESTIMATED_STRIPE_FEE_RATE);
-  const platformFeeAmount = roundCurrency(safeBaseAmount * HINTED_PLATFORM_FEE_RATE);
-  const totalFeeAmount = roundCurrency(stripeFeeAmount + platformFeeAmount);
-  const totalAmount = roundCurrency(safeBaseAmount + totalFeeAmount);
+  const safeBaseAmountMinor = toMinorUnits(baseAmount);
+  const stripeFeeMinor = Math.ceil(safeBaseAmountMinor * ESTIMATED_STRIPE_FEE_RATE);
+  const platformFeeMinor = Math.ceil(safeBaseAmountMinor * HINTED_PLATFORM_FEE_RATE);
+  const totalFeeMinor = stripeFeeMinor + platformFeeMinor;
+  const totalAmountMinor = safeBaseAmountMinor + totalFeeMinor;
 
   return {
-    itemAmount: safeBaseAmount,
-    stripeFeeAmount,
-    platformFeeAmount,
-    feeAmount: totalFeeAmount,
-    totalAmount,
+    itemAmount: fromMinorUnits(safeBaseAmountMinor),
+    stripeFeeAmount: fromMinorUnits(stripeFeeMinor),
+    platformFeeAmount: fromMinorUnits(platformFeeMinor),
+    feeAmount: fromMinorUnits(totalFeeMinor),
+    totalAmount: fromMinorUnits(totalAmountMinor),
   };
 }
 
@@ -391,7 +403,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
   const fullItemTitle = circleRow.item_title || "Shared gift";
   const peopleInPotCount = Math.max(members.length, 1);
   const recommendedContribution =
-    totalTarget > 0 ? roundCurrency(totalTarget / peopleInPotCount) : 0;
+    totalTarget > 0 ? roundCurrencyUp(totalTarget / peopleInPotCount) : 0;
 
   return {
     id: circleRow.id,
@@ -1575,6 +1587,11 @@ function ContributeModal({
   const [loadingIntent, setLoadingIntent] = useState(false);
   const [inlineError, setInlineError] = useState("");
 
+  const livePeopleInPotCount = Math.max(circle?.members?.length || 0, 1);
+  const liveRecommendedContribution = roundCurrencyUp(
+    Number(circle?.pot?.target || 0) / livePeopleInPotCount
+  );
+
   useEffect(() => {
     if (!open || !circle) {
       setAmount("");
@@ -1583,10 +1600,10 @@ function ContributeModal({
       return;
     }
 
-    const suggestedContribution = Math.max(
-      roundCurrency(circle?.pot?.recommendedContribution || 0),
-      0
-    );
+    const peopleInPotCount = Math.max(circle?.members?.length || 0, 1);
+    const rawSuggestedContribution =
+      Number(circle?.pot?.target || 0) / peopleInPotCount;
+    const suggestedContribution = roundCurrencyUp(rawSuggestedContribution);
 
     setAmount(suggestedContribution > 0 ? String(suggestedContribution) : "");
     setClientSecret("");
@@ -1697,7 +1714,7 @@ function ContributeModal({
               <p className="mt-2 text-[12px] leading-5 text-slate-500">
                 Recommended share of the full target:{" "}
                 {formatCurrency(
-                  circle?.pot?.recommendedContribution || 0,
+                  liveRecommendedContribution || 0,
                   circle?.pot?.currency || "GBP"
                 )}{" "}
                 each
@@ -1803,17 +1820,21 @@ function CreateCircleModal({
   const liveBaseAmount = parseAmount(form.goalValue);
   const liveTotals = calculateCircleTotals(liveBaseAmount);
   const totalPeopleCount = Math.max((selectedPeople?.length || 0) + 1, 1);
-  const recommendedPerPerson = roundCurrency(liveTotals.totalAmount / totalPeopleCount);
+  const recommendedPerPerson = roundCurrencyUp(
+    liveTotals.totalAmount / totalPeopleCount
+  );
 
   function handleSelectHint(hint) {
     const hintAmount = extractHintAmount(hint);
+    const detectedCurrency =
+      String(hint?.currency || "").trim().toUpperCase() || form.currency || "GBP";
     const nextAmount = hintAmount > 0 ? String(hintAmount) : "";
 
     setForm((prev) => ({
       ...prev,
       selectedHintId: hint.id,
       goalValue: nextAmount,
-      currency: hint?.currency || prev.currency,
+      currency: detectedCurrency,
     }));
 
     setLinkPreview({
@@ -1821,6 +1842,7 @@ function CreateCircleModal({
       description: hint?.retailer || "",
       image: hint?.image_url || "",
       url: hint?.url || "",
+      currency: detectedCurrency,
     });
   }
 
@@ -2056,7 +2078,7 @@ function CreateCircleModal({
                       selectedHintId: "",
                       goalValue: prev.itemSource === "url" ? prev.goalValue : "",
                     }));
-                    setLinkPreview(null);
+                    setLinkPreview((prev) => (prev ? { ...prev, currency: form.currency } : null));
                   }}
                   className={`inline-flex h-11 items-center justify-center rounded-full px-4 text-sm font-semibold ${
                     form.itemSource === "url"
@@ -2878,11 +2900,18 @@ export default function CirclesClient() {
       }
 
       const previewAmount = extractPreviewAmount(data);
-      setLinkPreview(data || null);
+      const detectedCurrency =
+        String(data?.currency || "").trim().toUpperCase() || form.currency || "GBP";
+
+      setLinkPreview({
+        ...(data || {}),
+        currency: detectedCurrency,
+      });
+
       setForm((prev) => ({
         ...prev,
         goalValue: previewAmount > 0 ? String(previewAmount) : "",
-        currency: data?.currency || prev.currency,
+        currency: detectedCurrency,
       }));
     } catch {
       setLinkPreview({
@@ -2891,6 +2920,7 @@ export default function CirclesClient() {
           "We could not pull a preview from that link yet, but you can still use the URL.",
         image: "",
         url: form.itemUrl.trim(),
+        currency: form.currency || "GBP",
       });
       setForm((prev) => ({
         ...prev,
@@ -3140,7 +3170,7 @@ export default function CirclesClient() {
       item_url: itemUrl,
       item_image_url: itemImageUrl,
       item_description: itemDescription,
-      currency: form.currency || "GBP",
+      currency: String(form.currency || "GBP").trim().toUpperCase(),
       item_target_amount: totals.itemAmount,
       organising_fee_amount: totals.feeAmount,
       total_target_amount: totals.totalAmount,
