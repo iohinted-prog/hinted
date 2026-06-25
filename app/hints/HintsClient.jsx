@@ -27,7 +27,7 @@ import AvatarMenu from "../components/AvatarMenu";
 
 const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
-const CARD_MAX_HEIGHT = "min(620px, 74vh)";
+const CARD_MAX_HEIGHT = "min(540px, 68vh)";
 const TIMEOUT_MODAL_MESSAGE =
   "We tried to get the title, image, and price, but this shop asked you to add them instead.";
 
@@ -142,6 +142,66 @@ const demoHints = [
     private: false,
     url: "https://www.spabreaks.com/",
     position: 5,
+    needsReview: false,
+  },
+  {
+    id: "demo-7",
+    title: "Espresso machine",
+    retailer: "sageappliances.com",
+    numericPrice: 399,
+    currency: "GBP",
+    image:
+      "https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#d6e7eb] via-[#b5ced7] to-[#8fb3c5]",
+    starred: false,
+    private: false,
+    url: "https://www.sageappliances.com/",
+    position: 6,
+    needsReview: false,
+  },
+  {
+    id: "demo-8",
+    title: "City break",
+    retailer: "eurostar.com",
+    numericPrice: 210,
+    currency: "GBP",
+    image:
+      "https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
+    starred: false,
+    private: false,
+    url: "https://www.eurostar.com/",
+    position: 7,
+    needsReview: false,
+  },
+  {
+    id: "demo-9",
+    title: "Fine jewellery",
+    retailer: "libertylondon.com",
+    numericPrice: 275,
+    currency: "GBP",
+    image:
+      "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
+    starred: false,
+    private: false,
+    url: "https://www.libertylondon.com/",
+    position: 8,
+    needsReview: false,
+  },
+  {
+    id: "demo-10",
+    title: "Luxury fragrance",
+    retailer: "selfridges.com",
+    numericPrice: 98,
+    currency: "GBP",
+    image:
+      "https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=1200&q=80",
+    fallbackGradient: "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+    starred: false,
+    private: true,
+    url: "https://www.selfridges.com/",
+    position: 9,
     needsReview: false,
   },
 ];
@@ -324,6 +384,14 @@ function shortenTitle(title = "", retailer = "") {
   return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
+function splitIntoColumns(items, columnCount = 3) {
+  const columns = Array.from({ length: columnCount }, () => []);
+  items.forEach((item, index) => {
+    columns[index % columnCount].push(item);
+  });
+  return columns;
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -353,53 +421,29 @@ function loadImageAspectRatio(src) {
   });
 }
 
-function estimateVisualWeight(hint, imageRatios) {
-  const ratio = imageRatios[hint.id];
-
-  let weight = 1;
-  if (ratio && Number.isFinite(ratio)) {
-    if (ratio < 0.78) weight = 1.38;
-    else if (ratio < 0.95) weight = 1.22;
-    else if (ratio < 1.18) weight = 1.08;
-    else if (ratio > 1.7) weight = 0.78;
-    else if (ratio > 1.35) weight = 0.88;
-    else weight = 1;
-  } else if (hint.image) {
-    weight = 1.1;
-  }
-
-  if (hint.starred) weight += 0.06;
-  if (hint.needsReview) weight += 0.04;
-
-  return weight;
-}
-
-function splitIntoBalancedColumns(items, imageRatios, columnCount = 3) {
-  const columns = Array.from({ length: columnCount }, () => []);
-  const heights = Array.from({ length: columnCount }, () => 0);
-
-  items.forEach((item) => {
-    const lightestIndex = heights.indexOf(Math.min(...heights));
-    columns[lightestIndex].push(item);
-    heights[lightestIndex] += estimateVisualWeight(item, imageRatios);
-  });
-
-  return columns;
-}
-
 function fallbackCardRatio(hint) {
-  if (hint?.image) return 0.9;
-  return 1.02;
+  const ratioMap = {
+    "demo-1": 0.74,
+    "demo-2": 1.18,
+    "demo-3": 0.9,
+    "demo-4": 1.28,
+    "demo-5": 0.82,
+    "demo-6": 0.7,
+    "demo-7": 1.1,
+    "demo-8": 0.86,
+    "demo-9": 0.76,
+    "demo-10": 1.22,
+  };
+
+  if (ratioMap[hint?.id]) return ratioMap[hint.id];
+  if (hint?.image) return 0.82;
+  return 1;
 }
 
 function getCardAspectRatio(hint, imageRatios) {
   const imageRatio = imageRatios[hint.id];
   if (imageRatio && Number.isFinite(imageRatio)) {
-    if (imageRatio < 0.78) return 0.72;
-    if (imageRatio < 0.92) return 0.82;
-    if (imageRatio < 1.12) return 0.94;
-    if (imageRatio < 1.35) return 1.06;
-    return 1.18;
+    return imageRatio;
   }
   return fallbackCardRatio(hint);
 }
@@ -449,28 +493,6 @@ function buildManualDraft(rawUrl) {
     private: false,
     needsReview: true,
     source: "manual-timeout",
-  };
-}
-
-function buildDraftFromIdea(data, rawPrompt) {
-  const extractedNumericPrice =
-    typeof data?.numericPrice === "number" ? data.numericPrice : extractNumericPrice(data?.priceText);
-  const priceMeta = sanitisePrice(data?.priceText, extractedNumericPrice);
-
-  return {
-    title: String(data?.title || rawPrompt || "Saved hint").trim(),
-    retailer: String(data?.retailer || "Gift idea").trim(),
-    image: typeof data?.image === "string" ? data.image : "",
-    uploadedImage: null,
-    url: "",
-    priceInput: priceMeta.numericPrice != null ? String(priceMeta.numericPrice) : "",
-    numericPrice: priceMeta.numericPrice,
-    rawPrice: priceMeta.rawPrice,
-    currency: data?.currency || priceMeta.originalCurrency || BASE_CURRENCY,
-    starred: false,
-    private: false,
-    needsReview: true,
-    source: data?.source || "ai-idea",
   };
 }
 
@@ -526,40 +548,6 @@ async function fetchPreviewWithTimeout(url, timeoutMs = PREVIEW_TIMEOUT_MS) {
   }
 }
 
-async function fetchIdeaSuggestion(prompt) {
-  const response = await fetch("/api/hint-idea", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({ prompt, currency: BASE_CURRENCY }),
-  });
-
-  const raw = await response.text();
-  let data = null;
-
-  try {
-    data = raw ? JSON.parse(raw) : null;
-  } catch {
-    throw new Error(raw || "The idea service returned an invalid response.");
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error || data?.message || "Could not generate a hint idea right now."
-    );
-  }
-
-  return data;
-}
-
-function looksLikeUrl(value = "") {
-  const trimmed = String(value).trim();
-  if (!trimmed) return false;
-  return isValidHttpUrl(trimmed);
-}
-
 function ModalShell({ isOpen, onClose, eyebrow, title, children, footer }) {
   if (!isOpen) return null;
 
@@ -589,7 +577,9 @@ function ModalShell({ isOpen, onClose, eyebrow, title, children, footer }) {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-7">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5 sm:px-7">
+            {children}
+          </div>
 
           <div className="shrink-0 border-t border-[#f2e5de] bg-white px-6 py-4 sm:px-7">
             {footer}
@@ -617,7 +607,7 @@ function HintFormFields({
         </label>
         <input
           id={`${prefix}-link`}
-          type="text"
+          type="url"
           value={form.url}
           onChange={(e) => setForm((current) => ({ ...current, url: e.target.value }))}
           className="h-14 w-full rounded-[18px] border border-[#eadcd3] bg-[#fcfaf8] px-5 text-[15px] text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50"
@@ -726,8 +716,6 @@ function AddHintModal({
 }) {
   const helperCopy = notice
     ? "We tried to get your info, but this shop asked you to put it in instead."
-    : form.source === "ai-idea"
-    ? "We created a starting point for this idea. Check the details before saving."
     : "We found what we could. Check the details and fix anything before saving.";
 
   return (
@@ -974,16 +962,14 @@ function HintCard({
               {hint.private ? "🔒 Private" : "🔓 Public"}
             </button>
 
-            {hint.url ? (
-              <a
-                href={hint.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
-              >
-                Open
-              </a>
-            ) : null}
+            <a
+              href={hint.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
+            >
+              Open
+            </a>
           </div>
         </div>
       </div>
@@ -1021,7 +1007,7 @@ function SortableHintCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="mb-6">
+    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid">
       <HintCard
         hint={hint}
         imageRatios={imageRatios}
@@ -1081,16 +1067,13 @@ export default function HintsClient() {
     setBusyState({ open: false, title: "", message: "" });
   }
 
-  function beginFetchBusy(kind = "link") {
+  function beginFetchBusy() {
     clearBusyTimers();
 
     setBusyState({
       open: true,
-      title: kind === "idea" ? "Creating your idea..." : "Fetching your item...",
-      message:
-        kind === "idea"
-          ? "Finding a photo and a rough price for this idea..."
-          : "Pulling the title, image, and price from the link...",
+      title: "Fetching your item...",
+      message: "Pulling the title, image, and price from the link...",
     });
 
     busyLongTimerRef.current = window.setTimeout(() => {
@@ -1098,11 +1081,9 @@ export default function HintsClient() {
         current.open
           ? {
               ...current,
-              title: kind === "idea" ? "Still creating..." : "Still fetching...",
+              title: "Still fetching...",
               message:
-                kind === "idea"
-                  ? "This is taking a little longer than expected."
-                  : "This is taking a little longer than expected. Some retailers are slower to respond.",
+                "This is taking a little longer than expected. Some retailers are slower to respond.",
             }
           : current
       );
@@ -1185,7 +1166,6 @@ export default function HintsClient() {
           url: row.url || "",
           position: row.position ?? index,
           needsReview: false,
-          source: row.source || "user",
         }))
       );
 
@@ -1197,7 +1177,7 @@ export default function HintsClient() {
 
   const visibleHints = hints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
-  const columns = useMemo(() => splitIntoBalancedColumns(visibleHints, imageRatios, 3), [visibleHints, imageRatios]);
+  const columns = useMemo(() => splitIntoColumns(visibleHints, 3), [visibleHints]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1276,9 +1256,7 @@ export default function HintsClient() {
 
     const trimmedTitle = editForm.title.trim() || "Saved hint";
     const trimmedUrl = editForm.url.trim();
-    const trimmedRetailer =
-      editForm.retailer?.trim() ||
-      (trimmedUrl ? normaliseRetailer(trimmedUrl) : "Gift idea");
+    const trimmedRetailer = editForm.retailer?.trim() || normaliseRetailer(trimmedUrl);
     const parsedNumericPrice = extractNumericPrice(editForm.priceInput);
     const priceMeta = sanitisePrice(editForm.priceInput, parsedNumericPrice);
     const finalImage = editForm.uploadedImage || editForm.image || "";
@@ -1322,7 +1300,7 @@ export default function HintsClient() {
             ? {
                 ...hint,
                 title: trimmedTitle,
-                url: trimmedUrl,
+                url: trimmedUrl || hint.url,
                 retailer: trimmedRetailer,
                 image: finalImage,
                 rawPrice: editForm.priceInput || "",
@@ -1400,7 +1378,7 @@ export default function HintsClient() {
 
     setIsRefreshingEdit(true);
     setError("");
-    beginFetchBusy("link");
+    beginFetchBusy();
 
     try {
       const data = await fetchPreviewWithTimeout(normaliseInputUrl(trimmed), PREVIEW_TIMEOUT_MS);
@@ -1466,41 +1444,42 @@ export default function HintsClient() {
       return;
     }
 
+    if (!isValidHttpUrl(trimmed)) {
+      setError("Please paste a valid product or experience URL.");
+      return;
+    }
+
     setIsAdding(true);
     setError("");
     setAddModalNotice("");
+    beginFetchBusy();
 
     try {
-      if (looksLikeUrl(trimmed)) {
-        beginFetchBusy("link");
-        const normalisedUrl = normaliseInputUrl(trimmed);
-        const data = await fetchPreviewWithTimeout(normalisedUrl, PREVIEW_TIMEOUT_MS);
-        const draft = buildDraftFromPreview(data, trimmed);
+      const normalisedUrl = normaliseInputUrl(trimmed);
+      const data = await fetchPreviewWithTimeout(normalisedUrl, PREVIEW_TIMEOUT_MS);
+      const draft = buildDraftFromPreview(data, trimmed);
 
-        setPendingHint(draft);
-        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...draft });
-        setIsAddModalOpen(true);
-        setLink("");
-      } else {
-        beginFetchBusy("idea");
-        const data = await fetchIdeaSuggestion(trimmed);
-        const draft = buildDraftFromIdea(data, trimmed);
-
-        setPendingHint(draft);
-        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...draft });
-        setIsAddModalOpen(true);
-        setLink("");
-      }
+      setPendingHint(draft);
+      setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...draft });
+      setIsAddModalOpen(true);
+      setLink("");
     } catch (err) {
-      if (looksLikeUrl(trimmed)) {
+      if (err?.code === "PREVIEW_TIMEOUT" || err?.message === "PREVIEW_TIMEOUT") {
         const manualDraft = buildManualDraft(trimmed);
+
         setPendingHint(manualDraft);
         setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
         setAddModalNotice(TIMEOUT_MODAL_MESSAGE);
         setIsAddModalOpen(true);
         setLink("");
       } else {
-        setError(errorToMessage(err));
+        const manualDraft = buildManualDraft(trimmed);
+
+        setPendingHint(manualDraft);
+        setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...manualDraft });
+        setAddModalNotice(TIMEOUT_MODAL_MESSAGE);
+        setIsAddModalOpen(true);
+        setLink("");
       }
     } finally {
       setIsAdding(false);
@@ -1517,10 +1496,8 @@ export default function HintsClient() {
 
     try {
       const title = newHintForm.title.trim() || pendingHint.title || "Saved hint";
-      const url = newHintForm.url.trim() || pendingHint.url || "";
-      const retailer =
-        newHintForm.retailer?.trim() ||
-        (url ? normaliseRetailer(url) : pendingHint.retailer || "Gift idea");
+      const url = newHintForm.url.trim() || pendingHint.url;
+      const retailer = newHintForm.retailer?.trim() || normaliseRetailer(url);
       const numericPrice = extractNumericPrice(newHintForm.priceInput);
       const priceMeta = sanitisePrice(newHintForm.priceInput, numericPrice);
       const image = newHintForm.uploadedImage || newHintForm.image || "";
@@ -1539,7 +1516,6 @@ export default function HintsClient() {
         url,
         position: 0,
         needsReview: false,
-        source: newHintForm.source || "user",
       };
 
       const supabase = createClient();
@@ -1556,7 +1532,7 @@ export default function HintsClient() {
         starred: newHint.starred,
         is_private: newHint.private,
         position: 0,
-        source: newHint.source,
+        source: newHintForm.source || "user",
       });
 
       if (error) throw new Error(errorToMessage(error));
@@ -1591,7 +1567,7 @@ export default function HintsClient() {
 
     if (!over || active.id === over.id || hints.length === 0) return;
 
-    const nextColumns = splitIntoBalancedColumns(hints, imageRatios, 3).map((col) => [...col]);
+    const nextColumns = splitIntoColumns(hints, 3);
     const fromColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === active.id));
     const toColumnIndex = nextColumns.findIndex((col) => col.some((item) => item.id === over.id));
 
@@ -1636,7 +1612,7 @@ export default function HintsClient() {
             <div className="mx-auto flex w-full max-w-[980px] flex-col gap-3 sm:flex-row">
               <input
                 id="hint-link"
-                type="text"
+                type="url"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
                 onKeyDown={(e) => {
@@ -1685,15 +1661,12 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="columns-1 gap-6 md:columns-3">
                 {[1, 2, 3].map((i) => (
-                  <div key={i}>
+                  <div key={i} className="mb-6 break-inside-avoid">
                     <div
                       className="w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[#f9f8f5]"
-                      style={{
-                        aspectRatio: i === 1 ? "0.76" : i === 2 ? "1.08" : "0.88",
-                        maxHeight: CARD_MAX_HEIGHT,
-                      }}
+                      style={{ aspectRatio: i === 1 ? "0.78" : "1", maxHeight: CARD_MAX_HEIGHT }}
                     >
                       <div className="skeleton h-full w-full" />
                     </div>
@@ -1750,21 +1723,18 @@ export default function HintsClient() {
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                {splitIntoBalancedColumns(demoHints, imageRatios, 3).map((columnHints, columnIndex) => (
-                  <div key={`demo-column-${columnIndex}`} className="space-y-6">
-                    {columnHints.map((hint) => (
-                      <HintCard
-                        key={hint.id}
-                        hint={hint}
-                        imageRatios={imageRatios}
-                        onEdit={() => {}}
-                        onToggleStarred={() => {}}
-                        onTogglePrivate={() => {}}
-                        isDragging={false}
-                        formatCurrency={formatCurrency}
-                      />
-                    ))}
+              <div className="columns-1 gap-6 md:columns-3">
+                {demoHints.map((hint) => (
+                  <div key={hint.id} className="mb-6 break-inside-avoid">
+                    <HintCard
+                      hint={hint}
+                      imageRatios={imageRatios}
+                      onEdit={() => {}}
+                      onToggleStarred={() => {}}
+                      onTogglePrivate={() => {}}
+                      isDragging={false}
+                      formatCurrency={formatCurrency}
+                    />
                   </div>
                 ))}
               </div>
@@ -1786,7 +1756,7 @@ export default function HintsClient() {
       <EditHintModal
         isOpen={editingHintId !== null}
         editForm={editForm}
-        setForm={setEditForm}
+        setEditForm={setEditForm}
         onClose={closeEditModal}
         onSave={saveEditChanges}
         onRefreshFromLink={refreshHintFromLink}
