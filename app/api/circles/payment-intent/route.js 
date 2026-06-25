@@ -1,0 +1,222 @@
+import { NextResponse } from "next/server";
+import Stripe from "stripe";
+import { createClient } from "../../../../lib/supabase/server";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+let stripeInstance = null;
+
+function getStripe() {
+  if (stripeInstance) return stripeInstance;
+
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey || typeof secretKey !== "string" || !secretKey.trim()) {
+    throw new Error("Missing STRIPE_SECRET_KEY");
+  }
+
+  stripeInstance = new Stripe(secretKey.trim(), {
+    apiVersion: "2024-09-30.acacia",
+  });
+
+  return stripeInstance;
+}
+
+async function getAuthedUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw new Error(userError.message || "Failed to load user.");
+  }
+
+  if (!user) {
+    return { supabase, user: null };
+  }
+
+  return { supabase, user };
+}
+
+async function getStripeCustomerId(supabase, stripe, user) {
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("full_name, stripe_customer_id")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error(profileError.message || "Failed to load profile.");
+  }
+
+  if (profile?.stripe_customer_id) {
+    return { customerId: profile.stripe_customer_id, profile };
+  }
+
+  const customer = await stripe.customers.create({
+    email: user.email || undefined,
+    name: profile?.full_name || undefined,
+    metadata: {
+      supabase_user_id: user.id,
+    },
+  });
+
+  const { error: updateError } = await supabase
+    .from("profiles")
+    .update({ stripe_customer_id: customer.id })
+    .eq("id", user.id);
+
+  if (updateError) {
+    throw new Error(updateError.message || "Failed to save Stripe customer.");
+  }
+
+  return { customerId: customer.id, profile };
+}
+
+async function canAccessCircle(supabase, circleId, userId) {
+  const { data: circle, error: circleError } = await supabase
+    .from("circles")
+    .select("id, user_id, title, currency, total_target_amount")
+    .eq("id", circleId)
+    .maybeSingle();
+
+  if (circleError) {
+    throw new Error(circleError.message || "Failed to load circle.");
+  }
+
+  if (!circle) {
+    return { allowed: false, reason: "Circle not found." };
+  }
+
+  const isOwner = circle.user_id === userId;
+
+  if (isOwner) {
+    return { allowed: true, circle };
+  }
+
+  const { data: invite, error: inviteError } = await supabase
+    .from("circle_invites")
+    .select("id, invited_user_id, user_id, circle_id, invite_email, status")
+    .eq("circle_id", circleId)
+    .or(`invited_user_id.eq.${userId},user_id.eq.${userId}`)
+    .maybeSingle();
+
+  if (inviteError) {
+    throw new Error(inviteError.message || "Failed to load invite.");
+  }
+
+  if (!invite) {
+    return { allowed: false, reason: "You are not invited to this circle." };
+  }
+
+  const validInvite = invite.invited_user_id === userId || invite.user_id === userId;
+
+  if (!validInvite) {
+    return { allowed: false, reason: "You are not allowed to contribute to this circle." };
+  }
+
+  return { allowed: true, circle, invite };
+}
+
+export async function POST(request) {
+  try {
+    const stripe = getStripe();
+    const { supabase, user } = await getAuthedUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const circleId = String(body.circleId || body.circle_id || "").trim();
+    const amountInput = Number(String(body.amount ?? "").replace(/[^\d.]/g, ""));
+    const currency = String(body.currency || "GBP").trim().toUpperCase();
+
+    if (!circleId) {
+      return NextResponse.json({ error: "Missing circleId." }, { status: 400 });
+    }
+
+    if (!Number.isFinite(amountInput) || amountInput <= 0) {
+      return NextResponse.json({ error: "Amount must be greater than 0." }, { status: 400 });
+    }
+
+    const amount = Math.round((amountInput + Number.EPSILON) * 100) / 100;
+
+    const access = await canAccessCircle(supabase, circleId, user.id);
+    if (!access.allowed) {
+      return NextResponse.json({ error: access.reason || "Not allowed." }, { status: 403 });
+    }
+
+    const { customerId } = await getStripeCustomerId(supabase, stripe, user);
+
+    const contributionPayload = {
+      circle_id: circleId,
+      invite_id: access.invite?.id || null,
+      user_id: user.id,
+      contributor_name: body.contributorName || user.user_metadata?.full_name || user.email || null,
+      contributor_email: body.contributorEmail || user.email || null,
+      amount,
+      currency,
+      payment_status: "pending",
+    };
+
+    const { data: contribution, error: contributionError } = await supabase
+      .from("circle_contributions")
+      .insert(contributionPayload)
+      .select("id, circle_id, amount, currency")
+      .single();
+
+    if (contributionError) {
+      return NextResponse.json(
+        { error: contributionError.message || "Failed to create contribution." },
+        { status: 500 }
+      );
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      currency: currency.toLowerCase(),
+      customer: customerId,
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        supabase_user_id: user.id,
+        circle_id: circleId,
+        contribution_id: contribution.id,
+        invite_id: access.invite?.id || "",
+      },
+      receipt_email: body.contributorEmail || user.email || undefined,
+      description: body.description || `Contribution to circle ${circleId}`,
+    });
+
+    const { error: updateError } = await supabase
+      .from("circle_contributions")
+      .update({
+        stripe_payment_intent_id: paymentIntent.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", contribution.id);
+
+    if (updateError) {
+      return NextResponse.json(
+        { error: updateError.message || "Failed to save payment intent." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      clientSecret: paymentIntent.client_secret,
+      contributionId: contribution.id,
+      paymentIntentId: paymentIntent.id,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to create payment intent." },
+      { status: 500 }
+    );
+  }
+}
