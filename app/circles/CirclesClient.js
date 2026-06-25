@@ -2,12 +2,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { loadStripe } from "@stripe/stripe-js";
+import {
+  Elements,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 
 const HINTED_SERVICE_FEE_RATE = 0.02;
 const SELF_SELECTOR_ID = "__self__";
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
 const currencyOptions = [
   { code: "GBP", symbol: "£", label: "British Pound" },
@@ -414,6 +422,66 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
   };
 }
 
+function buildContributionMap(rows = []) {
+  return rows.reduce((acc, row) => {
+    const circleId = row.circle_id;
+    if (!circleId) return acc;
+
+    if (!acc[circleId]) {
+      acc[circleId] = {
+        raised: 0,
+        count: 0,
+        byUserId: {},
+      };
+    }
+
+    const amount = Number(row.amount || 0);
+    const isPaid = String(row.payment_status || "").toLowerCase() === "paid";
+
+    if (isPaid) {
+      acc[circleId].raised = roundCurrency(acc[circleId].raised + amount);
+      acc[circleId].count += 1;
+
+      if (row.user_id) {
+        acc[circleId].byUserId[row.user_id] = roundCurrency(
+          (acc[circleId].byUserId[row.user_id] || 0) + amount
+        );
+      }
+    }
+
+    return acc;
+  }, {});
+}
+
+function applyContributionDataToCircle(circleVm, contributionState, currentUserId, currentUserName) {
+  const safeState = contributionState || { raised: 0, byUserId: {} };
+  const paidByUserId = safeState.byUserId || {};
+  const raised = roundCurrency(safeState.raised || 0);
+
+  const members = Array.isArray(circleVm.members)
+    ? circleVm.members.map((member) => {
+        if (member.name === currentUserName || member.name === "You") {
+          const myAmount = roundCurrency(paidByUserId[currentUserId] || 0);
+          return {
+            ...member,
+            contributed: myAmount > 0,
+            amount: myAmount,
+          };
+        }
+        return member;
+      })
+    : [];
+
+  return {
+    ...circleVm,
+    members,
+    pot: {
+      ...circleVm.pot,
+      raised,
+    },
+  };
+}
+
 function buildGenericCalendarEvents() {
   const now = new Date();
   const end = new Date();
@@ -701,7 +769,13 @@ function PotTypeGuide() {
   );
 }
 
-function CircleCard({ circle, onDeleteCircleClick, deletingCircleId, formatCurrency }) {
+function CircleCard({
+  circle,
+  onDeleteCircleClick,
+  deletingCircleId,
+  formatCurrency,
+  onContributeClick,
+}) {
   const safeMembers = Array.isArray(circle?.members) ? circle.members : [];
   const joinedCount = safeMembers.filter(
     (member) => getAvatarState(member.status) === "accepted"
@@ -833,6 +907,14 @@ function CircleCard({ circle, onDeleteCircleClick, deletingCircleId, formatCurre
 
                 {circle?.id !== "example-circle" ? (
                   <div className="mt-5 flex flex-wrap justify-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onContributeClick(circle)}
+                      className="inline-flex h-10 items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 text-sm font-semibold text-white shadow-lg"
+                    >
+                      Contribute
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => onDeleteCircleClick(circle)}
@@ -1323,6 +1405,287 @@ function DeleteCircleModal({
             {isDeleting ? "Deleting..." : "Delete circle"}
           </button>
         </div>
+      </div>
+    </ModalShell>
+  );
+}
+
+function CirclePaymentForm({
+  circle,
+  amount,
+  setAmount,
+  onClose,
+  onSuccess,
+  setInlineError,
+  formatCurrency,
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  const [ready, setReady] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!stripe || !elements) return;
+
+    setSubmitting(true);
+    setInlineError("");
+
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setInlineError(submitError.message || "Please check your payment details.");
+      setSubmitting(false);
+      return;
+    }
+
+    const result = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/circles?paid=1&circle=${circle.id}`,
+      },
+      redirect: "if_required",
+    });
+
+    if (result.error) {
+      setInlineError(result.error.message || "Payment failed.");
+      setSubmitting(false);
+      return;
+    }
+
+    if (
+      result.paymentIntent?.status === "succeeded" ||
+      result.paymentIntent?.status === "processing"
+    ) {
+      await onSuccess();
+      return;
+    }
+
+    setInlineError("Payment did not complete.");
+    setSubmitting(false);
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
+        <label className="block">
+          <span className="block text-sm font-medium text-slate-900">Contribution amount</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="25"
+            className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+          />
+        </label>
+
+        <p className="mt-2 text-[12px] leading-5 text-slate-500">
+          Target: {formatCurrency(circle?.pot?.target || 0, circle?.pot?.currency || "GBP")} · Raised so far:{" "}
+          {formatCurrency(circle?.pot?.raised || 0, circle?.pot?.currency || "GBP")}
+        </p>
+      </div>
+
+      <div className="rounded-[24px] border border-[#ead8ce] bg-white p-4">
+        <PaymentElement onReady={() => setReady(true)} />
+      </div>
+
+      <div className="flex flex-wrap gap-3">
+        <button
+          type="submit"
+          disabled={!stripe || !elements || !ready || submitting}
+          className="inline-flex h-[48px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
+        >
+          {submitting ? "Processing..." : "Confirm contribution"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-[48px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function ContributeModal({
+  open,
+  onClose,
+  circle,
+  refreshCircles,
+  formatCurrency,
+}) {
+  const supabase = createClient();
+
+  const [amount, setAmount] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [loadingIntent, setLoadingIntent] = useState(false);
+  const [inlineError, setInlineError] = useState("");
+
+  useEffect(() => {
+    if (!open || !circle) {
+      setAmount("");
+      setClientSecret("");
+      setInlineError("");
+      return;
+    }
+
+    const suggestedRemaining = Math.max(
+      roundCurrency((circle?.pot?.target || 0) - (circle?.pot?.raised || 0)),
+      0
+    );
+
+    setAmount(suggestedRemaining > 0 ? String(suggestedRemaining) : "");
+    setClientSecret("");
+    setInlineError("");
+  }, [open, circle]);
+
+  async function prepareIntent() {
+    try {
+      setLoadingIntent(true);
+      setInlineError("");
+
+      const parsedAmount = parseAmount(amount);
+      if (parsedAmount <= 0) {
+        throw new Error("Enter a contribution amount greater than 0.");
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("You must be signed in to contribute.");
+      }
+
+      const response = await fetch("/api/circles/payment-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          circleId: circle.id,
+          amount: parsedAmount,
+          currency: circle?.pot?.currency || "GBP",
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to start payment.");
+      }
+
+      if (!data?.clientSecret) {
+        throw new Error("Missing Stripe client secret.");
+      }
+
+      setClientSecret(data.clientSecret);
+    } catch (error) {
+      setInlineError(error?.message || "Failed to start payment.");
+    } finally {
+      setLoadingIntent(false);
+    }
+  }
+
+  async function handleSuccess() {
+    await refreshCircles();
+    onClose();
+  }
+
+  if (!open || !circle) return null;
+
+  return (
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      eyebrow="Contribute"
+      title={`Contribute to ${circle.name}`}
+      maxWidth="max-w-[720px]"
+    >
+      <div className="space-y-5 p-6">
+        <div className="rounded-[22px] border border-[#eedfd6] bg-[#fffdfa] p-4">
+          <p className="text-sm font-semibold text-slate-900">{circle?.pot?.fullItemTitle || circle?.pot?.item}</p>
+          <p className="mt-2 text-[13px] leading-6 text-slate-500">
+            Funding mode: {circle?.pot?.fundingMode} · Deadline {formatDateLabel(circle?.pot?.deadline)}
+          </p>
+        </div>
+
+        {!clientSecret ? (
+          <>
+            <div className="rounded-[22px] border border-[#eedfd6] bg-white p-4">
+              <label className="block">
+                <span className="block text-sm font-medium text-slate-900">Contribution amount</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="25"
+                  className="mt-2 h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+                />
+              </label>
+
+              <p className="mt-3 text-[12px] leading-5 text-slate-500">
+                Raised: {formatCurrency(circle?.pot?.raised || 0, circle?.pot?.currency || "GBP")} of{" "}
+                {formatCurrency(circle?.pot?.target || 0, circle?.pot?.currency || "GBP")}
+              </p>
+            </div>
+
+            {inlineError ? (
+              <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {inlineError}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={prepareIntent}
+                disabled={loadingIntent}
+                className="inline-flex h-[48px] items-center justify-center rounded-full bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-6 text-sm font-semibold text-white shadow-lg disabled:opacity-70"
+              >
+                {loadingIntent ? "Preparing..." : "Continue to payment"}
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex h-[48px] items-center justify-center rounded-full border border-[#ead8ce] bg-white px-6 text-sm font-medium text-slate-700 hover:bg-[#fff5f0]"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: { theme: "stripe" },
+            }}
+          >
+            <CirclePaymentForm
+              circle={circle}
+              amount={amount}
+              setAmount={setAmount}
+              onClose={onClose}
+              onSuccess={handleSuccess}
+              setInlineError={setInlineError}
+              formatCurrency={formatCurrency}
+            />
+            {inlineError ? (
+              <div className="mt-4 rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">
+                {inlineError}
+              </div>
+            ) : null}
+          </Elements>
+        )}
       </div>
     </ModalShell>
   );
@@ -1981,8 +2344,10 @@ export default function CirclesClient() {
 
   const [isDeleteContactOpen, setIsDeleteContactOpen] = useState(false);
   const [isDeleteCircleOpen, setIsDeleteCircleOpen] = useState(false);
+  const [isContributeOpen, setIsContributeOpen] = useState(false);
   const [selectedContactToDelete, setSelectedContactToDelete] = useState(null);
   const [selectedCircleToDelete, setSelectedCircleToDelete] = useState(null);
+  const [selectedCircleForContribution, setSelectedCircleForContribution] = useState(null);
   const [isDeletingContact, setIsDeletingContact] = useState(false);
   const [isDeletingCircle, setIsDeletingCircle] = useState(false);
   const [deleteContactError, setDeleteContactError] = useState("");
@@ -2236,15 +2601,26 @@ export default function CirclesClient() {
 
       const circleIds = (circlesData || []).map((circle) => circle.id).filter(Boolean);
       let inviteMap = {};
+      let contributionMap = {};
 
       if (circleIds.length > 0) {
-        const { data: inviteData, error: inviteError } = await supabase
-          .from("circle_invites")
-          .select("*")
-          .in("circle_id", circleIds);
+        const [{ data: inviteData, error: inviteError }, { data: contributionData, error: contributionError }] =
+          await Promise.all([
+            supabase.from("circle_invites").select("*").in("circle_id", circleIds),
+            supabase
+              .from("circle_contributions")
+              .select("id, circle_id, user_id, amount, payment_status")
+              .in("circle_id", circleIds),
+          ]);
 
         if (inviteError) {
           throw new Error(normalizeSupabaseError(inviteError, "Failed to load circle invites."));
+        }
+
+        if (contributionError) {
+          throw new Error(
+            normalizeSupabaseError(contributionError, "Failed to load circle contributions.")
+          );
         }
 
         inviteMap = (inviteData || []).reduce((acc, invite) => {
@@ -2252,6 +2628,8 @@ export default function CirclesClient() {
           acc[invite.circle_id].push(invite);
           return acc;
         }, {});
+
+        contributionMap = buildContributionMap(contributionData || []);
       }
 
       const currentUserName =
@@ -2260,9 +2638,15 @@ export default function CirclesClient() {
         currentProfile?.invite_name ||
         "You";
 
-      const mapped = (circlesData || []).map((circle) =>
-        buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName)
-      );
+      const mapped = (circlesData || []).map((circle) => {
+        const baseVm = buildCircleViewModel(circle, inviteMap[circle.id] || [], currentUserName);
+        return applyContributionDataToCircle(
+          baseVm,
+          contributionMap[circle.id],
+          userId,
+          currentUserName
+        );
+      });
 
       setRealCircles(mapped);
       return mapped;
@@ -2274,6 +2658,13 @@ export default function CirclesClient() {
       setIsLoadingCircles(false);
     }
   }, [supabase]);
+
+  const refreshCircles = useCallback(async () => {
+    if (!sessionUser?.id) return;
+
+    const currentProfile = profile || (await loadProfile(sessionUser.id).catch(() => null));
+    await loadCircles(sessionUser.id, currentProfile);
+  }, [sessionUser, profile, loadProfile, loadCircles]);
 
   useEffect(() => {
     if (didBootstrap.current) return;
@@ -2350,6 +2741,11 @@ export default function CirclesClient() {
 
   function closeAddContactModal() {
     setIsAddContactOpen(false);
+  }
+
+  function openContributeModal(circle) {
+    setSelectedCircleForContribution(circle);
+    setIsContributeOpen(true);
   }
 
   async function handleFetchPreview() {
@@ -2837,6 +3233,7 @@ export default function CirclesClient() {
                         onDeleteCircleClick={openDeleteCircleModal}
                         deletingCircleId={isDeletingCircle ? selectedCircleToDelete?.id : null}
                         formatCurrency={formatCurrency}
+                        onContributeClick={openContributeModal}
                       />
                     ))
                   )}
@@ -2911,6 +3308,17 @@ export default function CirclesClient() {
         circle={selectedCircleToDelete}
         isDeleting={isDeletingCircle}
         errorMessage={deleteCircleError}
+      />
+
+      <ContributeModal
+        open={isContributeOpen}
+        onClose={() => {
+          setIsContributeOpen(false);
+          setSelectedCircleForContribution(null);
+        }}
+        circle={selectedCircleForContribution}
+        refreshCircles={refreshCircles}
+        formatCurrency={formatCurrency}
       />
     </main>
   );
