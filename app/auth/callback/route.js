@@ -11,13 +11,8 @@ export async function GET(request) {
     );
   }
 
-  // We build the response as a rewrite to the origin first,
-  // then we update the Location header after routing logic.
-  // This keeps one single response object so cookies are never lost.
-  const response = NextResponse.redirect(
-    new URL("/", requestUrl.origin)
-  );
-  response.headers.set("Cache-Control", "private, no-store");
+  // Collect cookies to set, write them onto the final response at the end
+  const cookiesToWrite = [];
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -28,9 +23,7 @@ export async function GET(request) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options);
-          });
+          cookiesToSet.forEach((cookie) => cookiesToWrite.push(cookie));
         },
       },
     }
@@ -49,25 +42,30 @@ export async function GET(request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    response.headers.set("Location", new URL("/", requestUrl.origin).toString());
-    return response;
+  let destination = "/";
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id, onboarding_completed")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    destination =
+      !profile || !profile.onboarding_completed ? "/onboarding" : "/feed";
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, onboarding_completed")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const destination =
-    !profile || !profile.onboarding_completed ? "/onboarding" : "/feed";
-
-  // Mutate Location on the existing response rather than creating a new one
-  response.headers.set(
-    "Location",
-    new URL(destination, requestUrl.origin).toString()
+  // Build the final response only once, after all logic is done
+  const response = NextResponse.redirect(
+    new URL(destination, requestUrl.origin)
   );
+
+  response.headers.set("Cache-Control", "private, no-store");
+
+  // Write all cookies onto the final response
+  cookiesToWrite.forEach(({ name, value, options }) => {
+    response.cookies.set(name, value, options);
+  });
 
   return response;
 }
