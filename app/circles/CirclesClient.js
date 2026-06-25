@@ -837,10 +837,11 @@ function CircleCard({
   const potCurrency = circle?.pot?.currency || "GBP";
   const moneyLabel = formatCurrency(circle?.pot?.target, potCurrency);
   const raisedLabel = formatCurrency(circle?.pot?.raised, potCurrency);
-  const recommendedLabel = formatCurrency(
-    circle?.pot?.recommendedContribution || 0,
+  const suggestedShare = formatCurrency(
+    roundCurrency((circle?.pot?.target || 0) / 2),
     potCurrency
   );
+
   const showItemPreview =
     circle?.pot?.active &&
     circle?.pot?.goalType === "item" &&
@@ -925,8 +926,8 @@ function CircleCard({
                   {raisedLabel} of {moneyLabel}
                 </p>
 
-                <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                  Suggested share of the full target: {recommendedLabel} each
+                <p className="mt-1 text-[12px] text-slate-400">
+                  Suggested share of the full target: {suggestedShare} each
                 </p>
 
                 <div className="mt-4 flex -space-x-3">
