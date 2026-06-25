@@ -1486,13 +1486,6 @@ export default function HintsClient() {
         const data = await fetchIdeaSuggestion(trimmed);
         const draft = buildDraftFromIdea(data, trimmed);
 
-        if (draft.image) {
-          const ratio = await loadImageAspectRatio(draft.image);
-          if (ratio) {
-            setImageRatios((current) => ({ ...current, draft_temp: ratio }));
-          }
-        }
-
         setPendingHint(draft);
         setNewHintForm({ ...EMPTY_NEW_HINT_FORM, ...draft });
         setIsAddModalOpen(true);
@@ -1793,7 +1786,7 @@ export default function HintsClient() {
       <EditHintModal
         isOpen={editingHintId !== null}
         editForm={editForm}
-        setEditForm={setEditForm}
+        setForm={setEditForm}
         onClose={closeEditModal}
         onSave={saveEditChanges}
         onRefreshFromLink={refreshHintFromLink}
