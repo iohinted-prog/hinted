@@ -13,7 +13,10 @@ import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 
-const HINTED_SERVICE_FEE_RATE = 0.02;
+const TOTAL_PLATFORM_FEE_RATE = 0.0475;
+const ESTIMATED_STRIPE_FEE_RATE = 0.0175;
+const HINTED_PLATFORM_FEE_RATE =
+  Math.round((TOTAL_PLATFORM_FEE_RATE - ESTIMATED_STRIPE_FEE_RATE + Number.EPSILON) * 100) / 100;
 const SELF_SELECTOR_ID = "__self__";
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -213,20 +216,24 @@ function relationshipLabelFromArray(relationshipTypes) {
   return relationshipTypes[0] || "Friend";
 }
 
-function calculateHintedFee(itemAmount) {
-  return roundCurrency(itemAmount * HINTED_SERVICE_FEE_RATE);
+function calculateFeeBreakdown(baseAmount) {
+  const safeBaseAmount = roundCurrency(baseAmount);
+  const stripeFeeAmount = roundCurrency(safeBaseAmount * ESTIMATED_STRIPE_FEE_RATE);
+  const platformFeeAmount = roundCurrency(safeBaseAmount * HINTED_PLATFORM_FEE_RATE);
+  const totalFeeAmount = roundCurrency(stripeFeeAmount + platformFeeAmount);
+  const totalAmount = roundCurrency(safeBaseAmount + totalFeeAmount);
+
+  return {
+    itemAmount: safeBaseAmount,
+    stripeFeeAmount,
+    platformFeeAmount,
+    feeAmount: totalFeeAmount,
+    totalAmount,
+  };
 }
 
 function calculateCircleTotals(itemAmount) {
-  const safeItemAmount = roundCurrency(itemAmount);
-  const feeAmount = calculateHintedFee(safeItemAmount);
-  const totalAmount = roundCurrency(safeItemAmount + feeAmount);
-
-  return {
-    itemAmount: safeItemAmount,
-    feeAmount,
-    totalAmount,
-  };
+  return calculateFeeBreakdown(itemAmount);
 }
 
 function toDisplayPotTitle(value) {
@@ -382,9 +389,9 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
 
   const totalTarget = Number(circleRow.total_target_amount || 0);
   const fullItemTitle = circleRow.item_title || "Shared gift";
-  const contributorCount = Math.max(members.length, 1);
+  const peopleInPotCount = Math.max(members.length, 1);
   const recommendedContribution =
-    totalTarget > 0 ? roundCurrency(totalTarget / contributorCount) : 0;
+    totalTarget > 0 ? roundCurrency(totalTarget / peopleInPotCount) : 0;
 
   return {
     id: circleRow.id,
@@ -413,10 +420,10 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       recommendedContribution,
       note:
         circleRow.funding_mode === "all_or_nothing"
-          ? "This circle will only proceed if the target is reached by the deadline. Once it is filled, the organiser gets the money sent back to them to make the purchase."
+          ? "This circle will only proceed if the full target is reached by the deadline. The total already includes payment processing and our platform fee, and once the pot is filled the organiser receives the funds to make the purchase."
           : circleRow.funding_mode === "organiser_covers"
-            ? "If the target is not reached, the organiser can choose to cover the gap. Once it is filled, the organiser gets the money sent back to them to make the purchase."
-            : "This circle can stay flexible if fewer people join than expected. Once it is filled, the organiser gets the money sent back to them to make the purchase.",
+            ? "If the full target is not reached, the organiser can choose to cover the gap. The total already includes payment processing and our platform fee, and once the pot is filled the organiser receives the funds to make the purchase."
+            : "Anyone invited can contribute flexibly. The total already includes payment processing and our platform fee, and once the pot is filled the organiser receives the funds to make the purchase.",
       fundingMode: fundingModeToLabel(circleRow.funding_mode),
       deadline: circleRow.deadline_at || circleRow.event_date || "",
       goalType:
@@ -757,17 +764,17 @@ function PotTypeGuide() {
   const potTypes = [
     {
       title: "Flexible pot",
-      text: "Anyone invited can join and contribute what they want. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
+      text: "Anyone invited can join and contribute what they want. Once the full target is reached, the organiser receives the funds to complete the purchase.",
       colors: "bg-[#edf6eb] text-[#4a7a3a]",
     },
     {
       title: "All-or-nothing",
-      text: "The circle only goes ahead if the target is reached by the deadline. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
+      text: "The circle only goes ahead if the full target is reached by the deadline. Once it is filled, the organiser receives the funds to complete the purchase.",
       colors: "bg-[#fff3ee] text-[#d57a58]",
     },
     {
       title: "Organizer covers gap",
-      text: "The organiser can choose to top up the missing amount. Once the pot is filled, the organiser gets the money sent back to them to make the purchase.",
+      text: "The organiser can choose to top up the missing amount. Once the full target is reached, the organiser receives the funds to complete the purchase.",
       colors: "bg-[#eef4ff] text-[#5676b3]",
     },
   ];
@@ -783,8 +790,7 @@ function PotTypeGuide() {
 
       <div className="mt-3 rounded-[20px] border border-[#f2e1d8] bg-[#fff8f4] p-4">
         <p className="text-[13px] leading-6 text-slate-600">
-          When a pot reaches its full target, the organiser gets the money sent back to them so
-          they can make the purchase for the group.
+          When a pot reaches its full target, the organiser receives the funds to make the purchase for the group. That target already includes payment processing and our platform fee.
         </p>
       </div>
 
@@ -908,7 +914,7 @@ function CircleCard({
                 </p>
 
                 <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                  Recommended contribution: {recommendedLabel} each
+                  Suggested share of the full target: {recommendedLabel} each
                 </p>
 
                 <div className="mt-4 flex -space-x-3">
@@ -1689,7 +1695,7 @@ function ContributeModal({
               </p>
 
               <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                Recommended:{" "}
+                Recommended share of the full target:{" "}
                 {formatCurrency(
                   circle?.pot?.recommendedContribution || 0,
                   circle?.pot?.currency || "GBP"
@@ -1796,6 +1802,8 @@ function CreateCircleModal({
 
   const liveBaseAmount = parseAmount(form.goalValue);
   const liveTotals = calculateCircleTotals(liveBaseAmount);
+  const totalPeopleCount = Math.max((selectedPeople?.length || 0) + 1, 1);
+  const recommendedPerPerson = roundCurrency(liveTotals.totalAmount / totalPeopleCount);
 
   function handleSelectHint(hint) {
     const hintAmount = extractHintAmount(hint);
@@ -2235,7 +2243,7 @@ function CreateCircleModal({
           <div className="rounded-[24px] border border-[#eedfd6] bg-white p-5">
             <p className="text-sm font-semibold text-slate-900">Total target</p>
             <p className="mt-1 text-[13px] leading-6 text-slate-500">
-              This is the amount shown on the circle.
+              This is the final amount shown on the circle, including Stripe processing and our fee.
             </p>
 
             <div className="mt-4 space-y-4 rounded-[18px] bg-[#fff4ee] p-4">
@@ -2249,16 +2257,42 @@ function CreateCircleModal({
                 />
               ) : null}
 
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
-                  Total
-                </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">
-                  {formatCurrency(liveTotals.totalAmount, form.currency || "GBP")}
-                </p>
-                <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                  When you create this circle, we will add our 2% fee for helping you avoid those awkward interactions. This will be split by all members.
-                </p>
+              <div className="space-y-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                    Total target
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">
+                    {formatCurrency(liveTotals.totalAmount, form.currency || "GBP")}
+                  </p>
+                </div>
+
+                <div className="rounded-[16px] bg-white/70 p-3">
+                  <div className="flex items-center justify-between gap-3 text-[12px] text-slate-600">
+                    <span>Item amount</span>
+                    <span>{formatCurrency(liveTotals.itemAmount, form.currency || "GBP")}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-[12px] text-slate-600">
+                    <span>Stripe processing</span>
+                    <span>{formatCurrency(liveTotals.stripeFeeAmount, form.currency || "GBP")}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-[12px] text-slate-600">
+                    <span>Our fee</span>
+                    <span>{formatCurrency(liveTotals.platformFeeAmount, form.currency || "GBP")}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#df7b59]">
+                    Recommended per person
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-slate-900">
+                    {formatCurrency(recommendedPerPerson, form.currency || "GBP")}
+                  </p>
+                  <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                    This is based on the full circle target divided by everyone currently in the pot, including you.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
