@@ -79,6 +79,7 @@ const exampleCircle = {
     target: 122.4,
     currency: "GBP",
     raised: 40,
+    recommendedContribution: 61.2,
     note: "Example only.",
     fundingMode: "Flexible pot",
     deadline: "2026-07-01",
@@ -381,6 +382,9 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
 
   const totalTarget = Number(circleRow.total_target_amount || 0);
   const fullItemTitle = circleRow.item_title || "Shared gift";
+  const contributorCount = Math.max(members.length, 1);
+  const recommendedContribution =
+    totalTarget > 0 ? roundCurrency(totalTarget / contributorCount) : 0;
 
   return {
     id: circleRow.id,
@@ -406,6 +410,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       target: totalTarget,
       currency: circleRow.currency || "GBP",
       raised: 0,
+      recommendedContribution,
       note:
         circleRow.funding_mode === "all_or_nothing"
           ? "This circle will only proceed if the target is reached by the deadline."
@@ -784,6 +789,10 @@ function CircleCard({
   const potCurrency = circle?.pot?.currency || "GBP";
   const moneyLabel = formatCurrency(circle?.pot?.target, potCurrency);
   const raisedLabel = formatCurrency(circle?.pot?.raised, potCurrency);
+  const recommendedLabel = formatCurrency(
+    circle?.pot?.recommendedContribution || 0,
+    potCurrency
+  );
   const showItemPreview =
     circle?.pot?.active &&
     circle?.pot?.goalType === "item" &&
@@ -866,6 +875,10 @@ function CircleCard({
 
                 <p className="mt-3 text-sm text-slate-500">
                   {raisedLabel} of {moneyLabel}
+                </p>
+
+                <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                  Recommended contribution: {recommendedLabel} each
                 </p>
 
                 <div className="mt-4 flex -space-x-3">
@@ -1534,12 +1547,12 @@ function ContributeModal({
       return;
     }
 
-    const suggestedRemaining = Math.max(
-      roundCurrency((circle?.pot?.target || 0) - (circle?.pot?.raised || 0)),
+    const suggestedContribution = Math.max(
+      roundCurrency(circle?.pot?.recommendedContribution || 0),
       0
     );
 
-    setAmount(suggestedRemaining > 0 ? String(suggestedRemaining) : "");
+    setAmount(suggestedContribution > 0 ? String(suggestedContribution) : "");
     setClientSecret("");
     setInlineError("");
   }, [open, circle]);
@@ -1575,7 +1588,16 @@ function ContributeModal({
         }),
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data = null;
+
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText);
+        } catch {
+          throw new Error("Payment API returned an invalid response.");
+        }
+      }
 
       if (!response.ok) {
         throw new Error(data?.error || "Failed to start payment.");
@@ -1634,6 +1656,15 @@ function ContributeModal({
               <p className="mt-3 text-[12px] leading-5 text-slate-500">
                 Raised: {formatCurrency(circle?.pot?.raised || 0, circle?.pot?.currency || "GBP")} of{" "}
                 {formatCurrency(circle?.pot?.target || 0, circle?.pot?.currency || "GBP")}
+              </p>
+
+              <p className="mt-2 text-[12px] leading-5 text-slate-500">
+                Recommended:{" "}
+                {formatCurrency(
+                  circle?.pot?.recommendedContribution || 0,
+                  circle?.pot?.currency || "GBP"
+                )}{" "}
+                each
               </p>
             </div>
 
@@ -2816,7 +2847,7 @@ export default function CirclesClient() {
     const cleanedEmail = String(contactPayload.email || "").trim().toLowerCase();
     if (!cleanedEmail || !isValidEmail(cleanedEmail)) {
       throw new Error("A valid email address is required.");
-    }
+      }
 
     const insertPayload = {
       user_id: sessionUser.id,
