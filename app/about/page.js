@@ -9,36 +9,7 @@ export const metadata = {
 export default function AboutPage() {
   return (
     <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
-      <header className="border-b border-[#e8dfd4] bg-[#f7f4ef]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-          <Link
-            href="/"
-            className="flex items-center gap-3 text-sm font-semibold tracking-[-0.01em] text-slate-800"
-          >
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f3cfc2] text-base font-semibold text-slate-900 shadow-sm">
-              H
-            </div>
-            <span>Hinted</span>
-          </Link>
-
-          <nav className="flex items-center gap-3 text-sm font-medium text-slate-600">
-            <Link
-              href="/privacy"
-              className="rounded-full px-4 py-2 transition hover:bg-white/70 hover:text-slate-900"
-            >
-              Privacy
-            </Link>
-            <Link
-              href="/feed"
-              className="rounded-full border border-[#e7d8ca] bg-white/80 px-4 py-2 text-slate-900 transition hover:bg-white"
-            >
-              Back to app
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <section className="px-6 py-12 sm:py-16">
+        <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 rounded-[28px] border border-[#eadfd4] bg-white/80 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-10">
             <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-[#c1846c]">
