@@ -294,7 +294,9 @@ function relationshipToRoleLabel(relationshipTypes, fallbackRole) {
 }
 
 function mapContactState(status) {
-  return status === "accepted" ? "user" : "invitee";
+  if (status === "user") return "user";
+  if (status === "invited") return "invitee";
+  return "contact";
 }
 
 function getFeedBucket(item) {
@@ -361,25 +363,34 @@ function ContactAvatar({ contact }) {
   }
 
   const isUser = contact.contactState === "user";
+  const isInvitee = contact.contactState === "invitee";
+  const isPlainContact = contact.contactState === "contact";
 
   return (
     <div
       className={`relative flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${
         isUser
           ? "bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-white"
-          : "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
+          : isInvitee
+            ? "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
+            : "border border-[#e8ddd6] bg-[#faf7f4] text-slate-600"
       }`}
     >
       {contact.initials}
-      <span
-        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
-          isUser
-            ? "bg-[#2f3b2d] text-white"
-            : "border border-[#e6c5b6] bg-[#fff0e8] text-[#c87150]"
-        }`}
-      >
-        {isUser ? "C" : "I"}
-      </span>
+
+      {isUser ? (
+        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2f3b2d] px-1 text-[9px] font-bold text-white">
+          C
+        </span>
+      ) : isInvitee ? (
+        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#e6c5b6] bg-[#fff0e8] px-1 text-[9px] font-bold text-[#c87150]">
+          I
+        </span>
+      ) : isPlainContact ? (
+        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#e8ddd6] bg-white px-1 text-[9px] font-bold text-slate-500">
+          P
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -1453,10 +1464,10 @@ export default function FeedClient() {
     setContactError("");
 
     const { data, error } = await supabase
-      .from("contacts")
+      .from("contact_public_state")
       .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .eq("owner_user_id", userId)
+      .order("name", { ascending: true });
 
     if (error) {
       setContacts([]);
@@ -1465,19 +1476,23 @@ export default function FeedClient() {
     }
 
     const mapped = (data || []).map((row) => {
-      const contactState = mapContactState(row.status);
-      const relationshipTypes = Array.isArray(row.relationship_types) ? row.relationship_types : [];
+      const contactState = mapContactState(row.public_state);
 
       return {
-        id: row.id,
+        id: row.contact_id,
         name: row.name || row.email || "Unnamed contact",
-        role: relationshipToRoleLabel(relationshipTypes, row.role),
-        note: contactState === "user" ? "Hinted user" : "Invitee",
+        role: "Contact",
+        note:
+          contactState === "user"
+            ? "Hinted user"
+            : contactState === "invitee"
+              ? "Invitee"
+              : "Contact",
         initials: getInitials(row.name || row.email || "C"),
         email: row.email || "",
-        relationshipTypes,
         contactState,
-        status: row.status,
+        profileId: row.profile_id,
+        publicState: row.public_state,
         isDemo: false,
         raw: row,
       };
@@ -1557,7 +1572,7 @@ export default function FeedClient() {
         updated_at,
         invited_user_id
       `)
-      .in("status", ["pending", "viewed"])
+      .eq("status", "pending")
       .order("created_at", { ascending: false });
 
     query = normalizedEmail
@@ -1662,7 +1677,6 @@ export default function FeedClient() {
         Array.isArray(payload.relationshipTypes) && payload.relationshipTypes.length
           ? payload.relationshipTypes[0]
           : "Friend",
-      status: "invitee",
     };
 
     const { error } = await supabase.from("contacts").insert(insertPayload);
@@ -1985,15 +1999,6 @@ export default function FeedClient() {
                           className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
                         >
                           {inviteActionId === invite.id ? "Working..." : "View invite"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleInviteDecision(invite, "viewed")}
-                          disabled={inviteActionId === invite.id}
-                          className="inline-flex items-center justify-center rounded-full border border-[#dbe8d4] bg-[#eef8e9] px-4 py-2 text-sm font-semibold text-[#4b7a39] disabled:opacity-60"
-                        >
-                          {inviteActionId === invite.id ? "Working..." : "Mark viewed"}
                         </button>
 
                         <button
