@@ -200,11 +200,24 @@ function formatDateLabel(dateString) {
 }
 
 function getAvatarState(status) {
-  return String(status || "").toLowerCase() === "accepted" ? "accepted" : "invitee";
+  const normalized = String(status || "").toLowerCase();
+
+  if (normalized === "accepted" || normalized === "user" || normalized === "member") {
+    return "accepted";
+  }
+
+  if (normalized === "invitee" || normalized === "invited" || normalized === "pending") {
+    return "invitee";
+  }
+
+  return "contact";
 }
 
 function getStatusLabel(status) {
-  return getAvatarState(status) === "accepted" ? "Accepted" : "Invitee";
+  const avatarState = getAvatarState(status);
+  if (avatarState === "accepted") return "Accepted";
+  if (avatarState === "invitee") return "Invitee";
+  return "Contact";
 }
 
 function getAvatarClasses(colors, status, size = "md") {
@@ -220,7 +233,11 @@ function getAvatarClasses(colors, status, size = "md") {
     return `flex items-center justify-center rounded-full bg-gradient-to-b ${sizeClasses} font-bold text-white ${colors}`;
   }
 
-  return `flex items-center justify-center rounded-full border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] ${sizeClasses} font-bold text-[#c87150]`;
+  if (avatarState === "invitee") {
+    return `flex items-center justify-center rounded-full border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] ${sizeClasses} font-bold text-[#c87150]`;
+  }
+
+  return `flex items-center justify-center rounded-full border border-[#e8ddd6] bg-[#faf7f4] ${sizeClasses} font-bold text-slate-600`;
 }
 
 function relationshipLabelFromArray(relationshipTypes) {
@@ -338,22 +355,25 @@ function isValidEmail(value) {
 function buildContactRecordFromRow(row) {
   const relationship = row?.role || relationshipLabelFromArray(row?.relationship_types);
   const safeName = row?.name || row?.email || "Unnamed contact";
+  const publicState = row?.public_state || row?.status;
+  const avatarState = getAvatarState(publicState);
 
   return {
-    id: row.id,
+    id: row.contact_id || row.id,
     type: "contact",
-    profileConnectionId: row.id,
-    matchedProfileId: row?.matched_profile_id || null,
-    hasHintedAccount: Boolean(row?.matched_profile_id),
+    profileConnectionId: row.contact_id || row.id,
+    matchedProfileId: row?.profile_id || row?.matched_profile_id || null,
+    hasHintedAccount:
+      avatarState === "accepted" || Boolean(row?.profile_id || row?.matched_profile_id),
     name: safeName,
     role: relationship || "Friend",
-    note: getStatusLabel(row?.status),
+    note: getStatusLabel(publicState),
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship || "Friend"),
     email: row?.email || "",
     phone: row?.phone || "",
     birthday: row?.birthday || "",
-    status: getAvatarState(row?.status),
+    status: avatarState,
     raw: row,
   };
 }
@@ -647,15 +667,19 @@ function ContactCard({ contact, onDeleteClick }) {
 }
 
 function MemberPill({ member, currency = "GBP", formatCurrency }) {
-  const isAccepted = getAvatarState(member.status) === "accepted";
+  const avatarState = getAvatarState(member.status);
+  const isAccepted = avatarState === "accepted";
+  const isInvitee = avatarState === "invitee";
 
   const statusStyles = isAccepted
     ? member.contributed
       ? "bg-[#edf6eb] text-[#4a7a3a]"
       : "bg-[#eef4ff] text-[#5676b3]"
-    : "bg-[#fff3ee] text-[#d57a58]";
+    : isInvitee
+      ? "bg-[#fff3ee] text-[#d57a58]"
+      : "bg-[#f3f4f6] text-slate-600";
 
-  const statusLabel = isAccepted ? "Accepted" : "Invitee";
+  const statusLabel = isAccepted ? "Accepted" : isInvitee ? "Invitee" : "Contact";
 
   return (
     <div className="rounded-[20px] border border-[#eee1d9] bg-[#fffdfa] p-3">
@@ -2570,47 +2594,15 @@ export default function CirclesClient() {
 
     try {
       const { data, error } = await supabase
-        .from("contacts")
+        .from("contact_public_state")
         .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
+        .eq("owner_user_id", userId)
+        .order("name", { ascending: true });
 
       if (error) throw new Error(normalizeSupabaseError(error, "Failed to load contacts."));
 
       const rawRows = Array.isArray(data) ? data : [];
-      const emails = rawRows
-        .map((row) => String(row?.email || "").trim().toLowerCase())
-        .filter(Boolean);
-
-      let profileMatches = [];
-      if (emails.length > 0) {
-        const { data: profilesData, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id, invite_email")
-          .in("invite_email", emails);
-
-        if (profilesError) {
-          throw new Error(normalizeSupabaseError(profilesError, "Failed to match contacts to profiles."));
-        }
-
-        profileMatches = Array.isArray(profilesData) ? profilesData : [];
-      }
-
-      const profileIdByEmail = profileMatches.reduce((acc, row) => {
-        const key = String(row?.invite_email || "").trim().toLowerCase();
-        if (key) acc[key] = row.id;
-        return acc;
-      }, {});
-
-      const enrichedRows = rawRows.map((row) => {
-        const emailKey = String(row?.email || "").trim().toLowerCase();
-        return {
-          ...row,
-          matched_profile_id: emailKey ? profileIdByEmail[emailKey] || null : null,
-        };
-      });
-
-      const mapped = enrichedRows.map(buildContactRecordFromRow);
+      const mapped = rawRows.map(buildContactRecordFromRow);
       setContacts(mapped);
       return mapped;
     } catch (error) {
@@ -2952,7 +2944,6 @@ export default function CirclesClient() {
         Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
           ? contactPayload.relationshipTypes[0]
           : "Friend",
-      status: "accepted",
     };
 
     const { error } = await supabase.from("contacts").insert(insertPayload);
