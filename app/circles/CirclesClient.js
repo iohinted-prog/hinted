@@ -3205,39 +3205,50 @@ export default function CirclesClient() {
         throw new Error("Circle was inserted, but the new row could not be returned.");
       }
 
-      const inviteRows = selectedPeople.map((person) => {
-  const rawEmail = String(person.email || "").trim();
-  const normalizedEmail = rawEmail.toLowerCase();
+  async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(value);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
 
-  return {
-    circle_id: insertedCircle.id,
-    user_id: sessionUser.id,
-    contact_id: person.id || null,
-    invite_name: person.name || null,
-    invite_email: rawEmail,
-    invite_email_normalized: normalizedEmail,
-    invite_token_hash: `${insertedCircle.id}:${normalizedEmail}`,
-    status: "pending",
-    reminder_count: 0,
-  };
-});
+const inviteRows = await Promise.all(
+  selectedPeople.map(async (person) => {
+    const rawEmail = String(person.email || "").trim();
+    const normalizedEmail = rawEmail.toLowerCase();
+    const inviteToken = crypto.randomUUID();
+    const inviteTokenHash = await sha256Hex(inviteToken);
 
-      let insertedInvites = [];
-      if (inviteRows.length > 0) {
-        const { data: inviteData, error: inviteError } = await supabase
-          .from("circle_invites")
-          .insert(inviteRows)
-          .select("*");
+    return {
+      circle_id: insertedCircle.id,
+      user_id: sessionUser.id,
+      contact_id: person.id || null,
+      invite_name: person.name || null,
+      invite_email: rawEmail,
+      invite_email_normalized: normalizedEmail,
+      invite_token: inviteToken,
+      invite_token_hash: inviteTokenHash,
+      status: "pending",
+      reminder_count: 0,
+    };
+  })
+);
 
-        if (inviteError) {
-          throw new Error(
-            normalizeSupabaseError(inviteError, "Circle created but invite insert failed.")
-          );
-        }
+let insertedInvites = [];
+if (inviteRows.length > 0) {
+  const { data: inviteData, error: inviteError } = await supabase
+    .from("circle_invites")
+    .insert(inviteRows)
+    .select("*");
 
-        insertedInvites = inviteData || [];
-      }
+  if (inviteError) {
+    throw new Error(
+      normalizeSupabaseError(inviteError, "Circle created but invite insert failed.")
+    );
+  }
 
+  insertedInvites = inviteData || [];
+}
       const currentUserName =
         getGoogleName(profile || {}) ||
         profile?.full_name ||
