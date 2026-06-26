@@ -11,7 +11,7 @@ export default function TestPage() {
     try {
       setLoading(true)
       const { data, error } = await supabase.functions.invoke('send-contact-invite', {
-        body: { email: 'your@email.com', name: 'Test User' },
+        body: { email: 'hello@hinted.io', name: 'Test User' },
       })
       const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
       console.log('contact invite result:', output)
@@ -29,7 +29,7 @@ export default function TestPage() {
     try {
       setLoading(true)
       const { data, error } = await supabase.functions.invoke('send-circle-invite', {
-        body: { circle_id: 'REPLACE_WITH_REAL_CIRCLE_ID', email: 'your@email.com', name: 'Test User' },
+        body: { circle_id: '431f3868-a336-40e6-a64e-f5bd3d47793f', email: 'hello@hinted.io', name: 'Test User' },
       })
       const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
       console.log('circle invite result:', output)
