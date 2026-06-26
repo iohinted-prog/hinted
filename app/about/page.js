@@ -143,10 +143,10 @@ export default function AboutPage() {
               <p className="text-[17px] leading-8 text-slate-700">
                 Questions, feedback, or partnership enquiries can be sent to{" "}
                 <a
-                  href="mailto:iohinted@gmail.com"
+                  href="mailto:hello@hinted.io"
                   className="font-medium text-slate-900 underline decoration-[#d8b3a3] underline-offset-4"
                 >
-                  iohinted@gmail.com
+                  hello@hinted.io
                 </a>
                 .
               </p>
