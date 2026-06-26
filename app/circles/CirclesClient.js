@@ -3216,6 +3216,7 @@ export default function CirclesClient() {
     invite_name: person.name || null,
     invite_email: rawEmail,
     invite_email_normalized: normalizedEmail,
+    invite_token_hash: `${insertedCircle.id}:${normalizedEmail}`,
     status: "pending",
     reminder_count: 0,
   };
