@@ -1,34 +1,48 @@
 'use client'
 
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
+import { useMemo, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
 
 export default function TestPage() {
+  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
 
   const testInviteFunction = async () => {
-    setLoading(true)
+    try {
+      setLoading(true)
 
-    const { data, error } = await supabase.functions.invoke('send-circle-invite', {
-      body: { test: true },
-    })
+      const { data, error } = await supabase.functions.invoke('send-circle-invite', {
+        body: { test: true },
+      })
 
-    const output = {
-      data: data ?? null,
-      error: error
-        ? {
-            name: error.name,
-            message: error.message,
-          }
-        : null,
+      const output = {
+        data: data ?? null,
+        error: error
+          ? {
+              name: error.name,
+              message: error.message,
+            }
+          : null,
+      }
+
+      console.log('invite function result:', output)
+      setResult(output)
+      alert(JSON.stringify(output, null, 2))
+    } catch (err) {
+      const output = {
+        data: null,
+        error: {
+          message: err instanceof Error ? err.message : 'Unknown error',
+        },
+      }
+
+      console.log('invite function catch error:', output)
+      setResult(output)
+      alert(JSON.stringify(output, null, 2))
+    } finally {
+      setLoading(false)
     }
-
-    console.log('invite function result:', output)
-    setResult(output)
-    setLoading(false)
-
-    alert(JSON.stringify(output, null, 2))
   }
 
   return (
