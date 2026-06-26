@@ -1,5 +1,4 @@
 'use client'
-
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -8,38 +7,37 @@ export default function TestPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
 
-  const testInviteFunction = async () => {
+  const testContactInvite = async () => {
     try {
       setLoading(true)
-
-      const { data, error } = await supabase.functions.invoke('send-circle-invite', {
-        body: { test: true },
+      const { data, error } = await supabase.functions.invoke('send-contact-invite', {
+        body: { email: 'your@email.com', name: 'Test User' },
       })
-
-      const output = {
-        data: data ?? null,
-        error: error
-          ? {
-              name: error.name,
-              message: error.message,
-            }
-          : null,
-      }
-
-      console.log('invite function result:', output)
+      const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
+      console.log('contact invite result:', output)
       setResult(output)
-      alert(JSON.stringify(output, null, 2))
     } catch (err) {
-      const output = {
-        data: null,
-        error: {
-          message: err instanceof Error ? err.message : 'Unknown error',
-        },
-      }
-
-      console.log('invite function catch error:', output)
+      const output = { data: null, error: { message: err instanceof Error ? err.message : 'Unknown error' } }
+      console.log('contact invite catch error:', output)
       setResult(output)
-      alert(JSON.stringify(output, null, 2))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const testCircleInvite = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase.functions.invoke('send-circle-invite', {
+        body: { circle_id: 'REPLACE_WITH_REAL_CIRCLE_ID', email: 'your@email.com', name: 'Test User' },
+      })
+      const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
+      console.log('circle invite result:', output)
+      setResult(output)
+    } catch (err) {
+      const output = { data: null, error: { message: err instanceof Error ? err.message : 'Unknown error' } }
+      console.log('circle invite catch error:', output)
+      setResult(output)
     } finally {
       setLoading(false)
     }
@@ -49,26 +47,42 @@ export default function TestPage() {
     <main style={{ padding: '24px', fontFamily: 'Arial, sans-serif' }}>
       <h1 style={{ marginBottom: '16px' }}>Test page</h1>
 
-      <button
-        onClick={testInviteFunction}
-        disabled={loading}
-        style={{
-          display: 'inline-block',
-          padding: '12px 16px',
-          backgroundColor: loading ? '#666' : '#000',
-          color: '#fff',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: loading ? 'default' : 'pointer',
-          fontSize: '16px',
-        }}
-      >
-        {loading ? 'Testing...' : 'Test invite function'}
-      </button>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+        <button
+          onClick={testContactInvite}
+          disabled={loading}
+          style={{
+            padding: '12px 16px',
+            backgroundColor: loading ? '#666' : '#000',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: loading ? 'default' : 'pointer',
+            fontSize: '16px',
+          }}
+        >
+          {loading ? 'Testing...' : 'Test contact invite'}
+        </button>
+
+        <button
+          onClick={testCircleInvite}
+          disabled={loading}
+          style={{
+            padding: '12px 16px',
+            backgroundColor: loading ? '#666' : '#333',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: loading ? 'default' : 'pointer',
+            fontSize: '16px',
+          }}
+        >
+          {loading ? 'Testing...' : 'Test circle invite'}
+        </button>
+      </div>
 
       <pre
         style={{
-          marginTop: '20px',
           padding: '16px',
           background: '#f4f4f4',
           borderRadius: '8px',
