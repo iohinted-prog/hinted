@@ -5,6 +5,14 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+async function hashToken(token: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(token)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -70,7 +78,7 @@ Deno.serve(async (req) => {
       .maybeSingle()
 
     const inviteToken = crypto.randomUUID()
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+    const inviteTokenHash = await hashToken(inviteToken)
 
     const { data: invite, error: insertError } = await supabase
       .from('circle_invites')
@@ -81,6 +89,7 @@ Deno.serve(async (req) => {
         invite_email_normalized: normalizedEmail,
         invite_name: name ?? null,
         invite_token: inviteToken,
+        invite_token_hash: inviteTokenHash,
         invited_user_id: existingProfile?.id ?? null,
         status: 'pending',
       })
