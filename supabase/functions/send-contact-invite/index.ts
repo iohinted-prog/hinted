@@ -97,7 +97,7 @@ Deno.serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Hinted <onboarding@resend.dev>',
+        from: 'Hinted <hello@hinted.io>',
         to: normalizedEmail,
         subject: "You've been added as a contact on Hinted",
         html: `
