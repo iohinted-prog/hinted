@@ -1,9 +1,9 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function AcceptContactInvitePage() {
+function AcceptContactInvite() {
   const supabase = useMemo(() => createClient(), [])
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -66,12 +66,17 @@ export default function AcceptContactInvitePage() {
       <main style={styles.container}>
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
         <p style={styles.body}>Accept to share your birthday and see their hints page.</p>
-        <button onClick={() => router.push(`/?invite_token=${token}&invite_type=contact`)} style={styles.button}>
+        <button
+          onClick={() => router.push(`/?invite_token=${token}&invite_type=contact`)}
+          style={styles.button}
+        >
           Accept and create account
         </button>
         <p style={styles.muted}>
           Already have an account?{' '}
-          <a href={`/?invite_token=${token}&invite_type=contact`} style={styles.link}>Sign in</a>
+          <a href={`/?invite_token=${token}&invite_type=contact`} style={styles.link}>
+            Sign in
+          </a>
         </p>
       </main>
     )
@@ -82,7 +87,9 @@ export default function AcceptContactInvitePage() {
       <main style={styles.container}>
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
         <p style={styles.body}>Accept to share your birthday and appear in their contacts.</p>
-        <button onClick={acceptInvite} style={styles.button}>Accept invite</button>
+        <button onClick={acceptInvite} style={styles.button}>
+          Accept invite
+        </button>
       </main>
     )
   }
@@ -112,6 +119,14 @@ export default function AcceptContactInvitePage() {
       </main>
     )
   }
+}
+
+export default function AcceptContactInvitePage() {
+  return (
+    <Suspense fallback={<main style={{ maxWidth: '480px', margin: '80px auto', padding: '24px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}><p>Loading...</p></main>}>
+      <AcceptContactInvite />
+    </Suspense>
+  )
 }
 
 const styles = {
