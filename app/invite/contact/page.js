@@ -9,7 +9,7 @@ export default function AcceptContactInvitePage() {
   const router = useRouter()
   const token = searchParams.get('token')
 
-  const [status, setStatus] = useState('loading') // loading | logged-out | accepting | success | error
+  const [status, setStatus] = useState('loading')
   const [errorMessage, setErrorMessage] = useState(null)
 
   useEffect(() => {
@@ -45,10 +45,6 @@ export default function AcceptContactInvitePage() {
     }
   }
 
-  const handleSignUp = () => {
-    router.push(`/sign-up?invite_token=${token}&invite_type=contact`)
-  }
-
   if (!token) {
     return (
       <main style={styles.container}>
@@ -70,8 +66,13 @@ export default function AcceptContactInvitePage() {
       <main style={styles.container}>
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
         <p style={styles.body}>Accept to share your birthday and see their hints page.</p>
-        <button onClick={handleSignUp} style={styles.button}>Accept and create account</button>
-        <p style={styles.muted}>Already have an account? <a href={`/sign-in?invite_token=${token}&invite_type=contact`} style={styles.link}>Sign in</a></p>
+        <button onClick={() => router.push(`/?invite_token=${token}&invite_type=contact`)} style={styles.button}>
+          Accept and create account
+        </button>
+        <p style={styles.muted}>
+          Already have an account?{' '}
+          <a href={`/?invite_token=${token}&invite_type=contact`} style={styles.link}>Sign in</a>
+        </p>
       </main>
     )
   }
