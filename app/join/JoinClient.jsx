@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import GoogleAuthButtons from '../components/GoogleAuthButtons'
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import InviteAuthButtons from "../components/InviteAuthButtons";
 
 function LandingLogo() {
   return (
@@ -14,22 +14,22 @@ function LandingLogo() {
         Hinted<span className="text-[#f36f64]">.io</span>
       </div>
     </div>
-  )
+  );
 }
 
 export default function JoinClient() {
-  const searchParams = useSearchParams()
-  const inviteToken = searchParams.get('invite_token')?.trim() || ''
-  const inviteType = searchParams.get('invite_type')?.trim() || ''
+  const searchParams = useSearchParams();
+  const inviteToken = searchParams.get("invite_token")?.trim() || "";
+  const inviteType = searchParams.get("invite_type")?.trim() || "";
 
-  const isContactInvite = inviteType === 'contact'
-  const isCircleInvite = inviteType === 'circle'
-  const hasInvite = Boolean(inviteToken && inviteType)
+  const isContactInvite = inviteType === "contact";
+  const isCircleInvite = inviteType === "circle";
+  const hasInvite = Boolean(inviteToken && inviteType);
 
-  const title = hasInvite ? 'Accept your invite' : 'Join Hinted'
+  const title = hasInvite ? "Accept your invite" : "Join Hinted";
   const subtitle = hasInvite
-    ? 'Sign in or create an account to continue. You will be taken straight to onboarding or your feed.'
-    : 'Use Google or Microsoft to sign in. New users will go to onboarding and returning users will go straight to the feed.'
+    ? "Sign in or create an account to continue. You will then be taken to onboarding or straight to your feed."
+    : "Use Google or Microsoft to sign in. New users will go to onboarding and returning users will go straight to the feed.";
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -42,8 +42,12 @@ export default function JoinClient() {
           {isContactInvite && (
             <div className="mb-6 rounded-[22px] border border-[#f1e4dc] bg-[#fff8f4] p-4">
               <p className="text-sm leading-6 text-slate-700">
-                <span className="font-semibold">You have been invited as a contact on Hinted.</span>{' '}
-                Sign in or create an account to accept the invite. New users will continue to onboarding, and existing users will go straight to their feed.
+                <span className="font-semibold">
+                  You have been invited as a contact on Hinted.
+                </span>{" "}
+                Sign in or create an account to accept the invite. New users
+                will continue to onboarding, and existing users will go
+                straight to their feed.
               </p>
             </div>
           )}
@@ -51,8 +55,12 @@ export default function JoinClient() {
           {isCircleInvite && (
             <div className="mb-6 rounded-[22px] border border-[#f1e4dc] bg-[#fff8f4] p-4">
               <p className="text-sm leading-6 text-slate-700">
-                <span className="font-semibold">You have been invited to join a circle on Hinted.</span>{' '}
-                Sign in or create an account to accept the invite. New users will continue to onboarding, and existing users will go straight to their feed.
+                <span className="font-semibold">
+                  You have been invited to join a circle on Hinted.
+                </span>{" "}
+                Sign in or create an account to accept the invite. New users
+                will continue to onboarding, and existing users will go
+                straight to their feed.
               </p>
             </div>
           )}
@@ -60,8 +68,9 @@ export default function JoinClient() {
           {!hasInvite && (
             <div className="mb-6 rounded-[22px] border border-[#f1e4dc] bg-[#fff8f4] p-4">
               <p className="text-sm leading-6 text-slate-700">
-                <span className="font-semibold">Welcome to Hinted.</span>{' '}
-                Sign in or create an account to continue. We will send you to onboarding if you are new, or straight to your feed if you have already set up your account.
+                <span className="font-semibold">Welcome to Hinted.</span>{" "}
+                Sign in or create an account to continue. We will take new users
+                to onboarding and returning users straight to their feed.
               </p>
             </div>
           )}
@@ -72,36 +81,43 @@ export default function JoinClient() {
                 <h2 className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
                   {title}
                 </h2>
-                <p className="mt-1 text-sm text-slate-500">
-                  {subtitle}
-                </p>
+                <p className="mt-1 text-sm text-slate-500">{subtitle}</p>
               </div>
+
               <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
                 Google or Microsoft
               </div>
             </div>
 
             <div className="space-y-4">
-              <GoogleAuthButtons
-                variant="hero-primary"
+              <InviteAuthButtons
                 inviteToken={inviteToken || undefined}
                 inviteType={inviteType || undefined}
               />
 
               <div className="rounded-[22px] border border-[#f3e4db] bg-[#fff8f4] p-4">
                 <p className="text-sm leading-6 text-slate-600">
-                  New here? Use Google or Microsoft to create your account. Returning users can log in the exact same way. After sign-in, Hinted will always take you either to onboarding or straight to your feed.
+                  New here? Use Google or Microsoft to create your account.
+                  Returning users can log in the exact same way. After sign-in,
+                  Hinted will always take you either to onboarding or straight
+                  to your feed.
                 </p>
               </div>
             </div>
 
             <p className="mt-4 text-xs leading-5 text-slate-500">
-              By continuing, you agree to Hinted&apos;s{' '}
-              <Link href="/terms" className="font-medium text-slate-700 underline underline-offset-2">
+              By continuing, you agree to Hinted&apos;s{" "}
+              <Link
+                href="/terms"
+                className="font-medium text-slate-700 underline underline-offset-2"
+              >
                 Terms
-              </Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="font-medium text-slate-700 underline underline-offset-2">
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="font-medium text-slate-700 underline underline-offset-2"
+              >
                 Privacy Policy
               </Link>
               .
@@ -109,12 +125,15 @@ export default function JoinClient() {
           </div>
 
           <p className="mt-6 text-center text-sm text-slate-500">
-            <Link href="/" className="font-medium text-slate-700 underline underline-offset-2">
+            <Link
+              href="/"
+              className="font-medium text-slate-700 underline underline-offset-2"
+            >
               Back to homepage
             </Link>
           </p>
         </div>
       </div>
     </main>
-  )
+  );
 }
