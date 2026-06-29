@@ -4,6 +4,8 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
+  const inviteToken = requestUrl.searchParams.get("invite_token");
+  const inviteType = requestUrl.searchParams.get("invite_type");
 
   if (!code) {
     return NextResponse.redirect(
@@ -37,7 +39,9 @@ export async function GET(request) {
     );
   }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   let destination = "/";
 
@@ -48,8 +52,19 @@ export async function GET(request) {
       .eq("id", user.id)
       .maybeSingle();
 
-    destination =
-      !profile || !profile.onboarding_completed ? "/onboarding" : "/feed";
+    const onboardingComplete = Boolean(profile?.onboarding_completed);
+
+    if (inviteToken && inviteType) {
+      const joinUrl = new URL(
+        onboardingComplete ? "/feed" : "/onboarding",
+        requestUrl.origin
+      );
+      joinUrl.searchParams.set("invite_token", inviteToken);
+      joinUrl.searchParams.set("invite_type", inviteType);
+      destination = `${joinUrl.pathname}${joinUrl.search}`;
+    } else {
+      destination = onboardingComplete ? "/feed" : "/onboarding";
+    }
   }
 
   const response = NextResponse.redirect(
