@@ -1,6 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 
 export default function TestPage() {
   const supabase = useMemo(() => createClient(), [])
@@ -13,11 +14,40 @@ export default function TestPage() {
       const { data, error } = await supabase.functions.invoke('send-contact-invite', {
         body: { email: 'iohinted@gmail.com', name: 'Test User' },
       })
-      const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
+
+      if (error) {
+        if (error instanceof FunctionsHttpError) {
+          const errorBody = await error.context.json()
+          const output = {
+            data: null,
+            error: {
+              name: error.name,
+              message: error.message,
+              details: errorBody,
+            },
+          }
+          console.log('contact invite http error:', output)
+          setResult(output)
+          return
+        }
+
+        const output = {
+          data: null,
+          error: { name: error.name, message: error.message },
+        }
+        console.log('contact invite result:', output)
+        setResult(output)
+        return
+      }
+
+      const output = { data: data ?? null, error: null }
       console.log('contact invite result:', output)
       setResult(output)
     } catch (err) {
-      const output = { data: null, error: { message: err instanceof Error ? err.message : 'Unknown error' } }
+      const output = {
+        data: null,
+        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+      }
       console.log('contact invite catch error:', output)
       setResult(output)
     } finally {
@@ -31,11 +61,40 @@ export default function TestPage() {
       const { data, error } = await supabase.functions.invoke('send-circle-invite', {
         body: { circle_id: '7aa96eee-c93c-4d92-9e8c-fe64b6a8d7ca', email: 'iohinted@gmail.com', name: 'Test User' },
       })
-      const output = { data: data ?? null, error: error ? { name: error.name, message: error.message } : null }
+
+      if (error) {
+        if (error instanceof FunctionsHttpError) {
+          const errorBody = await error.context.json()
+          const output = {
+            data: null,
+            error: {
+              name: error.name,
+              message: error.message,
+              details: errorBody,
+            },
+          }
+          console.log('circle invite http error:', output)
+          setResult(output)
+          return
+        }
+
+        const output = {
+          data: null,
+          error: { name: error.name, message: error.message },
+        }
+        console.log('circle invite result:', output)
+        setResult(output)
+        return
+      }
+
+      const output = { data: data ?? null, error: null }
       console.log('circle invite result:', output)
       setResult(output)
     } catch (err) {
-      const output = { data: null, error: { message: err instanceof Error ? err.message : 'Unknown error' } }
+      const output = {
+        data: null,
+        error: { message: err instanceof Error ? err.message : 'Unknown error' },
+      }
       console.log('circle invite catch error:', output)
       setResult(output)
     } finally {
