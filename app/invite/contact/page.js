@@ -74,7 +74,7 @@ function AcceptContactInvite() {
         </button>
         <p style={styles.muted}>
           Already have an account?{' '}
-          <a href={`/?invite_token=${token}&invite_type=contact`} style={styles.link}>
+          <a href={`/join?invite_token=${token}&invite_type=contact`} style={styles.link}>
             Sign in
           </a>
         </p>
