@@ -1,6 +1,8 @@
 'use client'
+
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { FunctionsHttpError } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/client'
 
 function AcceptContactInvite() {
@@ -14,25 +16,56 @@ function AcceptContactInvite() {
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
       if (!session) {
         setStatus('logged-out')
-      } else {
-        setStatus('ready')
+        return
       }
+
+      setStatus('ready')
     }
+
     checkSession()
   }, [supabase])
 
   const acceptInvite = async () => {
+    if (!token) {
+      setErrorMessage('Invalid invite link.')
+      setStatus('error')
+      return
+    }
+
     setStatus('accepting')
+
     try {
       const { data, error } = await supabase.functions.invoke('accept-contact-invite', {
         body: { token },
       })
 
-      if (error || !data?.ok) {
-        setErrorMessage(data?.error ?? error?.message ?? 'Something went wrong')
+      if (error) {
+        if (error instanceof FunctionsHttpError) {
+          const errorBody = await error.context.json()
+
+          setErrorMessage(
+            errorBody?.error ||
+              errorBody?.detail?.message ||
+              error.message ||
+              'Something went wrong'
+          )
+          setStatus('error')
+          return
+        }
+
+        setErrorMessage(error.message || 'Something went wrong')
+        setStatus('error')
+        return
+      }
+
+      if (!data?.ok) {
+        setErrorMessage(data?.error || 'Something went wrong')
         setStatus('error')
         return
       }
@@ -48,7 +81,10 @@ function AcceptContactInvite() {
   if (!token) {
     return (
       <main style={styles.container}>
-        <p style={styles.error}>Invalid invite link.</p>
+        <h1 style={styles.heading}>Invalid invite link</h1>
+        <p style={styles.error}>
+          This invite link is missing information or may no longer be valid.
+        </p>
       </main>
     )
   }
@@ -65,16 +101,23 @@ function AcceptContactInvite() {
     return (
       <main style={styles.container}>
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
-        <p style={styles.body}>Accept to share your birthday and see their hints page.</p>
+        <p style={styles.body}>
+          Accept the invite to share your birthday and connect on Hinted.
+        </p>
+
         <button
           onClick={() => router.push(`/join?invite_token=${token}&invite_type=contact`)}
           style={styles.button}
         >
-          Accept and create account
+          Continue to join
         </button>
+
         <p style={styles.muted}>
           Already have an account?{' '}
-          <a href={`/join?invite_token=${token}&invite_type=contact`} style={styles.link}>
+          <a
+            href={`/join?invite_token=${token}&invite_type=contact`}
+            style={styles.link}
+          >
             Sign in
           </a>
         </p>
@@ -86,7 +129,10 @@ function AcceptContactInvite() {
     return (
       <main style={styles.container}>
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
-        <p style={styles.body}>Accept to share your birthday and appear in their contacts.</p>
+        <p style={styles.body}>
+          Accept to share your birthday and appear in their contacts.
+        </p>
+
         <button onClick={acceptInvite} style={styles.button}>
           Accept invite
         </button>
@@ -111,19 +157,23 @@ function AcceptContactInvite() {
     )
   }
 
-  if (status === 'error') {
-    return (
-      <main style={styles.container}>
-        <h1 style={styles.heading}>Something went wrong</h1>
-        <p style={styles.error}>{errorMessage}</p>
-      </main>
-    )
-  }
+  return (
+    <main style={styles.container}>
+      <h1 style={styles.heading}>Something went wrong</h1>
+      <p style={styles.error}>{errorMessage || 'Something went wrong'}</p>
+    </main>
+  )
 }
 
 export default function AcceptContactInvitePage() {
   return (
-    <Suspense fallback={<main style={{ maxWidth: '480px', margin: '80px auto', padding: '24px', textAlign: 'center', fontFamily: 'Arial, sans-serif' }}><p>Loading...</p></main>}>
+    <Suspense
+      fallback={
+        <main style={styles.container}>
+          <p style={styles.muted}>Loading...</p>
+        </main>
+      }
+    >
       <AcceptContactInvite />
     </Suspense>
   )
@@ -146,6 +196,7 @@ const styles = {
     fontSize: '16px',
     color: '#444',
     marginBottom: '24px',
+    lineHeight: 1.6,
   },
   button: {
     display: 'inline-block',
@@ -165,6 +216,7 @@ const styles = {
   error: {
     fontSize: '14px',
     color: '#e00',
+    lineHeight: 1.5,
   },
   link: {
     color: '#000',
