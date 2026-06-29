@@ -67,7 +67,7 @@ function AcceptContactInvite() {
         <h1 style={styles.heading}>You have been invited as a contact on Hinted</h1>
         <p style={styles.body}>Accept to share your birthday and see their hints page.</p>
         <button
-          onClick={() => router.push(`/?invite_token=${token}&invite_type=contact`)}
+          onClick={() => router.push(`/join?invite_token=${token}&invite_type=contact`)}
           style={styles.button}
         >
           Accept and create account
