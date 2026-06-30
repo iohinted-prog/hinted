@@ -2125,7 +2125,7 @@ export default function FeedClient() {
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {pendingInvites.map((invite) => (
+                  {{pendingInvites.map((invite) => (
                     <InviteCard
                       key={invite.id}
                       invite={invite}
@@ -2133,7 +2133,7 @@ export default function FeedClient() {
                       onAccept={handleAcceptInvite}
                       onDelete={(inv) => handleInviteDecision(inv, "declined")}
                     />
-                  ))
+                  ))}
                 </div>
               )}
             </section>
