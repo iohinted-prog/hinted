@@ -1563,40 +1563,89 @@ export default function FeedClient() {
 
     const normalizedEmail = user?.email?.trim().toLowerCase();
 
-    let query = supabase
-      .from("circle_invites")
-      .select(`
-        id,
-        circle_id,
-        user_id,
-        contact_id,
-        invite_name,
-        invite_email,
-        status,
-        viewed_at,
-        paid_at,
-        created_at,
-        updated_at,
-        invited_user_id
-      `)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+    const [circleResult, contactResult] = await Promise.all([
+      (async () => {
+        let query = supabase
+          .from("circle_invites")
+          .select(`
+            id,
+            circle_id,
+            user_id,
+            contact_id,
+            invite_name,
+            invite_email,
+            invite_token,
+            status,
+            viewed_at,
+            paid_at,
+            created_at,
+            updated_at,
+            invited_user_id
+          `)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
+        query = normalizedEmail
+          ? query.or(`invited_user_id.eq.${user.id},invite_email.eq.${normalizedEmail}`)
+          : query.eq("invited_user_id", user.id);
+        const { data, error } = await query;
+        return { data, error };
+      })(),
+      (async () => {
+        let query = supabase
+          .from("contact_invites")
+          .select(`
+            id,
+            inviter_user_id,
+            contact_id,
+            invite_email,
+            invite_name,
+            status,
+            expires_at,
+            accepted_by_user_id,
+            accepted_at,
+            created_at,
+            updated_at,
+            token_hash,
+            invited_user_id,
+            inviter:profiles!inviter_user_id(full_name, invite_name)
+          `)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false });
+        query = normalizedEmail
+          ? query.or(`invited_user_id.eq.${user.id},invite_email.eq.${normalizedEmail}`)
+          : query.eq("invited_user_id", user.id);
+        const { data, error } = await query;
+        return { data, error };
+      })(),
+    ]);
 
-    query = normalizedEmail
-      ? query.or(`invited_user_id.eq.${user.id},invite_email.eq.${normalizedEmail}`)
-      : query.eq("invited_user_id", user.id);
-
-    const { data, error } = await query;
-
-    if (error) {
+    if (circleResult.error) {
       setPendingInvites([]);
       setInvitesLoading(false);
-      throw new Error(normalizeSupabaseError(error, "Failed to load invites."));
+      throw new Error(normalizeSupabaseError(circleResult.error, "Failed to load invites."));
+    }
+    if (contactResult.error) {
+      setPendingInvites([]);
+      setInvitesLoading(false);
+      throw new Error(normalizeSupabaseError(contactResult.error, "Failed to load invites."));
     }
 
-    setPendingInvites(data || []);
+    const merged = [
+      ...(circleResult.data || []).map((invite) => ({ ...invite, source: "circle" })),
+      ...(contactResult.data || []).map((invite) => ({
+        ...invite,
+        source: "contact",
+        circle_id: null,
+        user_id: invite.inviter_user_id,
+        viewed_at: null,
+        paid_at: null,
+        invite_token: null,
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    setPendingInvites(merged);
     setInvitesLoading(false);
-    return data || [];
+    return merged;
   }, []);
 
   const loadCalendarEvents = useCallback(async (userId) => {
