@@ -1711,7 +1711,17 @@ export default function FeedClient() {
       const { error } = await supabase.from("contacts").delete().eq("id", contact.id);
       if (error) throw new Error(normalizeSupabaseError(error, "Failed to delete contact."));
 
+      if (contact.email) {
+        await supabase
+          .from("contact_invites")
+          .update({ status: "revoked" })
+          .eq("inviter_user_id", sessionUser.id)
+          .eq("invite_email", contact.email)
+          .eq("status", "pending");
+      }
+
       await loadContacts(sessionUser.id);
+      await loadInvites(sessionUser);
       setIsDeleteContactOpen(false);
       setSelectedContactToDelete(null);
       setContactSuccess("Contact deleted successfully.");
