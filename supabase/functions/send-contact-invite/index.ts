@@ -24,10 +24,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Missing auth header' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -37,56 +34,66 @@ Deno.serve(async (req) => {
     )
 
     const jwt = authHeader.replace('Bearer ', '')
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser(jwt)
+    const { data: { user }, error: userError } = await supabase.auth.getUser(jwt)
 
     if (userError || !user) {
       console.log('Auth error:', userError)
       return new Response(
         JSON.stringify({ ok: false, error: 'Invalid user' }),
-        {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     console.log('User authenticated:', user.id)
 
-    const { email, name } = await req.json()
+    const body = await req.json()
+    const email = String(body?.email || '').trim()
+    const name = typeof body?.name === 'string' ? body.name.trim() : ''
 
     if (!email) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Email is required' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const normalizedEmail = String(email).toLowerCase().trim()
+    const normalizedEmail = email.toLowerCase()
     console.log('Inviting:', normalizedEmail)
 
-    const { data: existingProfile, error: existingProfileError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('email_normalized', normalizedEmail)
-      .maybeSingle()
-
-    if (existingProfileError) {
-      console.log('Existing profile lookup error:', existingProfileError)
+    if (user.email && normalizedEmail === user.email.trim().toLowerCase()) {
       return new Response(
-        JSON.stringify({ ok: false, error: 'Failed to check existing profile' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        JSON.stringify({ ok: false, error: 'You cannot invite yourself as a contact' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    // Block if already an active linked contact
+    const { data: existingLinkedContact, error: existingLinkedContactError } = await supabase
+      .from('contacts')
+      .select('id, status')
+      .eq('user_id', user.id)
+      .eq('email', normalizedEmail)
+      .not('profile_id', 'is', null)
+      .eq('status', 'active')
+      .limit(1)
+      .maybeSingle()
+
+    if (existingLinkedContactError) {
+      console.log('Existing linked contact lookup error:', existingLinkedContactError)
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Failed to check existing contact' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (existingLinkedContact) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'This person is already an active contact.', contact_id: existingLinkedContact.id }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Block if already a pending invite
     const { data: existingPendingInvite, error: existingInviteError } = await supabase
       .from('contact_invites')
       .select('id')
@@ -99,25 +106,74 @@ Deno.serve(async (req) => {
       console.log('Existing invite lookup error:', existingInviteError)
       return new Response(
         JSON.stringify({ ok: false, error: 'Failed to check existing invite' }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
     if (existingPendingInvite) {
       console.log('Pending invite already exists:', existingPendingInvite.id)
       return new Response(
-        JSON.stringify({
-          ok: false,
-          error: 'A pending invite already exists for this email address.',
-          invite_id: existingPendingInvite.id,
-        }),
-        {
-          status: 409,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        JSON.stringify({ ok: false, error: 'A pending invite already exists for this email address.', invite_id: existingPendingInvite.id }),
+        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Find or create the placeholder contacts row so the invitee avatar
+    // appears immediately in the inviter's contacts list after sending.
+    const { data: existingEmailOnlyContact, error: existingEmailOnlyContactError } = await supabase
+      .from('contacts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('email', normalizedEmail)
+      .is('profile_id', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (existingEmailOnlyContactError) {
+      console.log('Existing email-only contact lookup error:', existingEmailOnlyContactError)
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Failed to check existing saved contact' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    let contactId = existingEmailOnlyContact?.id ?? null
+
+    if (!contactId) {
+      const { data: newContact, error: newContactError } = await supabase
+        .from('contacts')
+        .insert({
+          user_id: user.id,
+          name: name || normalizedEmail.split('@')[0],
+          email: normalizedEmail,
+          status: null,
+        })
+        .select('id')
+        .single()
+
+      if (newContactError) {
+        console.log('Contact insert error:', newContactError)
+        // Non-fatal: invite can still be sent even if placeholder contact fails
+      } else {
+        contactId = newContact.id
+        console.log('Placeholder contact created:', contactId)
+      }
+    }
+
+    // Look up whether this email belongs to a registered user so we can
+    // stamp invited_user_id at send time for in-app invite matching
+    const { data: existingProfile, error: existingProfileError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email_normalized', normalizedEmail)
+      .maybeSingle()
+
+    if (existingProfileError) {
+      console.log('Existing profile lookup error:', existingProfileError)
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Failed to check existing profile' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -129,11 +185,15 @@ Deno.serve(async (req) => {
       .from('contact_invites')
       .insert({
         inviter_user_id: user.id,
+        contact_id: contactId,
         invite_email: normalizedEmail,
-        invite_name: name ?? null,
+        invite_name: name || null,
         token_hash: tokenHash,
+        status: 'pending',
         expires_at: expiresAt,
-        accepted_by_user_id: existingProfile?.id ?? null,
+        accepted_by_user_id: null,
+        accepted_at: null,
+        invited_user_id: existingProfile?.id ?? null,
       })
       .select('id')
       .single()
@@ -142,10 +202,7 @@ Deno.serve(async (req) => {
       console.log('Insert error:', insertError)
       return new Response(
         JSON.stringify({ ok: false, error: insertError.message }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -156,7 +213,7 @@ Deno.serve(async (req) => {
 
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {
+      headers: {supabase functions deploy send-contact-invite
         Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
         'Content-Type': 'application/json',
       },
@@ -176,18 +233,9 @@ Deno.serve(async (req) => {
     if (!resendRes.ok) {
       const resendError = await resendRes.json()
       console.log('Resend error:', resendError)
-
       return new Response(
-        JSON.stringify({
-          ok: false,
-          error: 'Email failed',
-          detail: resendError,
-          from: 'Hinted <hello@hinted.io>',
-        }),
-        {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        JSON.stringify({ ok: false, error: 'Email failed', detail: resendError, from: 'Hinted <hello@hinted.io>' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -195,28 +243,14 @@ Deno.serve(async (req) => {
     console.log('Email sent successfully:', resendData)
 
     return new Response(
-      JSON.stringify({
-        ok: true,
-        invite_id: invite.id,
-        email_id: resendData?.id ?? null,
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ ok: true, invite_id: invite.id, email_id: resendData?.id ?? null }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
     console.log('Caught error:', error)
-
     return new Response(
-      JSON.stringify({
-        ok: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      JSON.stringify({ ok: false, error: error instanceof Error ? error.message : 'Unknown error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
 })

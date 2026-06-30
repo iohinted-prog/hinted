@@ -402,7 +402,13 @@ function ContactCard({ contact, onDeleteClick }) {
         <ContactAvatar contact={contact} />
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          {contact.profileId && !contact.isDemo ? (
+            <Link href={`/hints/${contact.profileId}`} className="text-sm font-semibold text-slate-900 hover:text-[#d96d4f]">
+              {contact.name}
+            </Link>
+          ) : (
+            <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          )}
           <p className="text-xs text-slate-500">
             {contact.role} · {contact.note}
           </p>
@@ -1481,7 +1487,7 @@ export default function FeedClient() {
       return {
         id: row.contact_id,
         name: row.name || row.email || "Unnamed contact",
-        role: "Contact",
+        role: contactState === "invitee" ? "Invitee" : (row.role || "Friend"),
         note:
           contactState === "user"
             ? "Hinted user"
@@ -1490,6 +1496,7 @@ export default function FeedClient() {
               : "Contact",
         initials: getInitials(row.name || row.email || "C"),
         email: row.email || "",
+        avatarUrl: row.avatar_url || null,
         contactState,
         profileId: row.profile_id,
         publicState: row.public_state,
@@ -1669,23 +1676,20 @@ export default function FeedClient() {
       throw new Error("A valid email address is required.");
     }
 
-    const insertPayload = {
-      user_id: sessionUser.id,
-      name: payload.name,
-      email: cleanedEmail,
-      role:
-        Array.isArray(payload.relationshipTypes) && payload.relationshipTypes.length
+    const { error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
+      body: {
+        email: cleanedEmail,
+        name: payload.name,
+        role: Array.isArray(payload.relationshipTypes) && payload.relationshipTypes.length
           ? payload.relationshipTypes[0]
           : "Friend",
-    };
-
-    const { error } = await supabase.from("contacts").insert(insertPayload);
-
-    if (error) {
-      throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
+      },
+    });
+    if (inviteError) {
+      throw new Error(normalizeSupabaseError(inviteError, "Failed to send contact invite."));
     }
-
     await loadContacts(sessionUser.id);
+    await loadInvites(sessionUser);
     setContactSuccess("Contact saved successfully.");
   }
 
@@ -1780,15 +1784,20 @@ export default function FeedClient() {
     setInvitesError("");
 
     try {
-      const { error } = await supabase
-        .from("circle_invites")
-        .update({ status: nextStatus })
-        .eq("id", invite.id);
-
-      if (error) throw new Error(normalizeSupabaseError(error, "Could not update invite."));
-
-      await loadInvites(sessionUser);
-      setActiveInvite(null);
+      if (invite.source === "contact") {
+        const { error } = await supabase
+          .from("contact_invites")
+          .update({ status: nextStatus })
+          .eq("id", invite.id);
+        if (error) throw new Error(normalizeSupabaseError(error, "Could not update invite."));
+      } else {
+        const { error } = await supabase
+          .from("circle_invites")
+          .update({ status: nextStatus })
+          .eq("id", invite.id);
+        if (error) throw new Error(normalizeSupabaseError(error, "Could not update invite."));
+      }
+      await Promise.all([loadInvites(sessionUser), loadContacts(sessionUser.id)]);
     } catch (error) {
       setInvitesError(error?.message || "Could not update invite.");
     } finally {
