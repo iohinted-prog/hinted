@@ -1409,6 +1409,68 @@ function MiniCalendar({
   );
 }
 
+function InviteCard({ invite, inviteActionId, onAccept, onDelete }) {
+  const isWorking = inviteActionId === invite.id;
+  const isContactInvite = invite.source === "contact";
+  return (
+    <article
+      className={`rounded-[22px] border p-4 ${
+        isContactInvite ? "border-[#e6ddd7] bg-white" : "border-[#dce8d8] bg-[#f7fbf5]"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-[12px] font-bold text-white">
+          {getInitials(isContactInvite
+            ? (invite.inviter?.full_name || invite.invite_name || "S")
+            : (invite.invite_name || invite.invite_email || "I"))}
+          <span className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
+            isContactInvite ? "border border-[#d7e4d2] bg-white text-[#4e684d]" : "bg-[#2f3b2d] text-white"
+          }`}>
+            {isContactInvite ? "I" : "C"}
+          </span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">
+                {isContactInvite
+                  ? invite.inviter?.full_name || invite.inviter?.invite_name || invite.invite_name || "Someone"
+                  : invite.invite_name || invite.invite_email || "Invite"}
+              </p>
+              <p className="mt-1 text-sm text-slate-500">
+                {isContactInvite ? "wants to connect with you" : invite.invite_email || "No email attached"}
+              </p>
+            </div>
+            <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${
+              isContactInvite ? "border border-[#d7e4d2] bg-white text-[#4e684d]" : "bg-[#2f3b2d] text-white"
+            }`}>
+              {isContactInvite ? "Contact" : "Circle"}
+            </span>
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => onAccept(invite)}
+              disabled={isWorking}
+              className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
+            >
+              {isWorking ? "Working..." : "Accept"}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(invite)}
+              disabled={isWorking}
+              className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            >
+              {isWorking ? "Working..." : "Delete"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 export default function FeedClient() {
   const [sessionUser, setSessionUser] = useState(null);
 
@@ -1838,6 +1900,30 @@ export default function FeedClient() {
     });
   }
 
+  async function handleAcceptInvite(invite) {
+    if (!sessionUser?.id) return;
+    setInviteActionId(invite.id);
+    setInvitesError("");
+    try {
+      if (invite.source === "contact") {
+        const { error } = await supabase.functions.invoke("accept-contact-invite", {
+          body: { invite_id: invite.id },
+        });
+        if (error) throw new Error(normalizeSupabaseError(error, "Could not accept contact invite."));
+      } else {
+        const { error } = await supabase.functions.invoke("accept-circle-invite", {
+          body: { token: invite.invite_token },
+        });
+        if (error) throw new Error(normalizeSupabaseError(error, "Could not accept circle invite."));
+      }
+      await Promise.all([loadInvites(sessionUser), loadContacts(sessionUser.id), loadFeedItems()]);
+    } catch (error) {
+      setInvitesError(error?.message || "Could not accept invite.");
+    } finally {
+      setInviteActionId(null);
+    }
+  }
+
   async function handleInviteDecision(invite, nextStatus) {
     setInviteActionId(invite.id);
     setInvitesError("");
@@ -2040,46 +2126,14 @@ export default function FeedClient() {
               ) : (
                 <div className="mt-4 space-y-3">
                   {pendingInvites.map((invite) => (
-                    <article
+                    <InviteCard
                       key={invite.id}
-                      className="rounded-[22px] border border-[#ecd9cf] bg-[#fcf8f5] p-4"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-900">
-                            {invite.invite_name || invite.invite_email || "Circle invite"}
-                          </p>
-                          <p className="mt-1 text-sm text-slate-500">
-                            {invite.invite_email || "No email attached"}
-                          </p>
-                        </div>
-
-                        <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#e77756]">
-                          {invite.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActiveInvite(invite)}
-                          disabled={inviteActionId === invite.id}
-                          className="inline-flex items-center justify-center rounded-full border border-[#ee8d69] bg-gradient-to-b from-[#ff946d] to-[#f36f64] px-4 py-2 text-sm font-semibold text-white shadow-sm disabled:opacity-60"
-                        >
-                          {inviteActionId === invite.id ? "Working..." : "View invite"}
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleInviteDecision(invite, "declined")}
-                          disabled={inviteActionId === invite.id}
-                          className="inline-flex items-center justify-center rounded-full border border-[#ead7cd] bg-white px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
-                        >
-                          {inviteActionId === invite.id ? "Working..." : "Decline"}
-                        </button>
-                      </div>
-                    </article>
-                  ))}
+                      invite={invite}
+                      inviteActionId={inviteActionId}
+                      onAccept={handleAcceptInvite}
+                      onDelete={(inv) => handleInviteDecision(inv, "declined")}
+                    />
+                  ))
                 </div>
               )}
             </section>
