@@ -361,39 +361,31 @@ function ContactAvatar({ contact }) {
       </div>
     );
   }
-
-  const isUser = contact.contactState === "user";
-  const isInvitee = contact.contactState === "invitee";
-  const isPlainContact = contact.contactState === "contact";
-
+  const visual = getContactVisualState(contact);
   return (
-    <div
-      className={`relative flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${
-        isUser
-          ? "bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-white"
-          : isInvitee
-            ? "border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] text-[#c87150]"
-            : "border border-[#e8ddd6] bg-[#faf7f4] text-slate-600"
-      }`}
-    >
-      {contact.initials}
-
-      {isUser ? (
-        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#2f3b2d] px-1 text-[9px] font-bold text-white">
-          C
-        </span>
-      ) : isInvitee ? (
-        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#e6c5b6] bg-[#fff0e8] px-1 text-[9px] font-bold text-[#c87150]">
-          I
-        </span>
-      ) : isPlainContact ? (
-        <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border border-[#e8ddd6] bg-white px-1 text-[9px] font-bold text-slate-500">
-          P
-        </span>
-      ) : null}
+    <div className="relative h-11 w-11 shrink-0">
+      {contact.avatarUrl ? (
+        <img
+          src={contact.avatarUrl}
+          alt={contact.name || "Contact"}
+          className="h-11 w-11 rounded-full object-cover"
+        />
+      ) : (
+        <div
+          className={`flex h-11 w-11 items-center justify-center rounded-full text-[12px] font-bold ${visual.avatarClass}`}
+        >
+          {contact.initials}
+        </div>
+      )}
+      <span
+        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${visual.badgeClass}`}
+      >
+        {visual.badgeLabel}
+      </span>
     </div>
   );
 }
+
 
 function ContactCard({ contact, onDeleteClick }) {
   return (
