@@ -2845,7 +2845,6 @@ export default function CirclesClient() {
         );
       });
 
-      console.log("AVATAR LOOKUP REACHED", Object.keys(inviteMap));
       // Fetch profile avatars for all members including self
       const allInviteEmails = Object.values(inviteMap)
         .flat()
@@ -2869,7 +2868,6 @@ export default function CirclesClient() {
           .select("id, email_normalized, avatar_url")
           .in("email_normalized", allInviteEmails);
 
-        console.log("profileRows", JSON.stringify(profileRows));
         (profileRows || []).forEach((p) => {
           if (p.email_normalized) avatarByEmail[p.email_normalized] = p.avatar_url;
         });
