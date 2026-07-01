@@ -2180,9 +2180,13 @@ function CreateCircleModal({
                                 : "border-[#efe1d9] bg-white hover:bg-[#fff8f4]"
                             }`}
                           >
-                            <div className={getAvatarClasses(person.colors, person.status)}>
-                              {person.initials}
-                            </div>
+                            {person.avatarUrl ? (
+                              <img src={person.avatarUrl} alt={person.name} className="h-10 w-10 rounded-full object-cover" />
+                            ) : (
+                              <div className={getAvatarClasses(person.colors, person.status)}>
+                                {person.initials}
+                              </div>
+                            )}
                             <div className="min-w-0">
                               <p className="text-sm font-semibold text-slate-900">{person.name}</p>
                               <p className="text-[12px] text-slate-500">{person.role}</p>
@@ -2401,9 +2405,13 @@ function CreateCircleModal({
                       key={person.id}
                       className="inline-flex items-center gap-2 rounded-full border border-[#ead8ce] bg-white px-3 py-2"
                     >
-                      <div className={getAvatarClasses(person.colors, person.status, "sm")}>
-                        {person.initials}
-                      </div>
+                      {person.avatarUrl ? (
+                        <img src={person.avatarUrl} alt={person.name} className="h-8 w-8 rounded-full object-cover" />
+                      ) : (
+                        <div className={getAvatarClasses(person.colors, person.status, "sm")}>
+                          {person.initials}
+                        </div>
+                      )}
                       <span className="text-sm font-medium text-slate-700">{person.name}</span>
                       <button
                         type="button"
@@ -2434,9 +2442,13 @@ function CreateCircleModal({
                     className="flex items-center justify-between rounded-[18px] border border-[#f0dfd6] bg-[#fffdfa] p-3"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={getAvatarClasses(contact.colors, contact.status)}>
-                        {contact.initials}
-                      </div>
+                      {contact.avatarUrl ? (
+                        <img src={contact.avatarUrl} alt={contact.name} className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className={getAvatarClasses(contact.colors, contact.status)}>
+                          {contact.initials}
+                        </div>
+                      )}
                       <div>
                         <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
                         <p className="text-[12px] text-slate-500">
