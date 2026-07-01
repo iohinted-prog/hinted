@@ -1477,10 +1477,14 @@ function InviteCard({ invite, inviteActionId, onAccept, onDelete }) {
       }`}
     >
       <div className="flex items-start gap-3">
-        <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-[12px] font-bold text-white">
-          {getInitials(isContactInvite
-            ? (invite.inviter?.full_name || invite.invite_name || "S")
-            : (invite.invite_name || invite.invite_email || "I"))}
+        <div className="relative h-11 w-11 shrink-0">
+          {invite.inviter?.avatar_url ? (
+            <img src={invite.inviter.avatar_url} alt={invite.inviter.full_name || ""} className="h-11 w-11 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b from-[#8aa587] to-[#4e684d] text-[12px] font-bold text-white">
+              {getInitials(invite.inviter?.full_name || invite.invite_name || "?")}
+            </div>
+          )}
           <span className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${
             isContactInvite ? "border border-[#d7e4d2] bg-white text-[#4e684d]" : "bg-[#2f3b2d] text-white"
           }`}>
