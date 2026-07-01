@@ -114,7 +114,6 @@ Deno.serve(async (req) => {
           circle_id: invite.circle_id,
           user_id: user.id,
           role: invite.role || 'member',
-          status: 'active',
         })
 
       if (membershipInsertError) {
