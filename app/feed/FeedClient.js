@@ -2131,7 +2131,7 @@ export default function FeedClient() {
                       invite={invite}
                       inviteActionId={inviteActionId}
                       onAccept={handleAcceptInvite}
-                      onDelete={(inv) => handleInviteDecision(inv, "declined")}
+                      onDelete={(inv) => handleInviteDecision(inv, "revoked")}
                     />
                   ))}
                 </div>
