@@ -1690,7 +1690,7 @@ export default function FeedClient() {
           .eq("status", "pending")
           .order("created_at", { ascending: false });
         query = normalizedEmail
-          ? query.or(`invited_user_id.eq.${user.id},invite_email.eq.${normalizedEmail}`)
+          ? query.or(`invited_user_id.eq.${user.id},invite_email_normalized.eq.${normalizedEmail}`)
           : query.eq("invited_user_id", user.id);
         const { data, error } = await query;
         return { data, error };
