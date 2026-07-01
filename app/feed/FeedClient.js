@@ -1766,6 +1766,7 @@ export default function FeedClient() {
       })),
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+    console.log("merged invites", JSON.stringify(merged.map(i => ({id: i.id, source: i.source, inviter: i.inviter, invite_name: i.invite_name}))));
     setPendingInvites(merged);
     setInvitesLoading(false);
     return merged;
