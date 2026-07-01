@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import { saveSettings } from "../actions/settings";
+import { usePreferences } from "../providers/PreferencesProvider";
 
 const INTEREST_OPTIONS = [
   "Home",
@@ -33,6 +34,7 @@ export default function SettingsPage() {
   const [hintSaleAlerts, setHintSaleAlerts] = useState(true);
   const [productUpdates, setProductUpdates] = useState(false);
   const [defaultReminderDays, setDefaultReminderDays] = useState("7");
+  const { setCurrency: setGlobalCurrency } = usePreferences();
   const [currency, setCurrency] = useState("GBP");
   const [interests, setInterests] = useState(["Travel", "Food"]);
   const [otherInterest, setOtherInterest] = useState("");
@@ -132,6 +134,7 @@ export default function SettingsPage() {
         other_interest: interests.includes("Other") ? otherInterest : "",
       });
 
+      setGlobalCurrency(currency);
       setSuccess("Settings saved.");
     } catch (err) {
       setError(err.message || "Failed to save settings.");
