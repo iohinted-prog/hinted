@@ -3344,8 +3344,7 @@ if (inviteRows.length > 0) {
         profile?.invite_name ||
         "You";
 
-      const mappedCircle = buildCircleViewModel(insertedCircle, insertedInvites, currentUserName);
-      setRealCircles((prev) => [mappedCircle, ...prev]);
+      await refreshCircles();
       setCircleSuccess("Circle created successfully.");
       setIsCreateOpen(false);
       initialiseCircleForm(profile, mergedCalendarEvents);
