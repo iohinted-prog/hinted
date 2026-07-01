@@ -657,10 +657,15 @@ function ContactCard({ contact, onDeleteClick }) {
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          {contact.matchedProfileId ? (
+            <a href={`/hints/${contact.matchedProfileId}`} className="text-sm font-semibold text-slate-900 hover:text-[#d96d4f]">
+              {contact.name}
+            </a>
+          ) : (
+            <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
+          )}
           <p className="text-xs text-slate-500">
-            {contact.role}
-            {contact.note ? ` · ${contact.note}` : ""}
+            {contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}
           </p>
         </div>
 
@@ -1316,7 +1321,7 @@ function AddContactModal({ open, onClose, onSave, supabase, modalKey }) {
                   <button
                     key={relationship}
                     type="button"
-                    onClick={() => toggleRelationship(relationship)}
+                    onClick={() => setSelectedRelationships([relationship])}
                     className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
                       selected
                         ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
@@ -2963,18 +2968,16 @@ export default function CirclesClient() {
       throw new Error("A valid email address is required.");
     }
 
-    const insertPayload = {
-      user_id: sessionUser.id,
-      name: contactPayload.name,
-      email: cleanedEmail,
-      role:
-        Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
+    const { error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
+      body: {
+        email: cleanedEmail,
+        name: contactPayload.name,
+        role: Array.isArray(contactPayload.relationshipTypes) && contactPayload.relationshipTypes.length
           ? contactPayload.relationshipTypes[0]
           : "Friend",
-    };
-
-    const { error } = await supabase.from("contacts").insert(insertPayload);
-    if (error) throw new Error(normalizeSupabaseError(error, "Failed to save contact."));
+      },
+    });
+    if (inviteError) throw new Error(normalizeSupabaseError(inviteError, "Failed to send contact invite."));
 
     const reloadedContacts = await loadContacts(sessionUser.id);
     await loadPublicHintsForContacts(reloadedContacts);
