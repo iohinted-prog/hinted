@@ -351,6 +351,29 @@ function resolveEventStyle(event) {
   return eventTypeStyles[event?.type] || eventTypeStyles.celebration;
 }
 
+function getAvatarState(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "accepted" || normalized === "user" || normalized === "member") return "accepted";
+  if (normalized === "invitee" || normalized === "invited" || normalized === "pending") return "invitee";
+  return "contact";
+}
+
+function getRelationshipGradient(role) {
+  const normalized = String(role || "").toLowerCase();
+  if (normalized.includes("partner") || normalized.includes("spouse")) return "from-[#e8b9a7] to-[#bf755f]";
+  if (normalized.includes("family") || normalized.includes("parent") || normalized.includes("child") || normalized.includes("sibling") || normalized.includes("cousin")) return "from-[#eac8b8] to-[#9d6957]";
+  if (normalized.includes("colleague")) return "from-[#b7c8db] to-[#6b88a7]";
+  return "from-[#efcdbf] to-[#bb8168]";
+}
+
+function getAvatarClasses(colors, status, size = "md") {
+  const avatarState = getAvatarState(status);
+  const sizeClasses = size === "sm" ? "h-8 w-8 text-[11px]" : size === "lg" ? "h-11 w-11 text-[12px]" : "h-10 w-10 text-[11px]";
+  if (avatarState === "accepted") return `flex items-center justify-center rounded-full bg-gradient-to-b ${sizeClasses} font-bold text-white ${colors}`;
+  if (avatarState === "invitee") return `flex items-center justify-center rounded-full border-2 border-dashed border-[#dfb39d] bg-[#fff5ef] ${sizeClasses} font-bold text-[#c87150]`;
+  return `flex items-center justify-center rounded-full border border-[#e8ddd6] bg-[#faf7f4] ${sizeClasses} font-bold text-slate-600`;
+}
+
 function getContactVisualState(contact) {
   if (contact.contactState === "user") {
     return {
@@ -392,7 +415,6 @@ function ContactAvatar({ contact }) {
       </div>
     );
   }
-  const visual = getContactVisualState(contact);
   return (
     <div className="relative h-11 w-11 shrink-0">
       {contact.avatarUrl ? (
@@ -402,17 +424,10 @@ function ContactAvatar({ contact }) {
           className="h-11 w-11 rounded-full object-cover"
         />
       ) : (
-        <div
-          className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-b text-[12px] font-bold text-white ${contact.colors || 'from-[#efcdbf] to-[#bb8168]'}`}
-        >
+        <div className={getAvatarClasses(contact.colors, contact.contactState, "lg")}>
           {contact.initials}
         </div>
       )}
-      <span
-        className={`absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[9px] font-bold ${visual.badgeClass}`}
-      >
-        {visual.badgeLabel}
-      </span>
     </div>
   );
 }
@@ -1602,6 +1617,7 @@ export default function FeedClient() {
         initials: getInitials(row.name || row.email || "C"),
         email: row.email || "",
         avatarUrl: row.avatar_url || null,
+        colors: getRelationshipGradient(row.role || "Friend"),
         contactState,
         profileId: row.profile_id,
         publicState: row.public_state,
