@@ -2845,7 +2845,8 @@ export default function CirclesClient() {
           .from('profiles')
           .select('id, full_name, avatar_url')
           .in('id', ownerIds);
-        (ownerProfiles || []).forEach(p => {
+        console.log("ownerProfiles", ownerProfiles, "ownerIds", ownerIds);
+      (ownerProfiles || []).forEach(p => {
           ownerNameMap[p.id] = p.full_name || 'Organiser';
           ownerAvatarMap[p.id] = p.avatar_url || null;
         });
