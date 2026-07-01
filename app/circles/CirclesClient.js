@@ -2868,16 +2868,14 @@ export default function CirclesClient() {
         });
       }
 
-      mapped.forEach((circle) => {
-        circle.members = circle.members.map((member) => {
+      const mappedWithAvatars = mapped.map((circle) => ({ ...circle, members: circle.members.map((member) => {
           const emailKey = member.email === "__self__" ? "__self__" : (member.email || "").toLowerCase();
           return avatarByEmail[emailKey]
             ? { ...member, avatarUrl: avatarByEmail[emailKey] }
             : member;
-        });
-      });
+        }), }));
 
-      setRealCircles(mapped);
+      setRealCircles(mappedWithAvatars);
       return mapped;
     } catch (error) {
       setRealCircles([]);
