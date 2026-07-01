@@ -49,6 +49,7 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const email = String(body?.email || '').trim()
     const name = typeof body?.name === 'string' ? body.name.trim() : ''
+    const role = typeof body?.role === 'string' ? body.role.trim() : 'Friend'
 
     if (!email) {
       return new Response(
@@ -147,6 +148,7 @@ Deno.serve(async (req) => {
           user_id: user.id,
           name: name || normalizedEmail.split('@')[0],
           email: normalizedEmail,
+          role: role,
           status: null,
         })
         .select('id')
@@ -213,7 +215,7 @@ Deno.serve(async (req) => {
 
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: {supabase functions deploy send-contact-invite
+      headers: {
         Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
         'Content-Type': 'application/json',
       },
