@@ -926,15 +926,23 @@ function CircleCard({
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              {safeMembers.map((member) => (
-                <MemberPill
-                  key={`${circle?.id}-${member.name}`}
-                  member={member}
-                  currency={potCurrency}
-                  formatCurrency={formatCurrency}
-                />
+            <div className="mt-4 flex flex-wrap gap-2">
+              {safeMembers.slice(0, 4).map((member) => (
+                <div
+                  key={`${circle?.id}-${member.name}-pill`}
+                  className={`inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2`}
+                >
+                  <div className={getAvatarClasses(member.colors, member.status, "sm")}>
+                    {member.initials}
+                  </div>
+                  <span className="text-sm font-medium text-slate-700">{member.name}</span>
+                </div>
               ))}
+              {safeMembers.length > 4 ? (
+                <div className="inline-flex items-center rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2 text-sm font-medium text-slate-500">
+                  +{safeMembers.length - 4} more
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1016,18 +1024,20 @@ function CircleCard({
                       Contribute
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={() => onDeleteCircleClick(circle)}
-                      disabled={deletingCircleId === circle.id}
-                      className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
-                        deletingCircleId === circle.id
-                          ? "cursor-not-allowed bg-[#f3d6d1] text-[#b14f43]"
-                          : "border border-[#efc0ba] bg-[#fff4f2] text-[#b14f43] hover:bg-[#ffe9e5]"
-                      }`}
-                    >
-                      {deletingCircleId === circle.id ? "Deleting..." : "Delete circle"}
-                    </button>
+                    {circle?.raw?.user_id === sessionUser?.id ? (
+                      <button
+                        type="button"
+                        onClick={() => onDeleteCircleClick(circle)}
+                        disabled={deletingCircleId === circle.id}
+                        className={`inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold ${
+                          deletingCircleId === circle.id
+                            ? "cursor-not-allowed bg-[#f3d6d1] text-[#b14f43]"
+                            : "border border-[#efc0ba] bg-[#fff4f2] text-[#b14f43] hover:bg-[#ffe9e5]"
+                        }`}
+                      >
+                        {deletingCircleId === circle.id ? "Deleting..." : "Delete circle"}
+                      </button>
+                    ) : null}
                   </div>
                 ) : null}
               </>
@@ -1049,28 +1059,14 @@ function CurrencyAmountInput({
   return (
     <div className="space-y-2">
       <span className="text-sm font-medium text-slate-700">{label}</span>
-      <div className="grid gap-3 sm:grid-cols-[170px_minmax(0,1fr)]">
-        <select
-          value={currency}
-          onChange={(e) => onCurrencyChange(e.target.value)}
-          className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-        >
-          {currencyOptions.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.code} · {option.label}
-            </option>
-          ))}
-        </select>
-
-        <input
-          type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => onAmountChange(e.target.value)}
-          placeholder="220"
-          className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-        />
-      </div>
+      <input
+        type="text"
+        inputMode="decimal"
+        value={amount}
+        onChange={(e) => onAmountChange(e.target.value)}
+        placeholder="220"
+        className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
+      />
     </div>
   );
 }
