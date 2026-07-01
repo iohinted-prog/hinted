@@ -2893,6 +2893,7 @@ export default function CirclesClient() {
       }
 
       const mappedWithAvatars = mapped.map((circle) => ({ ...circle, members: circle.members.map((member) => {
+          if (member.avatarUrl) return member;
           const emailKey = member.email === "__self__" ? "__self__" : (member.email || "").toLowerCase();
           return avatarByEmail[emailKey]
             ? { ...member, avatarUrl: avatarByEmail[emailKey] }
