@@ -744,7 +744,7 @@ function AddContactModal({ open, onClose, onSave, supabase }) {
                   <button
                     key={relationship}
                     type="button"
-                    onClick={() => toggleRelationship(relationship)}
+                    onClick={() => setSelectedRelationships([relationship])}
                     className={`rounded-full border px-4 py-2.5 text-sm font-medium transition ${
                       selected
                         ? "border-[#2f3b2d] bg-[#2f3b2d] text-white"
@@ -1080,7 +1080,7 @@ function CalendarPopover({
         {events.length > 0 ? (
           events.map((event) => {
             const style = resolveEventStyle(event);
-            const canDelete = event.source === "user";
+            const canDelete = event.source === "user" || event.source === "contact_sync";
 
             return (
               <div key={event.id} className="rounded-[18px] border border-[#eee1da] bg-white p-4">
