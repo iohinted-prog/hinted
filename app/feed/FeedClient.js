@@ -1774,8 +1774,25 @@ export default function FeedClient() {
       });
     }
 
+    const circleInvites = (circleResult.data || []);
+    const circleInviterIds = [...new Set(circleInvites.map((i) => i.user_id).filter(Boolean))];
+    let circleInviterMap = {};
+    if (circleInviterIds.length) {
+      const { data: circleInviterProfiles } = await supabase
+        .from("profiles")
+        .select("id, full_name, invite_name, avatar_url")
+        .in("id", circleInviterIds);
+      (circleInviterProfiles || []).forEach((p) => {
+        circleInviterMap[p.id] = p;
+      });
+    }
+
     const merged = [
-      ...(circleResult.data || []).map((invite) => ({ ...invite, source: "circle" })),
+      ...circleInvites.map((invite) => ({
+        ...invite,
+        source: "circle",
+        inviter: circleInviterMap[invite.user_id] || null,
+      })),
       ...contactInvites.map((invite) => ({
         ...invite,
         inviter: inviterMap[invite.inviter_user_id] || null,
