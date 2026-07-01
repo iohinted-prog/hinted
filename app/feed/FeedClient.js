@@ -1495,8 +1495,7 @@ function InviteCard({ invite, inviteActionId, onAccept, onDelete }) {
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-900">
-                {isContactInvite
-                  ? invite.inviter?.full_name || invite.inviter?.invite_name || invite.invite_name || "Someone"}
+                {invite.inviter?.full_name || invite.inviter?.invite_name || invite.invite_name || "Someone"}
               </p>
               <p className="mt-1 text-sm text-slate-500">
                 {isContactInvite ? "wants to connect with you" : "invited you to a circle"}
