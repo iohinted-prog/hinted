@@ -3079,7 +3079,7 @@ export default function CirclesClient() {
       throw new Error("A valid email address is required.");
     }
 
-    const { error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
+    const { data: inviteData, error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
       body: {
         email: cleanedEmail,
         name: contactPayload.name,

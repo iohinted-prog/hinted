@@ -172,6 +172,16 @@ function isValidEmail(value) {
 
 function normalizeSupabaseError(error, fallback) {
   if (!error) return fallback;
+  // Supabase wraps Edge Function errors with a generic message; the real message is in error.context
+  if (error.message && error.message.includes("non-2xx")) {
+    const ctx = error.context;
+    if (ctx && typeof ctx.json === "function") {
+      // handled async elsewhere
+    }
+    const body = error.context?.body || error.details || error.hint;
+    if (body && typeof body === "string" && !body.includes("non-2xx")) return body;
+    return fallback;
+  }
   const parts = [error.message, error.details, error.hint].filter(Boolean);
   return parts.length ? parts.join(" — ") : fallback;
 }
@@ -1884,7 +1894,7 @@ export default function FeedClient() {
       throw new Error("A valid email address is required.");
     }
 
-    const { error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
+    const { data: inviteData, error: inviteError } = await supabase.functions.invoke("send-contact-invite", {
       body: {
         email: cleanedEmail,
         name: payload.name,
@@ -1894,7 +1904,13 @@ export default function FeedClient() {
       },
     });
     if (inviteError) {
-      throw new Error(normalizeSupabaseError(inviteError, "Failed to send contact invite."));
+      let msg = "Failed to send contact invite.";
+      try {
+        const body = inviteData || (inviteError.context && await inviteError.context.json());
+        if (body?.error) msg = body.error;
+        else if (body?.message) msg = body.message;
+      } catch {}
+      throw new Error(msg);
     }
     await loadContacts(sessionUser.id);
     await loadInvites(sessionUser);
@@ -2379,7 +2395,6 @@ export default function FeedClient() {
                   </div>
 
                   <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                    Only automatic user updates can be commented on.
                   </div>
                 </div>
 
