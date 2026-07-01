@@ -2394,8 +2394,6 @@ export default function FeedClient() {
                     </h2>
                   </div>
 
-                  <div className="rounded-[20px] border border-[#f3dfd6] bg-[#fffaf7] px-4 py-3 text-[13px] leading-6 text-slate-600">
-                  </div>
                 </div>
 
                 <div className="mt-5 flex flex-wrap gap-3">
