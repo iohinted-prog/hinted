@@ -987,13 +987,23 @@ function CircleCard({
 
                 <div className="mt-4 flex -space-x-3">
                   {safeMembers.map((member) => (
-                    <div
-                      key={`${circle?.id}-${member.name}-avatar`}
-                      className={`${getAvatarClasses(member.colors, member.status, "lg")} border-4 border-white shadow-sm`}
-                      title={member.name}
-                    >
-                      {member.initials}
-                    </div>
+                    member.avatarUrl ? (
+                      <img
+                        key={`${circle?.id}-${member.name}-avatar`}
+                        src={member.avatarUrl}
+                        alt={member.name}
+                        className="h-11 w-11 rounded-full object-cover border-4 border-white shadow-sm"
+                        title={member.name}
+                      />
+                    ) : (
+                      <div
+                        key={`${circle?.id}-${member.name}-avatar`}
+                        className={`${getAvatarClasses(member.colors, member.status, "lg")} border-4 border-white shadow-sm`}
+                        title={member.name}
+                      >
+                        {member.initials}
+                      </div>
+                    )
                   ))}
                 </div>
 
