@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       .update({
         status: 'accepted',
         invited_user_id: user.id,
-        accepted_at: new Date().toISOString(),
+
       })
       .eq('id', invite.id)
 
