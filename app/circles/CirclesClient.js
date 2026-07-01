@@ -408,6 +408,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       amount: 0,
       colors: "from-[#4e596d] to-[#212a3c]",
       status: "accepted",
+      email: "__self__",
     },
     ...inviteRows.map((invite) => ({
       name: invite.invite_name || invite.invite_email || "Invited person",
@@ -2829,11 +2830,20 @@ export default function CirclesClient() {
         );
       });
 
-      // Fetch profile avatars for all invited users
+      // Fetch profile avatars for all members including self
       const allInviteEmails = Object.values(inviteMap)
         .flat()
-        .map((i) => i.invite_email_normalized || i.invite_email)
+        .map((i) => (i.invite_email_normalized || i.invite_email || "").toLowerCase())
         .filter(Boolean);
+
+      const { data: selfProfile } = await supabase
+        .from("profiles")
+        .select("id, email_normalized, avatar_url")
+        .eq("id", userId)
+        .maybeSingle();
+
+      const avatarByEmail = {};
+      if (selfProfile?.avatar_url) avatarByEmail["__self__"] = selfProfile.avatar_url;
 
       if (allInviteEmails.length) {
         const { data: profileRows } = await supabase
@@ -2841,20 +2851,19 @@ export default function CirclesClient() {
           .select("id, email_normalized, avatar_url")
           .in("email_normalized", allInviteEmails);
 
-        const avatarByEmail = {};
         (profileRows || []).forEach((p) => {
           if (p.email_normalized) avatarByEmail[p.email_normalized] = p.avatar_url;
         });
-
-        mapped.forEach((circle) => {
-          circle.members = circle.members.map((member) => {
-            const email = member.email || "";
-            return avatarByEmail[email]
-              ? { ...member, avatarUrl: avatarByEmail[email] }
-              : member;
-          });
-        });
       }
+
+      mapped.forEach((circle) => {
+        circle.members = circle.members.map((member) => {
+          const emailKey = member.email === "__self__" ? "__self__" : (member.email || "").toLowerCase();
+          return avatarByEmail[emailKey]
+            ? { ...member, avatarUrl: avatarByEmail[emailKey] }
+            : member;
+        });
+      });
 
       setRealCircles(mapped);
       return mapped;
