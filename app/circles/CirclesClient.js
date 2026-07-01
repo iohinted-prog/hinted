@@ -881,7 +881,6 @@ function CircleCard({
   const safeMembers = (Array.isArray(circle?.members) ? circle.members : []).map((member) => {
     if (member.avatarUrl) return member;
     const matched = contacts.find((c) => c.email && member.email && c.email.toLowerCase() === member.email.toLowerCase());
-    console.log("member email:", member.email, "matched:", matched?.email, "avatarUrl:", matched?.avatarUrl);
     return matched?.avatarUrl ? { ...member, avatarUrl: matched.avatarUrl } : member;
   });
   const joinedCount = safeMembers.filter(
