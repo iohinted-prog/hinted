@@ -2864,6 +2864,7 @@ export default function CirclesClient() {
           .select("id, email_normalized, avatar_url")
           .in("email_normalized", allInviteEmails);
 
+        console.log("profileRows", JSON.stringify(profileRows));
         (profileRows || []).forEach((p) => {
           if (p.email_normalized) avatarByEmail[p.email_normalized] = p.avatar_url;
         });
