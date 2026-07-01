@@ -2855,6 +2855,7 @@ export default function CirclesClient() {
       const mapped = (circlesData || []).map((circle) => {
         const ownerName = circle.user_id === userId ? currentUserName : (ownerNameMap[circle.user_id] || 'Organiser');
         const ownerAvatar = circle.user_id === userId ? null : (ownerAvatarMap[circle.user_id] || null);
+        console.log("ownerAvatar for circle", circle.id, ownerAvatar);
         const baseVm = buildCircleViewModel(circle, inviteMap[circle.id] || [], ownerName, ownerAvatar);
         return applyContributionDataToCircle(
           baseVm,
