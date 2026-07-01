@@ -1137,6 +1137,15 @@ function CalendarPopover({
             <option value="celebration">Celebration</option>
           </select>
 
+          <label className="flex items-center gap-3 cursor-pointer">
+            <div
+              onClick={() => setDraft((prev) => ({ ...prev, recurring: !prev.recurring }))}
+              className={`relative h-6 w-11 rounded-full transition-colors ${draft.recurring ? "bg-[#2f3b2d]" : "bg-slate-200"}`}
+            >
+              <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${draft.recurring ? "translate-x-5" : ""}`} />
+            </div>
+            <span className="text-sm text-slate-600">Repeat yearly</span>
+          </label>
           <button
             type="button"
             onClick={onAddEvent}
@@ -1162,7 +1171,7 @@ function MiniCalendar({
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDate, setSelectedDate] = useState(today);
   const [openPopover, setOpenPopover] = useState(true);
-  const [draft, setDraft] = useState({ title: "", type: "birthday" });
+  const [draft, setDraft] = useState({ title: "", type: "birthday", recurring: false });
   const [calendarSaving, setCalendarSaving] = useState(false);
   const [eventToDelete, setEventToDelete] = useState(null);
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
@@ -1211,6 +1220,7 @@ function MiniCalendar({
         title: draft.title.trim(),
         type: draft.type,
         eventDate: selectedKey,
+        recurring: draft.recurring,
       });
       setDraft({ title: "", type: "birthday" });
     } catch (error) {
@@ -1968,6 +1978,7 @@ export default function FeedClient() {
       event_date: payload.eventDate,
       type: payload.type,
       source: "user",
+      recurring: payload.recurring || false,
     };
 
     const { data, error } = await supabase
@@ -2044,15 +2055,28 @@ export default function FeedClient() {
   }, [combinedFeedItems, activeFilter]);
 
   const eventsByDate = useMemo(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const nextYear = currentYear + 1;
     return (calendarEvents || []).reduce((acc, row) => {
-      const key = row.event_date;
-      if (!key) return acc;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push({
-        id: row.id,
-        title: row.title,
-        type: row.type || "celebration",
-        source: row.source || "user",
+      if (!row.event_date) return acc;
+      const keysToIndex = [row.event_date];
+      if (row.recurring) {
+        const [, month, day] = row.event_date.split("-");
+        const thisYearKey = `${currentYear}-${month}-${day}`;
+        const nextYearKey = `${nextYear}-${month}-${day}`;
+        if (!keysToIndex.includes(thisYearKey)) keysToIndex.push(thisYearKey);
+        if (!keysToIndex.includes(nextYearKey)) keysToIndex.push(nextYearKey);
+      }
+      keysToIndex.forEach((key) => {
+        if (!acc[key]) acc[key] = [];
+        acc[key].push({
+          id: row.id,
+          title: row.title,
+          type: row.type || "celebration",
+          source: row.source || "user",
+          recurring: row.recurring || false,
+        });
       });
       return acc;
     }, {});
