@@ -947,9 +947,13 @@ function CircleCard({
                   key={`${circle?.id}-${member.name}-pill`}
                   className={`inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2`}
                 >
-                  <div className={getAvatarClasses(member.colors, member.status, "sm")}>
-                    {member.initials}
-                  </div>
+                  {member.avatarUrl ? (
+                    <img src={member.avatarUrl} alt={member.name} className="h-7 w-7 rounded-full object-cover" />
+                  ) : (
+                    <div className={getAvatarClasses(member.colors, member.status, "sm")}>
+                      {member.initials}
+                    </div>
+                  )}
                   <span className="text-sm font-medium text-slate-700">{member.name}</span>
                 </div>
               ))}
