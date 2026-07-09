@@ -992,7 +992,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
             <div className="columns-2 gap-3">
               {hints.map((hint) => (
                 <div key={hint.id} className="mb-3 break-inside-avoid">
-                  
+                  <a
                     href={hint.url}
                     target="_blank"
                     rel="noopener noreferrer"
