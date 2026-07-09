@@ -915,6 +915,116 @@ function DeleteContactModal({
   );
 }
 
+
+function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
+  const [hints, setHints] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!userId) return;
+    async function load() {
+      setLoading(true);
+      const [{ data: profileData }, { data: hintsData }] = await Promise.all([
+        supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
+        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred").eq("user_id", userId).eq("is_private", false).order("position", { ascending: true }).limit(40),
+      ]);
+      setProfile(profileData);
+      setHints(hintsData || []);
+      setLoading(false);
+    }
+    load();
+  }, [userId]);
+
+  const displayName = profile?.full_name || name || "User";
+  const displayAvatar = profile?.avatar_url || avatarUrl;
+  const interests = Array.isArray(profile?.interests) ? profile.interests : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(33,24,20,0.42)] backdrop-blur-sm sm:items-center sm:px-4" onClick={onClose}>
+      <div
+        className="flex w-full max-w-[640px] flex-col overflow-hidden rounded-t-[32px] border border-[#efdcd2] bg-white shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:rounded-[32px]"
+        style={{ maxHeight: "90dvh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="shrink-0 border-b border-[#f2e5de] px-6 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {displayAvatar ? (
+                <img src={displayAvatar} alt={displayName} className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[14px] font-bold text-white">
+                  {initials || getInitials(displayName)}
+                </div>
+              )}
+              <div>
+                <p className="text-[18px] font-semibold text-slate-900">{displayName}</p>
+                {interests.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {interests.slice(0, 5).map((interest) => (
+                      <span key={interest} className="rounded-full bg-[#fff4ee] px-2.5 py-0.5 text-[11px] font-semibold text-[#df7b59]">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Hints */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-slate-400">Loading hints...</div>
+          ) : hints.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
+          ) : (
+            <div className="columns-2 gap-3">
+              {hints.map((hint) => (
+                <div key={hint.id} className="mb-3 break-inside-avoid">
+                  
+                    href={hint.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group block overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors"
+                  >
+                    {hint.image_url ? (
+                      <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
+                    ) : (
+                      <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
+                        <span className="text-2xl">🎁</span>
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="text-[13px] font-semibold text-slate-900 line-clamp-2">{hint.title}</p>
+                      {hint.numeric_price != null && (
+                        <p className="mt-1 text-[12px] text-[#df7b59] font-medium">
+                          {new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}
+                        </p>
+                      )}
+                      <p className="mt-0.5 text-[11px] text-slate-400 truncate">{hint.retailer}</p>
+                    </div>
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FeedItem({
   item,
   comments,
@@ -925,6 +1035,7 @@ function FeedItem({
   onSubmitComment,
   demoReactionsState,
   onToggleDemoReaction,
+  onOpenProfile,
 }) {
   const metadata = item.metadata || {};
   const socialEnabled = isSocialFeedItem(item);
@@ -950,6 +1061,8 @@ function FeedItem({
 
   const actorHref = metadata.actor_profile_href || item.cta_href || "#";
   const actorInitials = metadata.actor_avatar_initials || getInitials(metadata.actor_name || item.headline || "H");
+  const actorUserId = item.actor_user_id && item.actor_user_id !== "hinted-demo" ? item.actor_user_id : null;
+  const actorAvatarUrl = metadata.actor_avatar_url || null;
   const demoReactions = item.isDemo
     ? demoReactionsState || []
     : Array.isArray(metadata.demo_reactions)
@@ -960,12 +1073,22 @@ function FeedItem({
   return (
     <article className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
       <div className="flex items-start gap-4">
-        <Link
-          href={actorHref}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white transition hover:scale-[1.03]"
-        >
-          {actorInitials}
-        </Link>
+        {actorUserId ? (
+          <button
+            type="button"
+            onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white transition hover:scale-[1.03] overflow-hidden"
+          >
+            {actorAvatarUrl ? <img src={actorAvatarUrl} alt={metadata.actor_name || ""} className="h-full w-full object-cover" /> : actorInitials}
+          </button>
+        ) : (
+          <Link
+            href={actorHref}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white transition hover:scale-[1.03]"
+          >
+            {actorInitials}
+          </Link>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
@@ -983,9 +1106,19 @@ function FeedItem({
               </div>
 
               {metadata.actor_name ? (
-                <Link href={actorHref} className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]">
-                  {metadata.actor_name}
-                </Link>
+                {actorUserId ? (
+                  <button
+                    type="button"
+                    onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
+                    className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]"
+                  >
+                    {metadata.actor_name}
+                  </button>
+                ) : (
+                  <Link href={actorHref} className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]">
+                    {metadata.actor_name}
+                  </Link>
+                )}
               ) : null}
 
               <p className="mt-1 text-[15px] leading-7 text-slate-700">{item.headline}</p>
@@ -1556,6 +1689,7 @@ export default function FeedClient() {
   const [deleteContactError, setDeleteContactError] = useState("");
 
   const [feedItems, setFeedItems] = useState([]);
+  const [profileModal, setProfileModal] = useState(null); // { userId, name, avatarUrl, initials }
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -2439,6 +2573,7 @@ export default function FeedClient() {
                           onSubmitComment={handleSubmitComment}
                           demoReactionsState={demoReactionsByFeedId[item.id]}
                           onToggleDemoReaction={handleToggleDemoReaction}
+                          onOpenProfile={setProfileModal}
                         />
                       );
                     })
@@ -2523,6 +2658,15 @@ export default function FeedClient() {
         isDeleting={isDeletingContact}
         errorMessage={deleteContactError}
       />
+      {profileModal && (
+        <UserProfileModal
+          userId={profileModal.userId}
+          name={profileModal.name}
+          avatarUrl={profileModal.avatarUrl}
+          initials={profileModal.initials}
+          onClose={() => setProfileModal(null)}
+        />
+      )}
     </main>
   );
 }
