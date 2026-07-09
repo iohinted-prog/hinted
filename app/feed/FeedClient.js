@@ -1106,7 +1106,7 @@ function FeedItem({
               </div>
 
               {metadata.actor_name ? (
-                {actorUserId ? (
+                actorUserId ? (
                   <button
                     type="button"
                     onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
@@ -1118,7 +1118,7 @@ function FeedItem({
                   <Link href={actorHref} className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]">
                     {metadata.actor_name}
                   </Link>
-                )}
+                )
               ) : null}
 
               <p className="mt-1 text-[15px] leading-7 text-slate-700">{item.headline}</p>
