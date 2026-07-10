@@ -124,6 +124,41 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Create feed item for circle join
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    const { data: circle } = await supabase
+      .from('circles')
+      .select('title, user_id')
+      .eq('id', invite.circle_id)
+      .maybeSingle()
+
+    if (profile && circle) {
+      const actorName = profile.full_name || 'Someone'
+      const circleTitle = circle.title || 'a circle'
+      await supabase.from('feed_items').insert({
+        owner_user_id: circle.user_id,
+        actor_user_id: user.id,
+        family: 'circle',
+        item_type: 'circle_join',
+        visibility: 'contacts',
+        headline: `${actorName} joined your ${circleTitle} circle`,
+        occurred_at: new Date().toISOString(),
+        metadata: {
+          actor_name: actorName,
+          actor_avatar_url: profile.avatar_url || null,
+          actor_avatar_initials: actorName.charAt(0).toUpperCase(),
+          circle_id: invite.circle_id,
+          circle_title: circleTitle,
+          social_enabled: true,
+        }
+      })
+    }
+
     const { error: updateError } = await supabase
       .from('circle_invites')
       .update({
