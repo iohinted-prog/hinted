@@ -674,8 +674,7 @@ function ContactCard({ contact, onDeleteClick, onOpenProfile, onEditClick }) {
             {contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}
           </p>
         </div>
-        <button
-          type="button"
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onEditClick && onEditClick(contact); }}
@@ -683,12 +682,14 @@ function ContactCard({ contact, onDeleteClick, onOpenProfile, onEditClick }) {
           >
             Edit
           </button>
-          onClick={(e) => { e.stopPropagation(); onDeleteClick(contact); }}
-          className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
-        >
-          Delete
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDeleteClick(contact); }}
+            className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
+          >
+            Delete
+          </button>
+        </div>
     </article>
   );
 }
