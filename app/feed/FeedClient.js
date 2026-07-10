@@ -2404,7 +2404,6 @@ export default function FeedClient() {
               </div>
               <h2 className="mt-2 text-base font-semibold text-slate-900">Contacts</h2>
               <p className="mt-1 text-xs text-slate-500">Invitees and contacts live here.</p>
-              </div>
 
               <div className="mt-4 space-y-3">
                 {contactsLoading ? (
