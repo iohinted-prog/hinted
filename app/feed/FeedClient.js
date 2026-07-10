@@ -1789,9 +1789,35 @@ export default function FeedClient() {
       throw new Error(normalizeSupabaseError(error, "Failed to load feed."));
     }
 
-    setFeedItems(data || []);
+    const rows = data || [];
+    const actorIds = [...new Set(
+      rows.map(r => r.actor_user_id).filter(id => id && id !== "hinted-demo")
+    )];
+    let avatarByUserId = {};
+    if (actorIds.length) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, avatar_url")
+        .in("id", actorIds);
+      (profiles || []).forEach(p => {
+        if (p.avatar_url) avatarByUserId[p.id] = p.avatar_url;
+      });
+    }
+    const enriched = rows.map(row => {
+      if (!row.actor_user_id || row.actor_user_id === "hinted-demo") return row;
+      const avatarUrl = avatarByUserId[row.actor_user_id];
+      if (!avatarUrl) return row;
+      return {
+        ...row,
+        metadata: {
+          ...(row.metadata || {}),
+          actor_avatar_url: row.metadata?.actor_avatar_url || avatarUrl,
+        },
+      };
+    });
+    setFeedItems(enriched);
     setFeedLoading(false);
-    return data || [];
+    return enriched;
   }, []);
 
   const loadComments = useCallback(async (feedIds) => {
