@@ -7,9 +7,26 @@ import { createClient } from "../../lib/supabase/client";
 
 function LogoMark() {
   return (
-    <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] border border-[#efc4b2] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
-      <span className="text-lg">🎁</span>
-    </div>
+    <svg width="44" height="44" viewBox="0 0 188 188" role="img" aria-label="HintDrop logo mark">
+      <defs>
+        <linearGradient id="hdGrad" x1="0" y1="0" x2="0.2" y2="1">
+          <stop offset="0%" stopColor="#ffb899"/>
+          <stop offset="100%" stopColor="#ff8f6b"/>
+        </linearGradient>
+      </defs>
+      <rect x="8" y="8" width="160" height="155" rx="36" fill="url(#hdGrad)"/>
+      <path d="M22 142 Q8 164 3 176 Q34 166 54 150 Z" fill="#ff9a72"/>
+      <rect x="54" y="90" width="86" height="54" rx="5" fill="white" opacity="0.93"/>
+      <rect x="48" y="76" width="98" height="20" rx="5" fill="white" opacity="0.93"/>
+      <rect x="92" y="76" width="10" height="68" rx="3" fill="#ff7a55" opacity="0.85"/>
+      <rect x="48" y="81" width="98" height="10" rx="3" fill="#ff7a55" opacity="0.85"/>
+      <path d="M97 72 Q80 54 70 60 Q64 66 80 73 Z" fill="#ff7a55"/>
+      <path d="M97 72 Q114 54 124 60 Q130 66 114 73 Z" fill="#ff7a55"/>
+      <circle cx="97" cy="72" r="7" fill="#ff5e3a"/>
+      <line x1="158" y1="18" x2="170" y2="6" stroke="#ff7a55" strokeWidth="5" strokeLinecap="round"/>
+      <line x1="174" y1="36" x2="188" y2="30" stroke="#ff7a55" strokeWidth="5" strokeLinecap="round"/>
+      <line x1="169" y1="54" x2="182" y2="57" stroke="#ff7a55" strokeWidth="4" strokeLinecap="round"/>
+    </svg>
   );
 }
 
