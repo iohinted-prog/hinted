@@ -915,10 +915,12 @@ function DeleteContactModal({
 }
 
 
-function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
+function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentUserId }) {
   const [hints, setHints] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [claims, setClaims] = useState([]);
+  const [claimingId, setClaimingId] = useState(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -930,11 +932,39 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
         supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred").eq("user_id", userId).eq("is_private", false).order("position", { ascending: true }).limit(40),
       ]);
       setProfile(profileData);
-      setHints(hintsData || []);
+      const hintsList = hintsData || [];
+      setHints(hintsList);
+      if (hintsList.length && currentUserId && currentUserId !== userId) {
+        const { data: claimsData } = await supabase
+          .from("hint_claims")
+          .select("id, hint_id, claimed_by, claim_type")
+          .in("hint_id", hintsList.map(h => h.id));
+        setClaims(claimsData || []);
+      }
       setLoading(false);
     }
     load();
-  }, [userId]);
+  }, [userId, currentUserId]);
+
+  async function handleToggleClaim(hint) {
+    if (!currentUserId || currentUserId === userId) return;
+    const myClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by === currentUserId);
+    if (myClaim) {
+      setClaims(prev => prev.filter(c => c.id !== myClaim.id));
+      await supabase.from("hint_claims").delete().eq("id", myClaim.id);
+    } else {
+      const tempId = crypto.randomUUID();
+      setClaims(prev => [...prev, { id: tempId, hint_id: hint.id, claimed_by: currentUserId, claim_type: "solo" }]);
+      const { data, error } = await supabase.from("hint_claims")
+        .insert({ hint_id: hint.id, claimed_by: currentUserId, claim_type: "solo" })
+        .select().single();
+      if (error) {
+        setClaims(prev => prev.filter(c => c.id !== tempId));
+      } else if (data) {
+        setClaims(prev => prev.map(c => c.id === tempId ? data : c));
+      }
+    }
+  }
 
   const displayName = profile?.full_name || name || "User";
   const displayAvatar = profile?.avatar_url || avatarUrl;
@@ -947,7 +977,6 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
         style={{ maxHeight: "90dvh" }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="shrink-0 border-b border-[#f2e5de] px-6 py-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
@@ -971,17 +1000,11 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
                 )}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]"
-            >
+            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]">
               ✕
             </button>
           </div>
         </div>
-
-        {/* Hints */}
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           {loading ? (
             <div className="py-8 text-center text-sm text-slate-400">Loading hints...</div>
@@ -989,33 +1012,57 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
             <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
           ) : (
             <div className="columns-2 gap-3">
-              {hints.map((hint) => (
-                <div key={hint.id} className="mb-3 break-inside-avoid">
-                  <a
-                    href={hint.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors"
-                  >
-                    {hint.image_url ? (
-                      <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
-                    ) : (
-                      <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
-                        <span className="text-2xl">🎁</span>
-                      </div>
-                    )}
-                    <div className="p-3">
-                      <p className="text-[13px] font-semibold text-slate-900 line-clamp-2">{hint.title}</p>
-                      {hint.numeric_price != null && (
-                        <p className="mt-1 text-[12px] text-[#df7b59] font-medium">
-                          {new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}
-                        </p>
-                      )}
-                      <p className="mt-0.5 text-[11px] text-slate-400 truncate">{hint.retailer}</p>
+              {hints.map((hint) => {
+                const myClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by === currentUserId);
+                const otherClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by !== currentUserId);
+                const isViewingOther = currentUserId && currentUserId !== userId;
+                return (
+                  <div key={hint.id} className="mb-3 break-inside-avoid">
+                    <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors">
+                      <a href={hint.url} target="_blank" rel="noopener noreferrer" className="block">
+                        {hint.image_url ? (
+                          <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
+                        ) : (
+                          <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
+                            <span className="text-2xl">🎁</span>
+                          </div>
+                        )}
+                        <div className="p-3">
+                          <p className="text-[13px] font-semibold text-slate-900 line-clamp-2">{hint.title}</p>
+                          {hint.numeric_price != null && (
+                            <p className="mt-1 text-[12px] text-[#df7b59] font-medium">
+                              {new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}
+                            </p>
+                          )}
+                          <p className="mt-0.5 text-[11px] text-slate-400 truncate">{hint.retailer}</p>
+                        </div>
+                      </a>
+                      {isViewingOther ? (
+                        <div className="border-t border-[#f0dfd6] px-3 py-2 flex items-center justify-between gap-2">
+                          {otherClaim && !myClaim ? (
+                            <span className="text-[11px] text-slate-400">Someone is on it</span>
+                          ) : <span />}
+                          <button
+                            type="button"
+                            disabled={claimingId === hint.id}
+                            onClick={() => {
+                              setClaimingId(hint.id);
+                              handleToggleClaim(hint).finally(() => setClaimingId(null));
+                            }}
+                            className={`ml-auto text-[11px] font-semibold rounded-full px-3 py-1 border transition ${
+                              myClaim
+                                ? "bg-[#edf6eb] text-[#4a7a3a] border-[#c5dfc0]"
+                                : "bg-[#fff4ee] text-[#df7b59] border-[#f0c9b5] hover:bg-[#ffe9db]"
+                            }`}
+                          >
+                            {myClaim ? "I am on it" : "I am getting this"}
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
-                  </a>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -2841,6 +2888,7 @@ export default function FeedClient() {
           avatarUrl={profileModal.avatarUrl}
           initials={profileModal.initials}
           onClose={() => setProfileModal(null)}
+          currentUserId={sessionUser?.id}
         />
       )}
     </main>
