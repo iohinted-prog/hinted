@@ -1886,21 +1886,27 @@ export default function FeedClient() {
     return mapped;
   }, []);
 
-  const loadFeedItems = useCallback(async () => {
+  const loadFeedItems = useCallback(async (userId, contactList) => {
     setFeedLoading(true);
     setFeedError("");
-
-    const { data, error } = await supabase
+    const contactUserIds = (contactList || [])
+      .filter(c => c.profileId)
+      .map(c => c.profileId);
+    let query = supabase
       .from("feed_items")
       .select("*")
       .order("occurred_at", { ascending: false })
       .limit(50);
-
+    if (userId && contactUserIds.length) {
+      query = query.or(`owner_user_id.eq.${userId},and(actor_user_id.in.(${contactUserIds.join(",")}),visibility.eq.contacts)`);
+    } else if (userId) {
+      query = query.eq("owner_user_id", userId);
+    }
+    const { data, error } = await query;
     if (error) {
       setFeedItems([]);
       setFeedLoading(false);
       throw new Error(normalizeSupabaseError(error, "Failed to load feed."));
-    }
 
     const rows = data || [];
     const actorIds = [...new Set(
@@ -2148,7 +2154,7 @@ export default function FeedClient() {
 
         await Promise.all([
           loadContacts(user.id),
-          loadFeedItems(),
+          loadFeedItems(user.id, loadedContacts),
           loadInvites(user),
           loadCalendarEvents(user.id),
         ]);
@@ -2384,7 +2390,8 @@ export default function FeedClient() {
         });
         if (error) throw new Error(normalizeSupabaseError(error, "Could not accept circle invite."));
       }
-      await Promise.all([loadInvites(sessionUser), loadContacts(sessionUser.id), loadFeedItems()]);
+      const refreshedContacts = await loadContacts(sessionUser.id);
+    await Promise.all([loadInvites(sessionUser), loadFeedItems(sessionUser.id, refreshedContacts)]);
     } catch (error) {
       setInvitesError(error?.message || "Could not accept invite.");
     } finally {
