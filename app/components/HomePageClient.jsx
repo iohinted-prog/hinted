@@ -224,7 +224,7 @@ function LandingLogo() {
       <line x1="172" y1="34" x2="185" y2="29" stroke="#ff7a55" strokeWidth="4" strokeLinecap="round"/>
       <line x1="173" y1="52" x2="186" y2="55" stroke="#ff7a55" strokeWidth="3" strokeLinecap="round"/>
     </svg>
-      <div className="text-[22px] font-extrabold tracking-[-0.04em] [font-family:var(--font-nunito)] text-slate-900">
+      <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
         Hint<span className="text-[#f36f64]">Drop</span>
       </div>
     </div>
@@ -594,7 +594,7 @@ export default function HomePageClient() {
             <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]">
               Never forget.
               <br />
-              Always <span className="text-[#ff9a7b]">thoughtful.</span>
+              <span className="text-[#ff8060]">Always thoughtful.</span>
             </h1>
 
             <p className="mt-7 max-w-[560px] text-[16px] leading-8 text-slate-500 sm:text-[18px]">
