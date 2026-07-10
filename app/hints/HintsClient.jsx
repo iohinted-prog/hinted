@@ -23,6 +23,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "../../lib/supabase/client";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
+import { usePreferences } from "../providers/PreferencesProvider";
 import AvatarMenu from "../components/AvatarMenu";
 
 const BASE_CURRENCY = "GBP";
@@ -305,8 +306,8 @@ function extractNumericPrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function sanitisePrice(rawPrice, numericPrice) {
-  const detectedCurrency = detectCurrency(rawPrice) || BASE_CURRENCY;
+function sanitisePrice(rawPrice, numericPrice, fallbackCurrency = BASE_CURRENCY) {
+  const detectedCurrency = detectCurrency(rawPrice) || fallbackCurrency;
 
   return {
     numericPrice: typeof numericPrice === "number" && Number.isFinite(numericPrice) ? numericPrice : null,
@@ -1053,6 +1054,7 @@ function LoadingHintCard({ ratio = "0.92" }) {
 
 export default function HintsClient() {
   const { formatCurrency } = useCurrencyFormatter();
+  const { currency: userCurrency } = usePreferences();
 
   const [hints, setHints] = useState([]);
   const [link, setLink] = useState("");
@@ -1291,7 +1293,7 @@ export default function HintsClient() {
     const trimmedUrl = editForm.url.trim();
     const trimmedRetailer = editForm.retailer?.trim() || normaliseRetailer(trimmedUrl);
     const parsedNumericPrice = extractNumericPrice(editForm.priceInput);
-    const priceMeta = sanitisePrice(editForm.priceInput, parsedNumericPrice);
+    const priceMeta = sanitisePrice(editForm.priceInput, parsedNumericPrice, userCurrency);
     const finalImage = editForm.uploadedImage || editForm.image || "";
 
     setIsSavingEdit(true);
@@ -1532,7 +1534,7 @@ export default function HintsClient() {
       const url = newHintForm.url.trim() || pendingHint.url;
       const retailer = newHintForm.retailer?.trim() || normaliseRetailer(url);
       const numericPrice = extractNumericPrice(newHintForm.priceInput);
-      const priceMeta = sanitisePrice(newHintForm.priceInput, numericPrice);
+      const priceMeta = sanitisePrice(newHintForm.priceInput, numericPrice, userCurrency);
       const image = newHintForm.uploadedImage || newHintForm.image || "";
 
       const newHint = {
