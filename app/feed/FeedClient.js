@@ -1053,10 +1053,12 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                             className={`ml-auto text-[11px] font-semibold rounded-full px-3 py-1 border transition ${
                               myClaim
                                 ? "bg-[#edf6eb] text-[#4a7a3a] border-[#c5dfc0]"
-                                : "bg-[#fff4ee] text-[#df7b59] border-[#f0c9b5] hover:bg-[#ffe9db]"
+                                : otherClaim
+                                  ? "bg-[#fff8ee] text-[#b87a2a] border-[#f0d9a0] hover:bg-[#fff0d6]"
+                                  : "bg-[#fff4ee] text-[#df7b59] border-[#f0c9b5] hover:bg-[#ffe9db]"
                             }`}
                           >
-                            {myClaim ? "I am on it" : "I am getting this"}
+                            {myClaim ? "I am on it ✓" : otherClaim ? "Buy anyway?" : "I am getting this"}
                           </button>
                         </div>
                       ) : null}
