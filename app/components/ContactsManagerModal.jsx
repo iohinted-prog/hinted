@@ -2,7 +2,7 @@
 import { useState } from "react";
 import EditContactModal from "./EditContactModal";
 
-export default function ContactsManagerModal({ open, onClose, contacts, onAdd, onRefresh, onDelete }) {
+export default function ContactsManagerModal({ open, onClose, contacts, onAdd, onRefresh, onDelete, onOpenProfile }) {
   const [editingContact, setEditingContact] = useState(null);
 
   if (!open) return null;
@@ -22,7 +22,7 @@ export default function ContactsManagerModal({ open, onClose, contacts, onAdd, o
             <p className="text-sm text-slate-500 py-4 text-center">No contacts yet.</p>
           ) : (
             contacts.filter(c => !c.isDemo).map(contact => (
-              <div key={contact.id} className="flex items-center gap-3 rounded-[18px] border border-[#f0dfd6] bg-white px-4 py-3">
+              <div key={contact.id} className={"flex items-center gap-3 rounded-[18px] border border-[#f0dfd6] bg-white px-4 py-3 transition " + (contact.profileId ? "cursor-pointer hover:border-[#e8c9bc] hover:shadow-sm" : "")} onClick={() => { if (contact.profileId && onOpenProfile) onOpenProfile({ userId: contact.profileId, name: contact.name, avatarUrl: contact.avatarUrl, initials: contact.initials }); }}>
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white overflow-hidden">
                   {contact.avatarUrl ? (
                     <img src={contact.avatarUrl} alt={contact.name} className="h-full w-full object-cover" />
@@ -35,11 +35,11 @@ export default function ContactsManagerModal({ open, onClose, contacts, onAdd, o
                   <p className="text-xs text-slate-500 truncate">{contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
-                  <button type="button" onClick={() => setEditingContact(contact)}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); setEditingContact(contact); }}
                     className="h-8 px-3 rounded-full border border-[#ead8ce] bg-white text-[11px] font-semibold text-slate-600 hover:bg-[#f8f5f2]">
                     Edit
                   </button>
-                  <button type="button" onClick={() => onDelete(contact)}
+                  <button type="button" onClick={(e) => { e.stopPropagation(); onDelete(contact); }}
                     className="h-8 px-3 rounded-full border border-[#efc0ba] bg-[#fff4f2] text-[11px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]">
                     Delete
                   </button>

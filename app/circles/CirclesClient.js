@@ -3470,6 +3470,7 @@ if (inviteRows.length > 0) {
         onAdd={() => { setIsContactsManagerOpen(false); openAddContactModal(); }}
         onRefresh={() => loadContacts(sessionUser.id)}
         onDelete={(c) => { setIsContactsManagerOpen(false); openDeleteContactModal(c); }}
+        onOpenProfile={(p) => { setIsContactsManagerOpen(false); setProfileModal(p); }}
       />
       <AddContactModal
         key={addContactModalKey}

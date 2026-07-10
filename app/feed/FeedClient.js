@@ -2606,6 +2606,7 @@ export default function FeedClient() {
         onAdd={() => { setIsContactsManagerOpen(false); setIsAddContactOpen(true); }}
         onRefresh={() => loadContacts(sessionUser.id)}
         onDelete={(c) => { setIsContactsManagerOpen(false); openDeleteContactModal(c); }}
+        onOpenProfile={(p) => { setIsContactsManagerOpen(false); setProfileModal(p); }}
       />
       <AddContactModal
         open={isAddContactOpen}
