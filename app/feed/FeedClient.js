@@ -1707,6 +1707,40 @@ function InviteCard({ invite, inviteActionId, onAccept, onDelete }) {
   );
 }
 
+
+function buildGenericCalendarEvents() {
+  const now = new Date();
+  const end = new Date();
+  end.setMonth(end.getMonth() + 14);
+  const year = now.getFullYear();
+  const recurring = [
+    { title: "Halloween", type: "celebration", month: 10, day: 31 },
+    { title: "Bonfire Night", type: "celebration", month: 11, day: 5 },
+    { title: "Christmas", type: "celebration", month: 12, day: 25 },
+    { title: "New Year's Eve", type: "celebration", month: 12, day: 31 },
+    { title: "Valentine's Day", type: "celebration", month: 2, day: 14 },
+    { title: "Mother's Day", type: "celebration", month: 3, day: 30 },
+    { title: "Father's Day", type: "celebration", month: 6, day: 21 },
+  ];
+  const rows = [];
+  for (let y = year; y <= year + 2; y++) {
+    for (const item of recurring) {
+      const date = new Date(Date.UTC(y, item.month - 1, item.day));
+      if (date >= now && date <= end) {
+        rows.push({
+          id: `generic-${item.title}-${y}`,
+          title: item.title,
+          event_date: date.toISOString().slice(0, 10),
+          type: item.type,
+          source: "generic",
+          recurring: "yearly",
+        });
+      }
+    }
+  }
+  return rows.sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
+}
+
 export default function FeedClient() {
   const [sessionUser, setSessionUser] = useState(null);
 
@@ -2053,9 +2087,14 @@ export default function FeedClient() {
       throw new Error(normalizeSupabaseError(error, "Could not load calendar events."));
     }
 
-    setCalendarEvents(data || []);
+    const generic = buildGenericCalendarEvents();
+    const dbRows = data || [];
+    const merged = [...generic, ...dbRows].filter((event, index, self) =>
+      index === self.findIndex(e => e.title === event.title && e.event_date === event.event_date)
+    ).sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
+    setCalendarEvents(merged);
     setCalendarLoading(false);
-    return data || [];
+    return merged;
   }, []);
 
   useEffect(() => {
