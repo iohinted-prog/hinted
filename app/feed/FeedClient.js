@@ -1155,10 +1155,10 @@ function FeedItem({
                     </span>
                   )
                 ) : null}
-                {item.isDemo ? (
                 <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${bucketStyle}`}>
                   {bucketLabel}
                 </span>
+                {item.isDemo ? (
                   <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
                     Demo
                   </span>
