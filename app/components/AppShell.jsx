@@ -7,30 +7,11 @@ import { createClient } from "../../lib/supabase/client";
 
 function LogoMark() {
   return (
-    <svg width="44" height="44" viewBox="0 0 200 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="HintDrop">
-      <defs>
-        <linearGradient id="hdG1" x1="0" y1="0" x2="0.2" y2="1">
-          <stop offset="0%" stopColor="#ffb899"/>
-          <stop offset="100%" stopColor="#ff8f6b"/>
-        </linearGradient>
-      </defs>
-      <rect x="18" y="12" width="152" height="148" rx="34" fill="url(#hdG1)"/>
-      <path d="M28 140 Q10 165 4 178 Q36 166 56 148 Z" fill="#ff9a72"/>
-      <rect x="55" y="82" width="82" height="52" rx="5" fill="white" opacity="0.93"/>
-      <rect x="49" y="69" width="94" height="19" rx="5" fill="white" opacity="0.93"/>
-      <rect x="93" y="69" width="10" height="65" rx="3" fill="#ff7a55" opacity="0.85"/>
-      <rect x="49" y="74" width="94" height="10" rx="3" fill="#ff7a55" opacity="0.85"/>
-      <path d="M97 65 Q80 47 70 53 Q64 59 80 67 Z" fill="#ff7a55"/>
-      <path d="M97 65 Q114 47 124 53 Q130 59 114 67 Z" fill="#ff7a55"/>
-      <circle cx="97" cy="65" r="6" fill="#ff5e3a"/>
-      <line x1="158" y1="18" x2="168" y2="7" stroke="#ff7a55" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="172" y1="34" x2="185" y2="29" stroke="#ff7a55" strokeWidth="4" strokeLinecap="round"/>
-      <line x1="173" y1="52" x2="186" y2="55" stroke="#ff7a55" strokeWidth="3" strokeLinecap="round"/>
-    </svg>
+    <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
+      <span className="text-lg">🎁</span>
+    </div>
   );
-
 }
-
 function getMetadataName(metadata = {}) {
   return (
     metadata.full_name ||
