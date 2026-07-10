@@ -3579,7 +3579,7 @@ if (inviteRows.length > 0) {
           initials={profileModal.initials}
           onClose={() => setProfileModal(null)}
           currentUserId={sessionUser?.id}
-          isContact={contacts.some(c => c.profileId === profileModal.userId)}
+          isContact={contacts.some(c => (c.profileId || c.matchedProfileId) === profileModal.userId)}
           onAddContact={async () => {
             await supabase.functions.invoke('send-contact-invite', {
               body: { target_user_id: profileModal.userId, name: profileModal.name, role: 'Friend' },
