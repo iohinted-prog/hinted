@@ -31,7 +31,6 @@ export async function GET(request) {
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  console.log("[callback] exchange error:", error?.message);
 
   if (error) {
     console.error("Auth callback error:", error.message);
@@ -44,7 +43,6 @@ export async function GET(request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  console.log("[callback] user:", user?.id, user?.email);
   let destination = "/";
 
   if (user) {
