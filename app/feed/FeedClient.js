@@ -954,15 +954,19 @@ function FeedItem({
                 <div className="mt-4 space-y-3 border-t border-slate-100 pt-4">
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex items-start gap-3 rounded-[18px] border border-[#f0e8e3] bg-white px-4 py-3">
-                      {comment.author_avatar ? (
-                        <img src={comment.author_avatar} alt={comment.author_name} className="h-7 w-7 shrink-0 rounded-full object-cover mt-0.5" />
-                      ) : (
-                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[10px] font-bold text-white mt-0.5">
-                          {getInitials(comment.author_name || "S")}
-                        </div>
-                      )}
+                      <button type="button" onClick={() => comment.user_id && comment.user_id !== sessionUser?.id && onOpenProfile && onOpenProfile({ userId: comment.user_id, name: comment.author_name, avatarUrl: comment.author_avatar, initials: getInitials(comment.author_name || "S") })} className="shrink-0 mt-0.5">
+                        {comment.author_avatar ? (
+                          <img src={comment.author_avatar} alt={comment.author_name} className="h-7 w-7 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[10px] font-bold text-white">
+                            {getInitials(comment.author_name || "S")}
+                          </div>
+                        )}
+                      </button>
                       <p className="flex-1 text-[13px] leading-6 text-slate-600">
-                        <span className="font-semibold text-slate-900">{comment.author_name || "Someone"}</span>{" "}
+                        <button type="button" onClick={() => comment.user_id && comment.user_id !== sessionUser?.id && onOpenProfile && onOpenProfile({ userId: comment.user_id, name: comment.author_name, avatarUrl: comment.author_avatar, initials: getInitials(comment.author_name || "S") })} className={"font-semibold text-slate-900 " + (comment.user_id && comment.user_id !== sessionUser?.id ? "hover:text-[#d96d4f] cursor-pointer" : "")}>
+                          {comment.author_name || "Someone"}
+                        </button>{" "}
                         {comment.body}
                       </p>
                       {comment.user_id === sessionUser?.id ? (
