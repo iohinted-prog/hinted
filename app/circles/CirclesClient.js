@@ -2507,7 +2507,7 @@ export default function CirclesClient() {
   }, [realCircles]);
 
   const displayedCircles = useMemo(() => {
-    return activeCircles.length > 0 ? activeCircles : [exampleCircle];
+    return activeCircles.length > 0 || archivedCircles.length > 0 ? activeCircles : [exampleCircle];
   }, [activeCircles]);
 
   const initialiseCircleForm = useCallback((profileValue, eventsValue) => {
