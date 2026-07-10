@@ -921,7 +921,6 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
   const [loading, setLoading] = useState(true);
   const [claims, setClaims] = useState([]);
   const [claimingId, setClaimingId] = useState(null);
-  const supabase = createClient();
 
   useEffect(() => {
     if (!userId) return;
