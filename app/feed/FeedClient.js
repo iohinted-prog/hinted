@@ -1082,12 +1082,9 @@ function FeedItem({
             {actorAvatarUrl ? <img src={actorAvatarUrl} alt={metadata.actor_name || ""} className="h-full w-full object-cover" /> : actorInitials}
           </button>
         ) : (
-          <Link
-            href={actorHref}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white transition hover:scale-[1.03]"
-          >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white">
             {actorInitials}
-          </Link>
+          </div>
         )}
 
         <div className="min-w-0 flex-1">
@@ -1115,9 +1112,9 @@ function FeedItem({
                     {metadata.actor_name}
                   </button>
                 ) : (
-                  <Link href={actorHref} className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]">
+                  <span className="mt-3 inline-block text-[13px] font-semibold text-slate-900">
                     {metadata.actor_name}
-                  </Link>
+                  </span>
                 )
               ) : null}
 
