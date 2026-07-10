@@ -57,6 +57,8 @@ export default function AddContactModal({ open, onClose, onSave, modalKey }) {
         ]);
         const savedData = savedRes.ok ? await savedRes.json() : { results: [] };
         const otherData = otherRes.ok ? await otherRes.json() : { results: [] };
+        console.log("savedData", JSON.stringify(savedData?.results?.[0]));
+        console.log("otherData", JSON.stringify(otherData?.results?.[0]));
         function mapPeople(results) {
           return (Array.isArray(results) ? results : [])
             .map(item => item.person).filter(Boolean)
