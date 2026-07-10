@@ -20,6 +20,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+  },
   title: "HintDrop",
   description:
     "Build circles, hints, and reminders to stay close to the people who matter.",
