@@ -3313,13 +3313,11 @@ if (inviteRows.length > 0) {
             <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
               <aside className="space-y-4">
                 <div className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                    Contacts
-                  </p>
-                 <div className="flex items-center justify-between mt-1">
-                   <h1 className="text-[24px] font-semibold tracking-[-0.04em] text-slate-900">People you can add</h1>
-                   <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="inline-flex h-7 items-center justify-center rounded-full border border-[#f0c9b5] bg-[#fff4ee] px-3 text-[11px] font-semibold text-[#df7b59] hover:bg-[#ffe9db]">View contacts</button>
-                 </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Contacts</p>
+                    <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="inline-flex h-8 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-[11px] font-semibold text-white shadow-sm">View contacts</button>
+                  </div>
+                  <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-slate-900">People you can add</h1>
                   <p className="mt-2 text-[14px] leading-7 text-slate-600">
                     Invite people into shared circles, then track who has joined and who is still pending.
                   </p>
