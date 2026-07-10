@@ -643,7 +643,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
       setLoading(true);
       const [{ data: profileData }, { data: hintsData }] = await Promise.all([
         supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
-        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred").eq("user_id", userId).eq("is_private", false).order("position", { ascending: true }).limit(40),
+        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions").eq("user_id", userId).eq("is_private", false).order("position", { ascending: true }).limit(40),
       ]);
       setProfile(profileData);
       const hintsList = hintsData || [];
@@ -777,6 +777,13 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                             </p>
                           )}
                           <p className="mt-0.5 text-[11px] text-slate-400 truncate">{hint.retailer}</p>
+                          {hint.occasions?.length > 0 && (
+                            <div className="mt-1.5 flex flex-wrap gap-1">
+                              {hint.occasions.slice(0, 2).map(o => (
+                                <span key={o} className="rounded-full bg-[#f0f7ee] px-2 py-0.5 text-[10px] font-semibold text-[#4a7a3a]">{o}</span>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </a>
                       {isViewingOther ? (
