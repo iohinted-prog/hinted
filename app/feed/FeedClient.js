@@ -2636,7 +2636,7 @@ export default function FeedClient() {
                   </p>
                 </div>
               ) : (
-                <div className="mt-4 space-y-3">
+                <div className="mt-4 max-h-[400px] overflow-y-auto space-y-3 pr-1">
                   {pendingInvites.map((invite) => (
                     <InviteCard
                       key={invite.id}

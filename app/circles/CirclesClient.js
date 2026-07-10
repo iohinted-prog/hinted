@@ -3560,7 +3560,7 @@ if (inviteRows.length > 0) {
                     Invite people into shared circles, then track who has joined and who is still pending.
                   </p>
 
-                  <div className="mt-5 space-y-3">
+                  <div className="mt-5 max-h-[400px] overflow-y-auto space-y-3 pr-1">
                     {isLoadingContacts ? (
                       <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
                         Loading contacts...
