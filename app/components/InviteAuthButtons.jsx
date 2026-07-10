@@ -66,7 +66,7 @@ export default function InviteAuthButtons({ inviteToken, inviteType }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {
-          scopes: "email",
+          scopes: "openid profile email",
           redirectTo: buildRedirectTo(inviteToken, inviteType),
         },
       });

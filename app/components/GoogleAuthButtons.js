@@ -56,7 +56,7 @@ export default function GoogleAuthButtons({ variant = "hero-primary" }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "azure",
         options: {
-          scopes: "email",
+          scopes: "openid profile email",
           redirectTo: buildRedirectTo(),
         },
       });
