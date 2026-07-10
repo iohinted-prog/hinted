@@ -1910,6 +1910,7 @@ export default function FeedClient() {
         .order("occurred_at", { ascending: false })
         .limit(50) : Promise.resolve({ data: [], error: null }),
     ]);
+    console.log("ownResult error", ownResult.error, "contactResult error", contactResult.error);
     const error = ownResult.error || contactResult.error;
     const combined = [...(ownResult.data || []), ...(contactResult.data || [])];
     const seen = new Set();
