@@ -1035,6 +1035,7 @@ function FeedItem({
   demoReactionsState,
   onToggleDemoReaction,
   onOpenProfile,
+  sessionUser,
 }) {
   const metadata = item.metadata || {};
   const socialEnabled = isSocialFeedItem(item);
@@ -1182,9 +1183,13 @@ function FeedItem({
 
               {activeComposerId === item.id ? (
                 <div className="mt-4 flex gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
-                    Y
-                  </div>
+                  {sessionUser?.user_metadata?.avatar_url ? (
+                    <img src={sessionUser.user_metadata.avatar_url} alt="You" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white">
+                      {getInitials(sessionUser?.user_metadata?.full_name || sessionUser?.email || "Y") || "Y"}
+                    </div>
+                  )}
 
                   <div className="flex w-full gap-2">
                     <input
@@ -2597,6 +2602,7 @@ export default function FeedClient() {
                           demoReactionsState={demoReactionsByFeedId[item.id]}
                           onToggleDemoReaction={handleToggleDemoReaction}
                           onOpenProfile={setProfileModal}
+                          sessionUser={sessionUser}
                         />
                       );
                     })
