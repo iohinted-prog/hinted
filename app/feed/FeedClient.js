@@ -2406,7 +2406,6 @@ export default function FeedClient() {
                 </div>
                 <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="text-[11px] font-semibold text-[#df7b59] hover:underline">View all</button>
               </div>
-              <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="mt-2 text-[11px] font-semibold text-[#df7b59] hover:underline">View all</button>
 
               <div className="mt-4 space-y-3">
                 {contactsLoading ? (
