@@ -1138,37 +1138,37 @@ function FeedItem({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold ${bucketStyle}`}>
                   {bucketLabel}
                 </span>
-
+                {metadata.actor_name ? (
+                  actorUserId ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
+                      className="text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]"
+                    >
+                      {metadata.actor_name}
+                    </button>
+                  ) : (
+                    <span className="text-[13px] font-semibold text-slate-900">
+                      {metadata.actor_name}
+                    </span>
+                  )
+                ) : null}
                 {item.isDemo ? (
                   <span className="rounded-full border border-[#eadfd7] bg-[#fffaf7] px-2.5 py-1 text-[11px] font-medium text-slate-500">
                     Demo
                   </span>
                 ) : null}
               </div>
-
-              {metadata.actor_name ? (
-                actorUserId ? (
-                  <button
-                    type="button"
-                    onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
-                    className="mt-3 inline-block text-[13px] font-semibold text-slate-900 hover:text-[#d96d4f]"
-                  >
-                    {metadata.actor_name}
-                  </button>
-                ) : (
-                  <span className="mt-3 inline-block text-[13px] font-semibold text-slate-900">
-                    {metadata.actor_name}
-                  </span>
-                )
-              ) : null}
-
-              <p className="mt-1 text-[15px] leading-7 text-slate-700">{item.headline}</p>
+              <p className="mt-2 text-[15px] leading-7 text-slate-700">{item.headline}</p>
               {item.body ? <p className="mt-1 text-[14px] leading-6 text-slate-500">{item.body}</p> : null}
+            </div>
+            <span className="shrink-0 text-[12px] text-slate-400">
+              {formatRelativeFromDate(item.occurred_at || item.created_at)}
             </div>
 
             <span className="shrink-0 text-[12px] text-slate-400">
