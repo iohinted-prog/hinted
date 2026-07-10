@@ -571,6 +571,34 @@ function buildGenericCalendarEvents() {
   return rows.sort((a, b) => String(a.event_date).localeCompare(String(b.event_date)));
 }
 
+function buildContactBirthdayEvents(contacts) {
+  const now = new Date();
+  const rows = [];
+  for (const contact of (contacts || [])) {
+    if (!contact.birthday) continue;
+    const bday = new Date(contact.birthday);
+    if (isNaN(bday.getTime())) continue;
+    const month = bday.getMonth();
+    const day = bday.getDate();
+    // Generate for this year and next year, pick the next upcoming one
+    for (let y = now.getFullYear(); y <= now.getFullYear() + 1; y++) {
+      const date = new Date(Date.UTC(y, month, day));
+      if (date >= now) {
+        rows.push({
+          id: `birthday-${contact.id}-${y}`,
+          title: `${contact.name || "Contact"}'s Birthday`,
+          event_date: date.toISOString().slice(0, 10),
+          type: "Birthday",
+          source: "contact",
+          profile_id: contact.profileId || null,
+        });
+        break; // only add next upcoming occurrence
+      }
+    }
+  }
+  return rows;
+}
+
 function LogoMark() {
   return (
     <div className="relative flex h-11 w-11 items-center justify-center rounded-[16px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-lg">
@@ -2870,7 +2898,7 @@ export default function CirclesClient() {
 
         if (!active) return;
 
-        const merged = [...buildGenericCalendarEvents(), ...(loadedEvents || [])];
+        const merged = [...buildGenericCalendarEvents(), ...buildContactBirthdayEvents(loadedContacts), ...(loadedEvents || [])];
         initialiseCircleForm(currentProfile, merged);
 
         await loadCircles(user.id, currentProfile);
