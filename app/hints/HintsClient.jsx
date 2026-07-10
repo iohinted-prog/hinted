@@ -677,25 +677,32 @@ function HintFormFields({
         )}
       </div>
 
+
       <div>
         <label className="mb-2 block text-sm font-medium text-slate-700">Occasions (optional)</label>
-        <div className="flex flex-wrap gap-2">
-          {["Birthday", "Christmas", "Valentine's Day", "Anniversary", "Wedding", "Graduation", "Just because", "Mother's Day", "Father's Day", "Housewarming"].map(occasion => (
-            <button
-              key={occasion}
-              type="button"
-              onClick={() => setForm(current => ({
-                ...current,
-                occasions: current.occasions?.includes(occasion)
-                  ? current.occasions.filter(o => o !== occasion)
-                  : [...(current.occasions || []), occasion]
-              }))}
-              className={"rounded-full border px-3 py-1.5 text-xs font-medium transition " + (form.occasions?.includes(occasion) ? "border-[#2f3b2d] bg-[#2f3b2d] text-white" : "border-[#efe0d7] bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]")}
-            >
-              {occasion}
-            </button>
-          ))}
+        <div className="flex flex-wrap gap-2.5">
+          {["Birthday", "Christmas", "Valentine's Day", "Anniversary", "Wedding", "Graduation", "Just because", "Mother's Day", "Father's Day", "Housewarming"].map(occasion => {
+            const selected = form.occasions?.includes(occasion);
+            const atMax = (form.occasions?.length || 0) >= 2 && !selected;
+            return (
+              <button
+                key={occasion}
+                type="button"
+                disabled={atMax}
+                onClick={() => setForm(current => {
+                  const sel = current.occasions || [];
+                  const isSel = sel.includes(occasion);
+                  if (isSel && sel.length <= 1) return current;
+                  return { ...current, occasions: isSel ? sel.filter(o => o !== occasion) : [...sel, occasion] };
+                })}
+                className={"rounded-full px-4 py-2.5 text-sm font-medium transition " + (selected ? "bg-[#2f3b2d] text-white" : atMax ? "border border-slate-200 bg-white text-slate-300 cursor-not-allowed" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50")}
+              >
+                {occasion}
+              </button>
+            );
+          })}
         </div>
+        <p className="mt-3 text-xs text-slate-500">Pick up to 2. At least 1 required.</p>
       </div>
       {showToggles ? (
         <div className="flex flex-wrap items-center gap-4">
