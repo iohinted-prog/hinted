@@ -1894,17 +1894,29 @@ export default function FeedClient() {
     const contactUserIds = (contactList || [])
       .filter(c => c.profileId)
       .map(c => c.profileId);
-    let query = supabase
-      .from("feed_items")
-      .select("*")
-      .order("occurred_at", { ascending: false })
-      .limit(50);
-    if (userId && contactUserIds.length) {
-      query = query.or(`owner_user_id.eq.${userId},and(actor_user_id.in.(${contactUserIds.join(",")}),visibility.eq.contacts)`);
-    } else if (userId) {
-      query = query.eq("owner_user_id", userId);
-    }
-    const { data, error } = await query;
+    // Fetch own items and contact items separately then merge
+    const [ownResult, contactResult] = await Promise.all([
+      supabase
+        .from("feed_items")
+        .select("*")
+        .eq("owner_user_id", userId)
+        .order("occurred_at", { ascending: false })
+        .limit(50),
+      contactUserIds.length ? supabase
+        .from("feed_items")
+        .select("*")
+        .in("actor_user_id", contactUserIds)
+        .eq("visibility", "contacts")
+        .order("occurred_at", { ascending: false })
+        .limit(50) : Promise.resolve({ data: [], error: null }),
+    ]);
+    const error = ownResult.error || contactResult.error;
+    const combined = [...(ownResult.data || []), ...(contactResult.data || [])];
+    const seen = new Set();
+    const data = combined
+      .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
+      .sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime())
+      .slice(0, 50);
     if (error) {
       setFeedItems([]);
     }
