@@ -663,9 +663,13 @@ function ContactCard({ contact, onDeleteClick }) {
 
         <div className="min-w-0 flex-1">
           {contact.matchedProfileId ? (
-            <a href={`/hints/${contact.matchedProfileId}`} className="text-sm font-semibold text-slate-900 hover:text-[#d96d4f]">
+            <button
+              type="button"
+              onClick={() => setProfileModal({ userId: contact.matchedProfileId, name: contact.name, avatarUrl: contact.avatarUrl, initials: contact.initials })}
+              className="text-sm font-semibold text-slate-900 hover:text-[#d96d4f]"
+            >
               {contact.name}
-            </a>
+            </button>
           ) : (
             <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
           )}
@@ -879,6 +883,7 @@ function CircleCard({
   onContributeClick,
   sessionUser,
   contacts = [],
+  onOpenProfile,
 }) {
   const safeMembers = (Array.isArray(circle?.members) ? circle.members : []).map((member) => {
     if (member.avatarUrl) return member;
@@ -948,8 +953,8 @@ function CircleCard({
                   <button
                     key={`${circle?.id}-${member.name}-pill`}
                     type="button"
-                    onClick={() => setProfileModal({ userId: member.userId, name: member.name, avatarUrl: member.avatarUrl, initials: member.initials })}
-                    className="inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2 hover:border-[#e8c9bc] transition-colors"
+                    onClick={() => onOpenProfile && onOpenProfile({ userId: member.userId, name: member.name, avatarUrl: member.avatarUrl, initials: member.initials })}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2 hover:border-[#e8c9bc] hover:-translate-y-0.5 transition-all duration-150"
                   >
                     {member.avatarUrl ? (
                       <img src={member.avatarUrl} alt={member.name} className="h-7 w-7 rounded-full object-cover" />
@@ -3635,6 +3640,7 @@ if (inviteRows.length > 0) {
                         onContributeClick={openContributeModal}
                         sessionUser={sessionUser}
                         contacts={contacts}
+                        onOpenProfile={setProfileModal}
                       />
                     ))
                   )}
@@ -3653,6 +3659,7 @@ if (inviteRows.length > 0) {
                             formatCurrency={formatCurrency}
                             onContributeClick={openContributeModal}
                             sessionUser={sessionUser}
+                            onOpenProfile={setProfileModal}
                           />
                         ))}
                       </div>
