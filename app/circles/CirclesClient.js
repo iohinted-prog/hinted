@@ -399,7 +399,7 @@ function buildSelfRecord(profile) {
   };
 }
 
-function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You", ownerAvatar = null) {
+function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You", ownerAvatar = null, ownerUserId = null) {
   const members = [
     {
       name: currentUserName || "You",
@@ -410,6 +410,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       status: "accepted",
       email: "__self__",
       avatarUrl: ownerAvatar,
+      userId: ownerUserId,
     },
     ...inviteRows.map((invite) => ({
       name: invite.invite_name || invite.invite_email || "Invited person",
@@ -419,6 +420,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       colors: getRelationshipGradient(invite.invite_name || "Friend"),
       status: getAvatarState(invite.status),
       email: invite.invite_email_normalized || invite.invite_email || "",
+      userId: invite.invited_user_id || null,
     })),
   ];
 
@@ -942,19 +944,37 @@ function CircleCard({
 
             <div className="mt-4 flex flex-wrap gap-2">
               {safeMembers.slice(0, 4).map((member) => (
-                <div
-                  key={`${circle?.id}-${member.name}-pill`}
-                  className={`inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2`}
-                >
-                  {member.avatarUrl ? (
-                    <img src={member.avatarUrl} alt={member.name} className="h-7 w-7 rounded-full object-cover" />
-                  ) : (
-                    <div className={getAvatarClasses(member.colors, member.status, "sm")}>
-                      {member.initials}
-                    </div>
-                  )}
-                  <span className="text-sm font-medium text-slate-700">{member.name}</span>
-                </div>
+                {member.userId ? (
+                  <button
+                    key={`${circle?.id}-${member.name}-pill`}
+                    type="button"
+                    onClick={() => setProfileModal({ userId: member.userId, name: member.name, avatarUrl: member.avatarUrl, initials: member.initials })}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2 hover:border-[#e8c9bc] transition-colors"
+                  >
+                    {member.avatarUrl ? (
+                      <img src={member.avatarUrl} alt={member.name} className="h-7 w-7 rounded-full object-cover" />
+                    ) : (
+                      <div className={getAvatarClasses(member.colors, member.status, "sm")}>
+                        {member.initials}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-slate-700">{member.name}</span>
+                  </button>
+                ) : (
+                  <div
+                    key={`${circle?.id}-${member.name}-pill`}
+                    className="inline-flex items-center gap-2 rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2"
+                  >
+                    {member.avatarUrl ? (
+                      <img src={member.avatarUrl} alt={member.name} className="h-7 w-7 rounded-full object-cover" />
+                    ) : (
+                      <div className={getAvatarClasses(member.colors, member.status, "sm")}>
+                        {member.initials}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-slate-700">{member.name}</span>
+                  </div>
+                )}
               ))}
               {safeMembers.length > 4 ? (
                 <div className="inline-flex items-center rounded-full border border-[#eee1d9] bg-[#fffdfa] px-3 py-2 text-sm font-medium text-slate-500">
@@ -2527,6 +2547,108 @@ function CreateCircleModal({
   );
 }
 
+
+function UserProfileModal({ userId, name, avatarUrl, initials, onClose }) {
+  const [hints, setHints] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+
+  useEffect(() => {
+    if (!userId) return;
+    async function load() {
+      setLoading(true);
+      const [{ data: profileData }, { data: hintsData }] = await Promise.all([
+        supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
+        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred").eq("user_id", userId).eq("is_private", false).order("position", { ascending: true }).limit(40),
+      ]);
+      setProfile(profileData);
+      setHints(hintsData || []);
+      setLoading(false);
+    }
+    load();
+  }, [userId]);
+
+  const displayName = profile?.full_name || name || "User";
+  const displayAvatar = profile?.avatar_url || avatarUrl;
+  const interests = Array.isArray(profile?.interests) ? profile.interests : [];
+
+  function getInitials(name) {
+    return String(name || "").split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(33,24,20,0.42)] backdrop-blur-sm sm:items-center sm:px-4" onClick={onClose}>
+      <div
+        className="flex w-full max-w-[640px] flex-col overflow-hidden rounded-t-[32px] border border-[#efdcd2] bg-white shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:rounded-[32px]"
+        style={{ maxHeight: "90dvh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="shrink-0 border-b border-[#f2e5de] px-6 py-5">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              {displayAvatar ? (
+                <img src={displayAvatar} alt={displayName} className="h-14 w-14 rounded-full object-cover" />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[14px] font-bold text-white">
+                  {initials || getInitials(displayName)}
+                </div>
+              )}
+              <div>
+                <p className="text-[18px] font-semibold text-slate-900">{displayName}</p>
+                {interests.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {interests.slice(0, 5).map((interest) => (
+                      <span key={interest} className="rounded-full bg-[#fff4ee] px-2.5 py-0.5 text-[11px] font-semibold text-[#df7b59]">
+                        {interest}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]">
+              ✕
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          {loading ? (
+            <div className="py-8 text-center text-sm text-slate-400">Loading hints...</div>
+          ) : hints.length === 0 ? (
+            <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
+          ) : (
+            <div className="columns-2 gap-3">
+              {hints.map((hint) => (
+                <div key={hint.id} className="mb-3 break-inside-avoid">
+                  <a href={hint.url} target="_blank" rel="noopener noreferrer" className="group block overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors">
+                    {hint.image_url ? (
+                      <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
+                    ) : (
+                      <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
+                        <span className="text-2xl">🎁</span>
+                      </div>
+                    )}
+                    <div className="p-3">
+                      <p className="text-[13px] font-semibold text-slate-900 line-clamp-2">{hint.title}</p>
+                      {hint.numeric_price != null && (
+                        <p className="mt-1 text-[12px] text-[#df7b59] font-medium">
+                          {new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}
+                        </p>
+                      )}
+                      <p className="mt-0.5 text-[11px] text-slate-400 truncate">{hint.retailer}</p>
+                    </div>
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CirclesClient() {
   const supabase = createClient();
   const { formatCurrency } = useCurrencyFormatter();
@@ -2538,6 +2660,7 @@ export default function CirclesClient() {
   const [ownHints, setOwnHints] = useState([]);
   const [publicHintsByContact, setPublicHintsByContact] = useState({});
   const [realCircles, setRealCircles] = useState([]);
+  const [profileModal, setProfileModal] = useState(null);
   const [calendarEvents, setCalendarEvents] = useState([]);
 
   const [isLoadingContacts, setIsLoadingContacts] = useState(true);
@@ -2858,7 +2981,8 @@ export default function CirclesClient() {
       const mapped = (circlesData || []).map((circle) => {
         const ownerName = circle.user_id === userId ? currentUserName : (ownerNameMap[circle.user_id] || 'Organiser');
         const ownerAvatar = circle.user_id === userId ? null : (ownerAvatarMap[circle.user_id] || null);
-        const baseVm = buildCircleViewModel(circle, inviteMap[circle.id] || [], ownerName, ownerAvatar);
+        const ownerUserId = circle.user_id || null;
+        const baseVm = buildCircleViewModel(circle, inviteMap[circle.id] || [], ownerName, ownerAvatar, ownerUserId);
         return applyContributionDataToCircle(
           baseVm,
           contributionMap[circle.id],
@@ -3618,5 +3742,14 @@ if (inviteRows.length > 0) {
         formatCurrency={formatCurrency}
       />
     </main>
+    {profileModal && (
+        <UserProfileModal
+          userId={profileModal.userId}
+          name={profileModal.name}
+          avatarUrl={profileModal.avatarUrl}
+          initials={profileModal.initials}
+          onClose={() => setProfileModal(null)}
+        />
+      )}
   );
 }
