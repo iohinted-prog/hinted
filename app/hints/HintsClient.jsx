@@ -43,7 +43,7 @@ const EMPTY_NEW_HINT_FORM = {
   starred: false,
   needsReview: false,
   source: "preview",
-  occasions: [],
+  occasions: ["Birthday", "Christmas"],
 };
 
 const EMPTY_EDIT_FORM = {
@@ -53,7 +53,7 @@ const EMPTY_EDIT_FORM = {
   image: "",
   uploadedImage: null,
   priceInput: "",
-  occasions: [],
+  occasions: ["Birthday", "Christmas"],
 };
 
 const demoHints = [
