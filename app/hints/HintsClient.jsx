@@ -43,6 +43,7 @@ const EMPTY_NEW_HINT_FORM = {
   starred: false,
   needsReview: false,
   source: "preview",
+  occasions: [],
 };
 
 const EMPTY_EDIT_FORM = {
@@ -52,6 +53,7 @@ const EMPTY_EDIT_FORM = {
   image: "",
   uploadedImage: null,
   priceInput: "",
+  occasions: [],
 };
 
 const demoHints = [
@@ -675,6 +677,26 @@ function HintFormFields({
         )}
       </div>
 
+      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">Occasions (optional)</label>
+        <div className="flex flex-wrap gap-2">
+          {["Birthday", "Christmas", "Valentine's Day", "Anniversary", "Wedding", "Graduation", "Just because", "Mother's Day", "Father's Day", "Housewarming"].map(occasion => (
+            <button
+              key={occasion}
+              type="button"
+              onClick={() => setForm(current => ({
+                ...current,
+                occasions: current.occasions?.includes(occasion)
+                  ? current.occasions.filter(o => o !== occasion)
+                  : [...(current.occasions || []), occasion]
+              }))}
+              className={"rounded-full border px-3 py-1.5 text-xs font-medium transition " + (form.occasions?.includes(occasion) ? "border-[#2f3b2d] bg-[#2f3b2d] text-white" : "border-[#efe0d7] bg-[#f7f2ee] text-slate-700 hover:bg-[#f1ebe6]")}
+            >
+              {occasion}
+            </button>
+          ))}
+        </div>
+      </div>
       {showToggles ? (
         <div className="flex flex-wrap items-center gap-4">
           <button
@@ -947,10 +969,15 @@ function HintCard({
 
             <p className="mt-1 truncate text-[13px] text-white/78">{hint.retailer}</p>
 
-            <div className="mt-3">
+            <div className="mt-3 flex flex-wrap gap-1.5 items-center">
               <span className="inline-flex rounded-full border border-[#ffd8c9] bg-[#fff1e9] px-2.5 py-1 text-[11px] font-semibold text-[#df7c59]">
                 {displayPrice}
               </span>
+              {(hint.occasions || []).slice(0, 2).map(occasion => (
+                <span key={occasion} className="inline-flex rounded-full border border-white/45 bg-white/72 px-2 py-0.5 text-[10px] font-semibold text-slate-700 backdrop-blur-md">
+                  {occasion}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -1194,6 +1221,7 @@ export default function HintsClient() {
           numericPrice: row.numeric_price,
           rawPrice: row.price_text || "",
           currency: row.currency || detectCurrency(row.price_text) || BASE_CURRENCY,
+          occasions: row.occasions || [],
           image: row.image_url || "",
           fallbackGradient: buildFallbackGradient(index),
           starred: Boolean(row.starred),
@@ -1268,6 +1296,7 @@ export default function HintsClient() {
       image: hint.image || "",
       uploadedImage: null,
       priceInput: hint.numericPrice != null ? String(hint.numericPrice) : "",
+      occasions: hint.occasions || [],
     });
   }
 
@@ -1312,6 +1341,7 @@ export default function HintsClient() {
           price_text: editForm.priceInput || "",
           numeric_price: priceMeta.numericPrice,
           currency: priceMeta.originalCurrency || BASE_CURRENCY,
+          occasions: editForm.occasions || [],
         })
         .eq("id", editingHintId);
 
@@ -1568,6 +1598,7 @@ export default function HintsClient() {
         is_private: newHint.private,
         position: 0,
         source: newHintForm.source || "user",
+        occasions: newHintForm.occasions || [],
       });
 
       if (error) throw new Error(errorToMessage(error));
