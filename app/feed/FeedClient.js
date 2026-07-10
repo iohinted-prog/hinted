@@ -1169,11 +1169,6 @@ function FeedItem({
             </div>
             <span className="shrink-0 text-[12px] text-slate-400">
               {formatRelativeFromDate(item.occurred_at || item.created_at)}
-            </div>
-
-            <span className="shrink-0 text-[12px] text-slate-400">
-              {formatRelativeFromDate(item.occurred_at || item.created_at)}
-            </span>
           </div>
 
           {item.cta_label && item.cta_href ? (
