@@ -1397,7 +1397,7 @@ function MiniCalendar({
 
       {eventToDelete ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm">
-          <div className="w-full max-w-[520px] rounded-[30px] border border-[#eddacf] bg-[#fffaf7] p-6 shadow-[0_24px_80px_rgba(88,46,31,0.22)]">
+          <div className="w-full max-w-[520px] rounded-[30px] border border-[#eddacf] bg-[#fffaf7] p-6 shadow-[0_24px_80px_rgba(88,46,31,0.22)] max-h-[90dvh] overflow-y-auto">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#df7b59]">
               Delete event
             </p>

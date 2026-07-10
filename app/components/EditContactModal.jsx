@@ -35,12 +35,12 @@ export default function EditContactModal({ contact, onClose, onSave }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(42,26,20,0.38)] px-4 backdrop-blur-sm" onClick={onClose}>
-      <div className="w-full max-w-[480px] rounded-[28px] border border-[#eddacf] bg-[#fffaf7] p-6 shadow-[0_24px_80px_rgba(88,46,31,0.22)]" onClick={e => e.stopPropagation()}>
+      <div className="w-full max-w-[480px] rounded-[28px] border border-[#eddacf] bg-[#fffaf7] shadow-[0_24px_80px_rgba(88,46,31,0.22)] flex flex-col max-h-[90dvh] overflow-hidden" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-[20px] font-semibold text-slate-900">Edit contact</h2>
           <button onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-500 hover:bg-[#fff5f0]" type="button">x</button>
         </div>
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-0 space-y-4">
           <label className="block">
             <span className="text-sm font-medium text-slate-700">Name</span>
             <input type="text" value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))}
