@@ -703,7 +703,6 @@ function HintFormFields({
         </div>
       </div>
       </div>
-      </div>
       {showToggles ? (
         <div className="flex flex-wrap items-center gap-4">
           <button
