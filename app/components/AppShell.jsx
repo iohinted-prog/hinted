@@ -29,7 +29,6 @@ function LogoMark() {
     </svg>
   );
 
-  );
 }
 
 function getMetadataName(metadata = {}) {
