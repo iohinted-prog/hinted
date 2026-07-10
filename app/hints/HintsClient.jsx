@@ -1377,6 +1377,7 @@ export default function HintsClient() {
                 rawPrice: editForm.priceInput || "",
                 numericPrice: priceMeta.numericPrice,
                 currency: priceMeta.originalCurrency || BASE_CURRENCY,
+                occasions: editForm.occasions || [],
                 needsReview: false,
               }
             : hint
