@@ -677,7 +677,6 @@ function HintFormFields({
         )}
       </div>
 
-
         <label className="mb-2 block text-sm font-medium text-slate-700">Occasions</label>
         <label className="mb-2 block text-sm font-medium text-slate-700">Occasions (optional)</label>
         <div className="flex flex-wrap gap-2.5">
