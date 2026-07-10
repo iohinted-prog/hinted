@@ -1905,6 +1905,7 @@ export default function FeedClient() {
     const { data, error } = await query;
     if (error) {
       setFeedItems([]);
+    }
       setFeedLoading(false);
       throw new Error(normalizeSupabaseError(error, "Failed to load feed."));
 
