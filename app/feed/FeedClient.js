@@ -443,29 +443,28 @@ function ContactAvatar({ contact }) {
 }
 
 
-function ContactCard({ contact, onDeleteClick }) {
+function ContactCard({ contact, onDeleteClick, onOpenProfile }) {
+  const isClickable = Boolean(contact.profileId && !contact.isDemo && onOpenProfile);
+  function handleProfileClick() {
+    if (isClickable) onOpenProfile({ userId: contact.profileId, name: contact.name, avatarUrl: contact.avatarUrl, initials: contact.initials });
+  }
   return (
-    <article className="rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+    <article
+      className={`rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 ${isClickable ? "hover:-translate-y-0.5 hover:shadow-md hover:border-[#e8c9bc] cursor-pointer" : "hover:-translate-y-0.5 hover:shadow-md"}`}
+      onClick={isClickable ? handleProfileClick : undefined}
+    >
       <div className="flex items-center gap-3">
         <ContactAvatar contact={contact} />
-
         <div className="min-w-0 flex-1">
-          {contact.profileId && !contact.isDemo ? (
-            <Link href={`/hints/${contact.profileId}`} className="text-sm font-semibold text-slate-900 hover:text-[#d96d4f]">
-              {contact.name}
-            </Link>
-          ) : (
-            <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
-          )}
+          <p className="text-sm font-semibold text-slate-900">{contact.name}</p>
           <p className="text-xs text-slate-500">
             {contact.role} · {contact.note}
           </p>
         </div>
-
         {!contact.isDemo ? (
           <button
             type="button"
-            onClick={() => onDeleteClick(contact)}
+            onClick={(e) => { e.stopPropagation(); onDeleteClick(contact); }}
             className="inline-flex h-9 items-center justify-center rounded-full border border-[#efc0ba] bg-[#fff4f2] px-3 text-[12px] font-semibold text-[#b14f43] hover:bg-[#ffe9e5]"
           >
             Delete
@@ -2460,6 +2459,7 @@ export default function FeedClient() {
                       key={contact.id}
                       contact={contact}
                       onDeleteClick={openDeleteContactModal}
+                      onOpenProfile={setProfileModal}
                     />
                   ))
                 ) : (
