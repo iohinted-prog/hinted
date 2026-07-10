@@ -678,7 +678,7 @@ function HintFormFields({
       </div>
 
 
-      <div>
+        <label className="mb-2 block text-sm font-medium text-slate-700">Occasions</label>
         <label className="mb-2 block text-sm font-medium text-slate-700">Occasions (optional)</label>
         <div className="flex flex-wrap gap-2.5">
           {["Birthday", "Christmas", "Valentine's Day", "Anniversary", "Wedding", "Graduation", "Just because", "Mother's Day", "Father's Day", "Housewarming"].map(occasion => {
@@ -692,7 +692,7 @@ function HintFormFields({
                 onClick={() => setForm(current => {
                   const sel = current.occasions || [];
                   const isSel = sel.includes(occasion);
-                  if (isSel && sel.length <= 1) return current;
+                  if (false) return current;
                   return { ...current, occasions: isSel ? sel.filter(o => o !== occasion) : [...sel, occasion] };
                 })}
                 className={"rounded-full px-4 py-2.5 text-sm font-medium transition " + (selected ? "bg-[#2f3b2d] text-white" : atMax ? "border border-slate-200 bg-white text-slate-300 cursor-not-allowed" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50")}
@@ -702,7 +702,6 @@ function HintFormFields({
             );
           })}
         </div>
-        <p className="mt-3 text-xs text-slate-500">Pick up to 2. At least 1 required.</p>
       </div>
       {showToggles ? (
         <div className="flex flex-wrap items-center gap-4">
