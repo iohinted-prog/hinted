@@ -443,6 +443,117 @@ export async function GET(request) {
       }
     }
 
+    // One-week nudge for inactive users
+    const sevenDaysAgo = new Date(today)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const sevenDaysAgoStart = new Date(sevenDaysAgo)
+    sevenDaysAgoStart.setHours(0, 0, 0, 0)
+    const sevenDaysAgoEnd = new Date(sevenDaysAgo)
+    sevenDaysAgoEnd.setHours(23, 59, 59, 999)
+
+    const { data: newUsers } = await supabase
+      .from('profiles')
+      .select('id, full_name, email_reminders, onboarding_completed')
+      .eq('onboarding_completed', true)
+      .eq('email_reminders', true)
+      .gte('created_at', sevenDaysAgoStart.toISOString())
+      .lte('created_at', sevenDaysAgoEnd.toISOString())
+
+    for (const newUser of newUsers || []) {
+      try {
+        // Check if they have any hints
+        const { count: hintCount } = await supabase
+          .from('hints')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', newUser.id)
+
+        // Check if they have any contacts
+        const { count: contactCount } = await supabase
+          .from('contacts')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', newUser.id)
+
+        if ((hintCount || 0) > 0 || (contactCount || 0) > 0) continue
+
+        const { data: authUser } = await supabase.auth.admin.getUserById(newUser.id)
+        const email = authUser?.user?.email
+        if (!email) continue
+
+        const name = newUser.full_name || 'there'
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<div style="background:#f5ede8;padding:40px 20px;">
+  <div style="max-width:520px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:10px;">
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
+      </div>
+    </div>
+    <div style="background:#fffaf7;border-radius:28px;border:1px solid #efdcd2;box-shadow:0 20px 60px rgba(88,46,31,0.12);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#2f3b2d,#3d4f3a);padding:36px 40px 32px;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin:0 0 10px;">A gentle nudge</p>
+        <h1 style="font-size:26px;font-weight:700;color:white;line-height:1.2;letter-spacing:-0.04em;margin:0;">Your HintDrop is ready when you are, ${name}</h1>
+      </div>
+      <div style="padding:36px 40px;">
+        <p style="font-size:15px;line-height:1.7;color:#5a4a42;margin:0 0 24px;">You signed up a week ago but have not added anything yet. No pressure — but when you are ready, here is where to start.</p>
+        <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:32px;">
+          <a href="https://hintdrop.app/hints" style="display:flex;align-items:center;gap:12px;background:#f7f2ee;border-radius:14px;border:1px solid #efe0d7;padding:14px 16px;text-decoration:none;">
+            <span style="font-size:20px;">🎁</span>
+            <div>
+              <p style="font-size:14px;font-weight:600;color:#2d2d2d;margin:0;">Add a hint</p>
+              <p style="font-size:13px;color:#a07060;margin:3px 0 0;">Paste any product link and save it to your list</p>
+            </div>
+          </a>
+          <a href="https://hintdrop.app/feed" style="display:flex;align-items:center;gap:12px;background:#f7f2ee;border-radius:14px;border:1px solid #efe0d7;padding:14px 16px;text-decoration:none;">
+            <span style="font-size:20px;">👥</span>
+            <div>
+              <p style="font-size:14px;font-weight:600;color:#2d2d2d;margin:0;">Invite a contact</p>
+              <p style="font-size:13px;color:#a07060;margin:3px 0 0;">Connect with someone and see what they are hinting at</p>
+            </div>
+          </a>
+        </div>
+        <div style="text-align:center;">
+          <a href="https://hintdrop.app/feed" style="display:inline-block;background:linear-gradient(160deg,#3d4f3a,#2f3b2d);color:white;font-size:15px;font-weight:700;padding:16px 40px;border-radius:50px;text-decoration:none;">Open HintDrop</a>
+        </div>
+      </div>
+      <div style="border-top:1px solid #f2e5de;padding:22px 40px;background:#fffaf7;">
+        <p style="font-size:12px;color:#b09080;text-align:center;line-height:1.6;margin:0;">This is the only nudge we will send. <a href="https://hintdrop.app/settings" style="color:#b09080;">Manage preferences</a></p>
+      </div>
+    </div>
+    <p style="text-align:center;font-size:12px;color:#c0a090;margin-top:24px;">HintDrop · <a href="https://hintdrop.app" style="color:#c0a090;">hintdrop.app</a></p>
+  </div>
+</div>
+</body>
+</html>`
+
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'HintDrop <hello@hintdrop.app>',
+            to: email,
+            subject: 'Your HintDrop is ready when you are 🎁',
+            html,
+          }),
+        })
+
+        if (resendRes.ok) {
+          sent.push({ type: 'nudge', to: email })
+        } else {
+          const err = await resendRes.json()
+          errors.push({ type: 'nudge', user: email, error: err })
+        }
+      } catch (err) {
+        errors.push({ type: 'nudge', user: newUser.id, error: err.message })
+      }
+    }
+
     return NextResponse.json({ ok: true, sent, errors, total: sent.length })
   } catch (err) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
