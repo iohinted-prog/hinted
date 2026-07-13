@@ -56,6 +56,8 @@ export async function saveSettings(formData) {
     personalized_offers: parseBoolean(formData.personalized_offers, true),
     hint_sale_alerts: parseBoolean(formData.hint_sale_alerts, true),
     product_updates: parseBoolean(formData.product_updates, false),
+    circle_reminders: parseBoolean(formData.circle_reminders, true),
+    weekly_digest: parseBoolean(formData.weekly_digest, true),
     default_reminder_days: Number(formData.default_reminder_days) || 7,
     currency,
     interests,

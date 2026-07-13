@@ -33,6 +33,8 @@ export default function SettingsPage() {
   const [personalizedOffers, setPersonalizedOffers] = useState(true);
   const [hintSaleAlerts, setHintSaleAlerts] = useState(true);
   const [productUpdates, setProductUpdates] = useState(false);
+  const [circleReminders, setCircleReminders] = useState(true);
+  const [weeklyDigest, setWeeklyDigest] = useState(true);
   const [defaultReminderDays, setDefaultReminderDays] = useState("7");
   const { setCurrency: setGlobalCurrency } = usePreferences();
   const [currency, setCurrency] = useState("GBP");
@@ -55,7 +57,7 @@ export default function SettingsPage() {
       const { data, error } = await supabase
         .from("profiles")
         .select(
-          "email_reminders, personalized_offers, hint_sale_alerts, product_updates, default_reminder_days, currency, interests, other_interest"
+          "email_reminders, personalized_offers, hint_sale_alerts, product_updates, circle_reminders, weekly_digest, default_reminder_days, currency, interests, other_interest"
         )
         .eq("id", user.id)
         .single();
@@ -74,6 +76,8 @@ export default function SettingsPage() {
       setPersonalizedOffers(data?.personalized_offers ?? true);
       setHintSaleAlerts(data?.hint_sale_alerts ?? true);
       setProductUpdates(data?.product_updates ?? false);
+      setCircleReminders(data?.circle_reminders ?? true);
+      setWeeklyDigest(data?.weekly_digest ?? true);
       setDefaultReminderDays(String(data?.default_reminder_days ?? 7));
       setCurrency(data?.currency ?? "GBP");
       setInterests(
@@ -128,6 +132,8 @@ export default function SettingsPage() {
         personalized_offers: personalizedOffers ? "1" : "0",
         hint_sale_alerts: hintSaleAlerts ? "1" : "0",
         product_updates: productUpdates ? "1" : "0",
+        circle_reminders: circleReminders ? "1" : "0",
+        weekly_digest: weeklyDigest ? "1" : "0",
         default_reminder_days: defaultReminderDays,
         currency,
         interests,
@@ -242,6 +248,36 @@ export default function SettingsPage() {
                   type="checkbox"
                   checked={productUpdates}
                   onChange={(e) => setProductUpdates(e.target.checked)}
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Circle reminders</p>
+                  <p className="text-xs text-slate-500">
+                    Reminders about circles you've joined, upcoming deadlines, and pending contributions. Cannot be turned off while you have an active circle with a pending contribution.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={circleReminders}
+                  onChange={(e) => setCircleReminders(e.target.checked)}
+                  className="h-5 w-5 accent-[#f36f64]"
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-[20px] border border-[#f1e4dc] bg-[#fffdfa] px-4 py-4">
+                <div>
+                  <p className="text-sm font-medium text-slate-900">Weekly digest</p>
+                  <p className="text-xs text-slate-500">
+                    A weekly summary of new hints from your contacts. Unsubscribe anytime without affecting other notifications.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={weeklyDigest}
+                  onChange={(e) => setWeeklyDigest(e.target.checked)}
                   className="h-5 w-5 accent-[#f36f64]"
                 />
               </label>
