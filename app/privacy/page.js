@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Privacy Policy | HintDrop",
   description:
-    "Read Hinted's Privacy Policy, including what information we collect, how we use it, and your choices.",
+    "Read HintDrop's Privacy Policy, including what information we collect, how we use it, and your choices.",
 };
 
 export default function PrivacyPage() {
@@ -17,7 +17,7 @@ export default function PrivacyPage() {
               Privacy Policy
             </p>
             <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-4xl">
-              How Hinted handles your information
+              How HintDrop handles your information
             </h1>
             <p className="mt-4 text-base leading-8 text-slate-600">
               Effective date: June 17, 2026
@@ -75,7 +75,7 @@ export default function PrivacyPage() {
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
                 We use information we collect to operate, improve, and secure
-                Hinted.
+                HintDrop.
               </p>
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
                 <li>- Create and manage your account.</li>
@@ -282,7 +282,7 @@ export default function PrivacyPage() {
                 We may update this Privacy Policy from time to time. If we make
                 material changes, we will post the updated version here and
                 update the &quot;Last updated&quot; date above. Your continued
-                use of Hinted after those changes become effective means you
+                use of HintDrop after those changes become effective means you
                 accept the updated policy.
               </p>
             </section>

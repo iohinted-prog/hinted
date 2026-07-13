@@ -99,7 +99,7 @@ export default function JoinClient() {
                 <p className="text-sm leading-6 text-slate-600">
                   New here? Use Google or Microsoft to create your account.
                   Returning users can log in the exact same way. After sign-in,
-                  Hinted will always take you either to onboarding or straight
+                  HintDrop will always take you either to onboarding or straight
                   to your feed.
                 </p>
               </div>

@@ -5,7 +5,7 @@ import OnboardingClient from "./OnboardingClient";
 
 export const metadata = {
   title: "Get started | HintDrop",
-  description: "Set up your Hinted profile.",
+  description: "Set up your HintDrop profile.",
 };
 
 export default async function OnboardingPage() {

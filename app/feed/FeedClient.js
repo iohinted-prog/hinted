@@ -81,7 +81,7 @@ const firstLookCard = {
   activity_session_id: null,
   source_event_id: null,
   headline: "Your feed will fill up as hints, reminders, and circle updates start rolling in.",
-  body: "This first-look card helps show how Hinted works before real activity arrives.",
+  body: "This first-look card helps show how HintDrop works before real activity arrives.",
   cta_label: "See hints",
   cta_href: "/hints",
   occurred_at: new Date().toISOString(),

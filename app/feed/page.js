@@ -5,7 +5,7 @@ import FeedClient from "./FeedClient";
 
 export const metadata = {
   title: "Feed | HintDrop",
-  description: "Your Hinted feed with updates, reminders, and activity in one place.",
+  description: "Your HintDrop feed with updates, reminders, and activity in one place.",
 };
 
 export default async function FeedPage() {

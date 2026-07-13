@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About | Hinted",
+  title: "About | HintDrop",
   description:
     "Learn about HintDrop, the relationship-aware gifting and reminder app designed to help people stay thoughtful.",
 };

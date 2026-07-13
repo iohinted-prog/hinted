@@ -489,7 +489,7 @@ function DemoVideoSection() {
             A guided walkthrough is coming here.
           </h2>
           <p className="mt-4 max-w-[58ch] text-[16px] leading-7 text-slate-600">
-            This section will house a short demo video showing how Hinted connects
+            This section will house a short demo video showing how HintDrop connects
             reminders, hints, circles, and curated shopping in one flow.
           </p>
 

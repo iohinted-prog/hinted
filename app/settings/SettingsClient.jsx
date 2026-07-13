@@ -182,7 +182,7 @@ export default function SettingsPage() {
             Reminder and app settings
           </h1>
           <p className="mt-3 max-w-[680px] text-[15px] leading-7 text-slate-600">
-            Manage how Hinted contacts you, how early reminders arrive, the interests
+            Manage how HintDrop contacts you, how early reminders arrive, the interests
             we use to personalise your experience, and the currency shown across the app.
           </p>
         </div>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
           <section className="rounded-[28px] border border-[#eddacf] bg-white p-6 shadow-sm">
             <h2 className="text-[20px] font-semibold text-slate-900">Interests</h2>
             <p className="mt-2 text-sm text-slate-500">
-              Pick at least 2 interests so Hinted can keep suggestions relevant.
+              Pick at least 2 interests so HintDrop can keep suggestions relevant.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2.5">

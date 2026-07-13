@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Terms of Service | HintDrop",
   description:
-    "Read Hinted's Terms of Service, including account rules, acceptable use, content rights, and limitations.",
+    "Read HintDrop's Terms of Service, including account rules, acceptable use, content rights, and limitations.",
 };
 
 export default function TermsPage() {
