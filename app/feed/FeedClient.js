@@ -2480,7 +2480,7 @@ export default function FeedClient() {
           <aside className="space-y-5">
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Contacts</p>
+                <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900 hover:text-[#df7b59] transition">Contacts</button>
 
               </div>
               <p className="mt-1 text-xs text-slate-500">Invitees and contacts live here.</p>
