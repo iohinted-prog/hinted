@@ -1,4 +1,5 @@
 "use client";
+import ContactCard from "../components/ContactCard";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
