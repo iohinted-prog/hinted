@@ -286,13 +286,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         from: 'HintDrop <hello@hintdrop.app>',
         to: normalizedEmail,
-        subject: "You've been added as a contact on HintDrop",
-        html: `
-          <p>Hi${name ? ` ${name}` : ''},</p>
-          <p>Someone has added you as a contact on HintDrop.</p>
-          <p><a href="${acceptUrl}">Accept and view their profile</a></p>
-          <p>This link expires in 7 days.</p>
-        `,
+        subject: `${inviterName} added you as a contact on HintDrop`,
+        html: buildContactInviteEmail(inviterName, name || '', acceptUrl),
       }),
     })
 
