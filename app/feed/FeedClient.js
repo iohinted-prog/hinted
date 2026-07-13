@@ -447,51 +447,6 @@ function ContactAvatar({ contact }) {
 }
 
 
-function getStarSign(birthday) {
-  if (!birthday) return null;
-  const d = new Date(birthday);
-  const m = d.getMonth() + 1;
-  const day = d.getDate();
-  if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return "♈ Aries";
-  if ((m === 4 && day >= 20) || (m === 5 && day <= 20)) return "♉ Taurus";
-  if ((m === 5 && day >= 21) || (m === 6 && day <= 20)) return "♊ Gemini";
-  if ((m === 6 && day >= 21) || (m === 7 && day <= 22)) return "♋ Cancer";
-  if ((m === 7 && day >= 23) || (m === 8 && day <= 22)) return "♌ Leo";
-  if ((m === 8 && day >= 23) || (m === 9 && day <= 22)) return "♍ Virgo";
-  if ((m === 9 && day >= 23) || (m === 10 && day <= 22)) return "♎ Libra";
-  if ((m === 10 && day >= 23) || (m === 11 && day <= 21)) return "♏ Scorpio";
-  if ((m === 11 && day >= 22) || (m === 12 && day <= 21)) return "♐ Sagittarius";
-  if ((m === 12 && day >= 22) || (m === 1 && day <= 19)) return "♑ Capricorn";
-  if ((m === 1 && day >= 20) || (m === 2 && day <= 18)) return "♒ Aquarius";
-  return "♓ Pisces";
-}
-
-function ContactCard({ contact, onDeleteClick, onOpenProfile, onEditClick }) {
-  const isClickable = Boolean(contact.profileId && !contact.isDemo && onOpenProfile);
-  function handleProfileClick() {
-    if (isClickable) onOpenProfile({ userId: contact.profileId, name: contact.name, avatarUrl: contact.avatarUrl, initials: contact.initials });
-  }
-  return (
-    <article
-      className={`rounded-[22px] border border-[#f0dfd6] bg-white p-4 shadow-sm transition-all duration-200 ${isClickable ? "hover:-translate-y-0.5 hover:shadow-md hover:border-[#e8c9bc] cursor-pointer" : "hover:-translate-y-0.5 hover:shadow-md"}`}
-      onClick={isClickable ? handleProfileClick : undefined}
-    >
-      <div className="flex items-center gap-3">
-        <ContactAvatar contact={contact} />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-900 truncate">{contact.name}</p>
-          <p className="text-xs text-slate-500 truncate">
-            {contact.role}{contact.note ? " · " + contact.note : ""}
-          </p>
-          {contact.birthday && (
-            <p className="text-[11px] text-[#df7b59] mt-0.5 truncate">🎂 {new Date(contact.birthday).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {getStarSign(contact.birthday)}</p>
-          )}
-        </div>
-      </div>
-    </article>
-  );
-}
-
 
 function buildContactBirthdayEvents(contacts) {
   const now = new Date();
