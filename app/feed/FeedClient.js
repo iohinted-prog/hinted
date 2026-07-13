@@ -1398,7 +1398,7 @@ function MiniCalendar({
 
       {isCalendarModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(42,26,20,0.38)] px-4 py-6 backdrop-blur-sm" onClick={() => setIsCalendarModalOpen(false)}>
-          <div className="mx-auto w-full max-w-[680px] rounded-[28px] border border-[#efdcd2] bg-[#fffaf7] p-6 shadow-[0_24px_80px_rgba(88,46,31,0.22)] my-6" onClick={e => e.stopPropagation()}>
+          <div className="mx-auto w-full max-w-[900px] rounded-[28px] border border-[#efdcd2] bg-[#fffaf7] p-6 shadow-[0_24px_80px_rgba(88,46,31,0.22)] my-6" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Planner</p>
@@ -1406,7 +1406,7 @@ function MiniCalendar({
               </div>
               <button type="button" onClick={() => setIsCalendarModalOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#eaded6] bg-white text-slate-500 hover:bg-slate-50">✕</button>
             </div>
-            <div className="grid gap-6 md:grid-cols-[1fr_300px]">
+            <div className="grid gap-6 md:grid-cols-[1fr_320px]">
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <button type="button" onClick={() => setCurrentMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#eaded6] bg-white text-slate-500 hover:bg-slate-50">←</button>
@@ -1424,7 +1424,7 @@ function MiniCalendar({
                     const selected = item.date.toDateString() === selectedDate.toDateString();
                     return (
                       <button key={idx} type="button" onClick={() => { setSelectedDate(item.date); setIsCalendarModalOpen(true); }}
-                        className={`min-h-[48px] rounded-[12px] border p-1.5 text-left transition ${selected ? "border-[#f2b39a] bg-[#fff2ea]" : isToday ? "border-[#f3c8b7] bg-[#fff8f4]" : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6]"}`}>
+                        className={`min-h-[64px] rounded-[12px] border p-1.5 text-left transition ${selected ? "border-[#f2b39a] bg-[#fff2ea]" : isToday ? "border-[#f3c8b7] bg-[#fff8f4]" : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6]"}`}>
                         <div className={`text-[12px] font-semibold ${selected ? "text-[#d96d4f]" : isToday ? "text-slate-900" : item.currentMonth ? "text-slate-700" : "text-slate-300"}`}>{item.day}</div>
                         {dayEvents.length > 0 && <span className={`mt-1 block h-1.5 w-1.5 rounded-full ${resolveEventStyle(dayEvents[0]).dot}`} />}
                       </button>
