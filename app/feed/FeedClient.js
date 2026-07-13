@@ -1705,6 +1705,7 @@ export default function FeedClient() {
         contactState,
         profileId: row.profile_id,
         publicState: row.public_state,
+        birthday: row.birthday || null,
         isDemo: false,
         raw: row,
       };
