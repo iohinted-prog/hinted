@@ -3306,6 +3306,7 @@ const inviteRows = await Promise.all(
       invite_token_hash: inviteTokenHash,
       status: "pending",
       reminder_count: 0,
+      invited_user_id: person.matchedProfileId || null,
     };
   })
 );
