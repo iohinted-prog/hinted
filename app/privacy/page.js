@@ -139,17 +139,28 @@ export default function PrivacyPage() {
                 3. Social sign-in and Google data
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                If you choose to sign in with Google or another third-party
-                provider, we may receive basic account information such as your
-                name, email address, and profile image, depending on what that
-                provider shares with us. We use that information to authenticate
-                your account, help create or maintain your profile, and support
-                the features you choose to use inside Hinted.
+                If you choose to sign in with Google, we receive basic account
+                information such as your name, email address, and profile image.
+                We use that information to authenticate your account, create or
+                maintain your profile, and support the features you choose to
+                use inside HintDrop.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                When you choose to search for contacts to add on HintDrop, we
+                request read-only access to your Google Contacts
+                (contacts.readonly and contacts.other.readonly scopes). This
+                access is used solely to help you find and add people you already
+                know — we display matching names and email addresses so you can
+                send them a HintDrop invite. We do not store your Google Contacts
+                data on our servers, sync your address book, or use your contacts
+                for any purpose other than the search you initiate in that moment.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not sell Google user data. We do not use Google user data
-                for purposes other than providing and improving HintDrop, unless
-                we clearly tell you otherwise and are permitted to do so.
+                for advertising, profiling, or any purpose other than providing
+                and improving HintDrop. Our use of Google user data complies with
+                the Google API Services User Data Policy, including the Limited
+                Use requirements.
               </p>
             </section>
 
