@@ -178,15 +178,19 @@ Deno.serve(async (req) => {
       user.email ||
       'New contact'
 
+    // Get inviter email from auth.users since profiles.email is not populated
+    const { data: inviterAuthUser } = await supabase.auth.admin.getUserById(invite.inviter_user_id)
+    const inviterAuthEmail = inviterAuthUser?.user?.email || null
+
     const inviterName =
       inviterProfile?.full_name ||
       inviterProfile?.invite_name ||
-      inviterProfile?.email ||
+      inviterAuthEmail ||
       'New contact'
 
     const normalizedUserEmail = userEmail || null
     const normalizedInviteEmail = inviteEmail || null
-    const normalizedInviterEmail = String(inviterProfile?.email || '').trim().toLowerCase() || null
+    const normalizedInviterEmail = String(inviterAuthEmail || inviterProfile?.email || '').trim().toLowerCase() || null
 
     // ---- Inviter-side canonical contact ----
 
