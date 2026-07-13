@@ -35,6 +35,12 @@ export default function ContactsManagerModal({ open, onClose, contacts, onAdd, o
                   <p className="text-xs text-slate-500 truncate">{contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}</p>
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
+                  {contact.contactState === "invitee" && (
+                    <button type="button" onClick={(e) => { e.stopPropagation(); handleResend(contact); }} disabled={resending === contact.id || resendDone[contact.id]}
+                      className="h-8 px-3 rounded-full border border-[#f0d0c8] bg-[#fff4ee] text-[11px] font-semibold text-[#df7b59] hover:bg-[#ffe9e0] disabled:opacity-50">
+                      {resendDone[contact.id] ? "Sent!" : resending === contact.id ? "Sending..." : "Resend"}
+                    </button>
+                  )}
                   <button type="button" onClick={(e) => { e.stopPropagation(); setEditingContact(contact); }}
                     className="h-8 px-3 rounded-full border border-[#ead8ce] bg-white text-[11px] font-semibold text-slate-600 hover:bg-[#f8f5f2]">
                     Edit
