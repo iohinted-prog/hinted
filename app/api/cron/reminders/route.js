@@ -136,7 +136,7 @@ function buildOrganizerSummaryEmail({ organiserName, circleTitle, daysUntil, unp
       <div style="padding:36px 40px;">
         <p style="font-size:15px;line-height:1.7;color:#5a4a42;margin:0 0 24px;">Hi ${organiserName || 'there'},</p>
         <div style="background:#fff4ee;border-radius:18px;border:1px solid #fde0d0;padding:22px 24px;margin-bottom:28px;">
-          <p style="font-size:14px;color:#5a4a42;margin:0;"><strong style="color:#2d2d2d;">${unpaidCount} of ${totalCount}</strong> ${totalCount === 1 ? 'person hasn't' : 'people haven't'} contributed yet. We've sent them a reminder.</p>
+          <p style="font-size:14px;color:#5a4a42;margin:0;"><strong style="color:#2d2d2d;">${unpaidCount} of ${totalCount}</strong> ${totalCount === 1 ? 'person has not' : 'people have not'} contributed yet. We've sent them a reminder.</p>
         </div>
         <div style="text-align:center;">
           <a href="${circleUrl}" style="display:inline-block;background:linear-gradient(160deg,#3d4f3a,#2f3b2d);color:white;font-size:15px;font-weight:700;padding:16px 40px;border-radius:50px;text-decoration:none;">View circle</a>
