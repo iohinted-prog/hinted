@@ -4,18 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import InviteAuthButtons from "../components/InviteAuthButtons";
 
-function LandingLogo() {
-  return (
-    <div className="flex items-center gap-3.5">
-      <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
-        🎁
-      </div>
-      <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
-        Hint<span className="text-[#f36f64]">Drop</span>
-      </div>
-    </div>
-  );
-}
+
 
 export default function JoinClient() {
   const searchParams = useSearchParams();
@@ -35,8 +24,7 @@ export default function JoinClient() {
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
         <header className="pb-8">
-          <LandingLogo />
-        </header>
+</header>
 
         <div className="mx-auto max-w-[540px]">
           {isContactInvite && (
