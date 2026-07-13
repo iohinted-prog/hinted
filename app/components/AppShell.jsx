@@ -160,7 +160,9 @@ export default function AppShell({ children }) {
   const notifRef = useRef(null);
 
   const loadInviteCount = useCallback(async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    const user = session.user;
     if (!user) return;
     const [{ data: circleInvites }, { data: contactInvites }] = await Promise.all([
       supabase.from("circle_invites").select("id, invite_token, invite_name, user_id, created_at").eq("invited_user_id", user.id).eq("status", "pending"),
