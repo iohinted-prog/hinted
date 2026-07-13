@@ -9,7 +9,7 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-function buildReminderEmail({ recipientName, contactName, eventType, eventDate, daysUntil, hints }) {
+function buildReminderEmail({ recipientName, contactName, eventType, eventDate, daysUntil, hints, unsubscribeUrl }) {
   const hasHints = hints && hints.length > 0
   const urgency = daysUntil <= 3 ? 'Coming up very soon' : daysUntil <= 7 ? 'Coming up this week' : 'Coming up soon'
   const ctaUrl = hasHints ? 'https://hintdrop.app/feed' : 'https://hintdrop.app/gift-shop'
@@ -53,7 +53,7 @@ function buildReminderEmail({ recipientName, contactName, eventType, eventDate, 
       </div>
       <div style="border-top:1px solid #f2e5de;padding:22px 40px;background:#fffaf7;">
         <p style="font-size:12px;color:#b09080;text-align:center;line-height:1.6;margin:0;">
-          <a href="https://hintdrop.app/settings" style="color:#b09080;">Manage your reminder preferences</a>
+          <a href="${unsubscribeUrl}" style="color:#b09080;">Unsubscribe from reminders</a> · <a href="https://hintdrop.app/settings" style="color:#b09080;">Manage preferences</a>
         </p>
       </div>
     </div>
@@ -180,7 +180,7 @@ export async function GET(request) {
       try {
         const { data: owner } = await supabase
           .from('profiles')
-          .select('id, full_name, email_reminders, default_reminder_days')
+          .select('id, full_name, email_reminders, default_reminder_days, unsubscribe_token')
           .eq('id', contact.user_id)
           .maybeSingle()
 
@@ -212,6 +212,7 @@ export async function GET(request) {
           hints = hintsData || []
         }
 
+        const unsubUrl = `https://hintdrop.app/unsubscribe?token=${owner.unsubscribe_token}`
         const html = buildReminderEmail({
           recipientName: owner.full_name || '',
           contactName: contact.name,
@@ -219,6 +220,7 @@ export async function GET(request) {
           eventDate: formatDate(nextBday.toISOString()),
           daysUntil,
           hints,
+          unsubscribeUrl: unsubUrl,
         })
 
         const resendRes = await fetch('https://api.resend.com/emails', {
@@ -258,7 +260,7 @@ export async function GET(request) {
     // Get all users who have email reminders on
     const { data: allUsers } = await supabase
       .from('profiles')
-      .select('id, full_name, email_reminders, default_reminder_days')
+      .select('id, full_name, email_reminders, default_reminder_days, unsubscribe_token')
       .eq('email_reminders', true)
 
     for (const event of genericEvents) {
@@ -282,6 +284,7 @@ export async function GET(request) {
           eventDate: formatDate(eventDate.toISOString()),
           daysUntil,
           hints: [],
+          unsubscribeUrl: `https://hintdrop.app/unsubscribe?token=${owner.unsubscribe_token}`,
         })
 
         const resendRes = await fetch('https://api.resend.com/emails', {
