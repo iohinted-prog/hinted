@@ -153,6 +153,67 @@ export async function GET(request) {
       }
     }
 
+    // Generic recurring events
+    const genericEvents = [
+      { title: 'Christmas', month: 12, day: 25, type: 'Christmas', shopCta: true },
+      { title: "Valentine's Day", month: 2, day: 14, type: "Valentine's Day", shopCta: true },
+      { title: "Mother's Day", month: 3, day: 30, type: "Mother's Day", shopCta: true },
+      { title: "Father's Day", month: 6, day: 21, type: "Father's Day", shopCta: true },
+      { title: 'Halloween', month: 10, day: 31, type: 'Halloween', shopCta: true },
+    ]
+
+    // Get all users who have email reminders on
+    const { data: allUsers } = await supabase
+      .from('profiles')
+      .select('id, full_name, email_reminders, default_reminder_days')
+      .eq('email_reminders', true)
+
+    for (const event of genericEvents) {
+      const thisYear = today.getFullYear()
+      let eventDate = new Date(Date.UTC(thisYear, event.month - 1, event.day))
+      if (eventDate < today) eventDate = new Date(Date.UTC(thisYear + 1, event.month - 1, event.day))
+      const daysUntil = Math.round((eventDate - today) / (1000 * 60 * 60 * 24))
+
+      for (const owner of allUsers || []) {
+        const reminderDays = owner.default_reminder_days || 7
+        if (daysUntil !== reminderDays && daysUntil !== 14 && daysUntil !== 3) continue
+
+        const { data: authUser } = await supabase.auth.admin.getUserById(owner.id)
+        const ownerEmail = authUser?.user?.email
+        if (!ownerEmail) continue
+
+        const html = buildReminderEmail({
+          recipientName: owner.full_name || '',
+          contactName: event.title,
+          eventType: event.type,
+          eventDate: formatDate(eventDate.toISOString()),
+          daysUntil,
+          hints: [],
+        })
+
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'HintDrop <hello@hintdrop.app>',
+            to: ownerEmail,
+            subject: `${event.title} is in ${daysUntil} ${daysUntil === 1 ? 'day' : 'days'} 🎁`,
+            html,
+          }),
+        })
+
+        if (resendRes.ok) {
+          sent.push({ event: event.title, to: ownerEmail, daysUntil })
+        } else {
+          const err = await resendRes.json()
+          errors.push({ event: event.title, error: err })
+        }
+      }
+    }
+
     return NextResponse.json({ ok: true, sent, errors, total: sent.length })
   } catch (err) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
