@@ -2597,6 +2597,26 @@ export default function FeedClient() {
           </aside>
 
           <section className="min-w-0">
+            <div className="mb-4 flex flex-wrap gap-2">
+              {feedFilters.map((filter) => {
+                const selected = activeFilter === filter.key;
+                return (
+                  <button
+                    key={filter.key}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setActiveFilter(filter.key)}
+                    className={`rounded-full px-4 py-2 text-sm font-medium transition ${
+                      selected
+                        ? "bg-[#2f3b2d] text-white shadow-sm"
+                        : "border border-[#efe4dd] bg-white text-slate-600 hover:bg-[#faf7f5]"
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
             <div className="rounded-[32px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.1)] sm:p-5">
               <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
                 <div className="flex flex-wrap items-end justify-between gap-4 border-b border-slate-100 pb-5">
