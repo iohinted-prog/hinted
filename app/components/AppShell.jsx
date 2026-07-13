@@ -153,7 +153,6 @@ export default function AppShell({ children }) {
     { href: "/shop", label: "Shop" },
   ];
 
-  const supabase = createClient();
   const [inviteCount, setInviteCount] = useState(0);
   const [invites, setInvites] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
