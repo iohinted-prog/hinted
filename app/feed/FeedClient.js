@@ -2562,38 +2562,6 @@ export default function FeedClient() {
               </button>
             </section>
 
-            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Filters
-                </p>
-                <h1 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                  Activity
-                </h1>
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2">
-                {feedFilters.map((filter) => {
-                  const selected = activeFilter === filter.key;
-
-                  return (
-                    <button
-                      key={filter.key}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() => setActiveFilter(filter.key)}
-                      className={`rounded-[18px] px-4 py-3 text-left text-sm font-medium transition ${
-                        selected
-                          ? "bg-[#2f3b2d] text-white shadow-sm"
-                          : "border border-[#efe4dd] bg-[#fffdfa] text-slate-600 hover:bg-[#faf7f5]"
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
           </aside>
 
           <section className="min-w-0">
