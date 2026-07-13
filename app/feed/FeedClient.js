@@ -1426,7 +1426,7 @@ function MiniCalendar({
                       <button key={idx} type="button" onClick={() => { setSelectedDate(item.date); setIsCalendarModalOpen(true); }}
                         className={`min-h-[48px] rounded-[12px] border p-1.5 text-left transition ${selected ? "border-[#f2b39a] bg-[#fff2ea]" : isToday ? "border-[#f3c8b7] bg-[#fff8f4]" : "border-slate-100 bg-[#fffdfa] hover:border-[#efc8b6]"}`}>
                         <div className={`text-[12px] font-semibold ${selected ? "text-[#d96d4f]" : isToday ? "text-slate-900" : item.currentMonth ? "text-slate-700" : "text-slate-300"}`}>{item.day}</div>
-                        {dayEvents.length > 0 && <span className="mt-1 block h-1.5 w-1.5 rounded-full bg-[#e8926a]" />}
+                        {dayEvents.length > 0 && <span className={`mt-1 block h-1.5 w-1.5 rounded-full ${resolveEventStyle(dayEvents[0]).dot}`} />}
                       </button>
                     );
                   })}
