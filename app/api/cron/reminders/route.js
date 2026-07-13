@@ -1,4 +1,5 @@
-import { createClient } from '../../../../lib/supabase/server'
+import { createClient as createServerClient } from '../../../../lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 export const runtime = 'nodejs'
@@ -72,7 +73,10 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Unauthorized', secretSet: !!cronSecret }, { status: 401 })
   }
 
-  const supabase = await createClient()
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  )
   const today = new Date()
   const sent = []
   const errors = []
