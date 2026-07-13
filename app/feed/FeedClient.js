@@ -2464,64 +2464,6 @@ export default function FeedClient() {
 
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="space-y-5">
-                </p>
-                <h2 className="mt-1 text-base font-semibold text-slate-900">
-                  Invites waiting for you
-                </h2>
-              </div>
-
-              {invitesLoading ? (
-                <p className="mt-4 text-sm text-slate-500">Loading invites...</p>
-              ) : pendingInvites.length === 0 ? (
-                <div className="mt-4 rounded-[22px] border border-dashed border-[#ecd9cf] bg-[#fcf8f5] px-4 py-5">
-                  <p className="text-sm font-medium text-slate-700">No invites need a response right now.</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-500">
-                    When someone adds you to a circle, it will appear here.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-4 max-h-[400px] overflow-y-auto space-y-3 pr-1">
-                  {pendingInvites.map((invite) => (
-                    <InviteCard
-                      key={invite.id}
-                      invite={invite}
-                      inviteActionId={inviteActionId}
-                      onAccept={handleAcceptInvite}
-                      onDelete={(inv) => handleInviteDecision(inv, "revoked")}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {activeInvite ? (
-              <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                      Selected invite
-                    </p>
-                    <h3 className="mt-1 text-base font-semibold text-slate-900">
-                      {activeInvite.invite_name || activeInvite.invite_email || "Circle invite"}
-                    </h3>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveInvite(null)}
-                    className="rounded-full border border-[#ead7cd] bg-white px-3 py-1.5 text-sm font-semibold text-slate-700"
-                  >
-                    Close
-                  </button>
-                </div>
-
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
-                  <p>Email: {activeInvite.invite_email || "No email attached"}</p>
-                  <p>Status: {activeInvite.status}</p>
-                  <p>Circle ID: {activeInvite.circle_id}</p>
-                </div>
-              </section>
-            ) : null}
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Contacts</p>
