@@ -2464,10 +2464,6 @@ export default function FeedClient() {
 
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="space-y-5">
-            <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Pending invites
                 </p>
                 <h2 className="mt-1 text-base font-semibold text-slate-900">
                   Invites waiting for you
