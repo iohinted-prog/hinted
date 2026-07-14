@@ -1804,6 +1804,17 @@ function CreateCircleModal({
                 <option value="organiser_covers">Organiser covers gap</option>
               </select>
             </label>
+            <label className="block space-y-1.5">
+              <span className="text-sm font-medium text-slate-700">Joining window</span>
+              <p className="text-[12px] text-slate-400">How long invitees have to join before you decide what to do.</p>
+              <select value={form.joiningWindowDays} onChange={e => setForm(prev => ({ ...prev, joiningWindowDays: Number(e.target.value) }))}
+                className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]">
+                <option value={3}>3 days</option>
+                <option value={5}>5 days</option>
+                <option value={7}>7 days (recommended)</option>
+                <option value={14}>14 days</option>
+              </select>
+            </label>
           </div>
         )}
 
@@ -2245,6 +2256,7 @@ export default function CirclesClient() {
     goalValue: "",
     currency: "GBP",
     fundingMode: "flexible",
+    joiningWindowDays: 7,
     itemSource: "hint",
     selectedHintId: "",
     itemUrl: "",
@@ -2978,6 +2990,16 @@ export default function CirclesClient() {
       fee_mode: "per_contributor",
       payout_mode: "release_to_organiser",
       funding_mode: fundingModeToDb(form.fundingMode),
+      joining_window_days: form.joiningWindowDays || 7,
+      joining_deadline_at: (() => {
+        const d = new Date();
+        d.setDate(d.getDate() + (form.joiningWindowDays || 7));
+        return d.toISOString();
+      })(),
+      locked_share_amount: selectedPeople.length > 0
+        ? roundCurrencyUp((totals.itemAmount + totals.feeAmount) / (selectedPeople.length + 1))
+        : totals.itemAmount + totals.feeAmount,
+      joining_status: "open",
       status: "draft",
     };
 
@@ -3022,6 +3044,9 @@ export default function CirclesClient() {
             status: "pending",
             reminder_count: 0,
             invited_user_id: person.matchedProfileId || null,
+            locked_share_amount: selectedPeople.length > 0
+              ? roundCurrencyUp((totals.itemAmount + totals.feeAmount) / (selectedPeople.length + 1))
+              : totals.itemAmount + totals.feeAmount,
           };
         })
       );
