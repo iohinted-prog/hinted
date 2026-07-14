@@ -155,8 +155,10 @@ export default function AppShell({ children }) {
 
   const [inviteCount, setInviteCount] = useState(0);
   const [invites, setInvites] = useState([]);
+  const [circleNotifs, setCircleNotifs] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [inviteActionId, setInviteActionId] = useState(null);
+  const [notifActionId, setNotifActionId] = useState(null);
   const notifRef = useRef(null);
 
   const loadInviteCount = useCallback(async () => {
@@ -181,8 +183,17 @@ export default function AppShell({ children }) {
       profileMap = (profiles || []).reduce((acc, p) => { acc[p.id] = p; return acc; }, {});
     }
     const merged = all.map(i => ({ ...i, inviter: profileMap[i.source === "circle" ? i.user_id : i.inviter_user_id] || null }));
+    // Load circle notifications for organiser
+    const { data: cnData } = await supabase
+      .from("circle_notifications")
+      .select("*")
+      .eq("organiser_id", user.id)
+      .eq("acted_on", false)
+      .order("created_at", { ascending: false });
+    const cn = cnData || [];
+    setCircleNotifs(cn);
     setInvites(merged);
-    setInviteCount(merged.length);
+    setInviteCount(merged.length + cn.length);
   }, [supabase]);
 
   useEffect(() => { loadInviteCount(); }, [loadInviteCount]);
@@ -206,6 +217,19 @@ export default function AppShell({ children }) {
       await loadInviteCount();
     } finally {
       setInviteActionId(null);
+    }
+  }
+
+  async function handleCircleNotifAction(notif, action) {
+    setNotifActionId(notif.id);
+    try {
+      if (action === "cancel") {
+        await supabase.from("circles").update({ status: "cancelled" }).eq("id", notif.circle_id);
+      }
+      await supabase.from("circle_notifications").update({ acted_on: true }).eq("id", notif.id);
+      await loadInviteCount();
+    } finally {
+      setNotifActionId(null);
     }
   }
 
@@ -278,7 +302,25 @@ export default function AppShell({ children }) {
                     <h3 className="mt-0.5 text-[17px] font-semibold text-slate-900">Pending invites</h3>
                   </div>
                   <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
-                    {invites.length === 0 ? (
+                    {circleNotifs.map(notif => (
+                      <div key={notif.id} className="rounded-[18px] border border-[#fde0d0] bg-[#fff4f2] p-4">
+                        <p className="text-sm font-semibold text-slate-900 mb-1">Circle update</p>
+                        <p className="text-xs text-slate-500 mb-3">{notif.message}</p>
+                        <div className="flex gap-2">
+                          <button type="button" disabled={notifActionId === notif.id}
+                            onClick={() => handleCircleNotifAction(notif, "continue")}
+                            className="flex-1 h-8 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[11px] font-semibold text-white disabled:opacity-60">
+                            {notifActionId === notif.id ? "..." : "Keep going"}
+                          </button>
+                          <button type="button" disabled={notifActionId === notif.id}
+                            onClick={() => handleCircleNotifAction(notif, "cancel")}
+                            className="flex-1 h-8 rounded-full border border-[#efc0ba] bg-white text-[11px] font-semibold text-[#b14f43] disabled:opacity-60">
+                            Cancel circle
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                    {invites.length === 0 && circleNotifs.length === 0 ? (
                       <p className="text-sm text-slate-400 text-center py-4">No pending invites</p>
                     ) : invites.map(invite => (
                       <div key={invite.id} className={`rounded-[18px] border p-4 ${invite.source === "contact" ? "border-[#e6ddd7] bg-white" : "border-[#dce8d8] bg-[#f7fbf5]"}`}>

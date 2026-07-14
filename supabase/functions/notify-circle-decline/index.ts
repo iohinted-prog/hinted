@@ -70,6 +70,16 @@ Deno.serve(async (req) => {
 </body>
 </html>`
 
+    // Insert organiser notification
+    await supabase.from('circle_notifications').insert({
+      circle_id: circle.id,
+      organiser_id: circle.user_id,
+      type: 'invite_declined',
+      message: `${declinerName} declined their invite to ${circle.title}`,
+      metadata: { invite_id, decliner_name: declinerName, circle_title: circle.title },
+      acted_on: false,
+    })
+
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
