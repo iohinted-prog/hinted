@@ -148,7 +148,7 @@ export default function AppShell({ children }) {
 
   const navItems = [
     { href: "/feed", label: "Feed" },
-    { href: "/hints", label: "Hints", highlight: true },
+    { href: "/hints", label: "Hints" },
     { href: "/circles", label: "Circles" },
     { href: "/shop", label: "Shop" },
   ];
@@ -260,7 +260,7 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <nav className="hidden md:flex items-center gap-2 sm:gap-3">
+            <nav className="hidden md:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
