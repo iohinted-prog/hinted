@@ -15,7 +15,7 @@ function buildWelcomeEmail(name: string): string {
   <div style="max-width:520px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🎁</div>
         <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
       </div>
     </div>

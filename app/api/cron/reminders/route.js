@@ -18,7 +18,7 @@ function buildReminderEmail({ recipientName, contactName, eventType, eventDate, 
     <a href="${h.url || 'https://hintdrop.app'}" style="display:flex;align-items:center;gap:12px;background:#f7f2ee;border-radius:14px;border:1px solid #efe0d7;padding:12px 14px;text-decoration:none;margin-bottom:10px;">
       ${h.image_url
         ? `<img src="${h.image_url}" style="width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;" />`
-        : `<div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(160deg,#ffb899,#ff8f6b);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🎁</div>`}
+        : `<div style="width:44px;height:44px;border-radius:8px;background:linear-gradient(160deg,#ffb899,#ff8f6b);display:flex;align-items:center;justify-content:center;font-size:20px;line-height:1;flex-shrink:0;">🎁</div>`}
       <div>
         <p style="font-size:14px;font-weight:600;color:#2d2d2d;margin:0;">${h.title}</p>
         ${h.price_text ? `<p style="font-size:13px;color:#ff8060;font-weight:700;margin:3px 0 0;">${h.price_text}</p>` : ''}
@@ -33,7 +33,7 @@ function buildReminderEmail({ recipientName, contactName, eventType, eventDate, 
   <div style="max-width:520px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🎁</div>
         <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
       </div>
     </div>
@@ -75,7 +75,7 @@ function buildCircleReminderEmail({ recipientName, circleTitle, daysUntil, organ
   <div style="max-width:520px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🎁</div>
         <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
       </div>
     </div>
@@ -90,7 +90,7 @@ function buildCircleReminderEmail({ recipientName, circleTitle, daysUntil, organ
         ${itemTitle ? `
         <div style="background:#f7f2ee;border-radius:18px;border:1px solid #efe0d7;padding:20px 22px;margin-bottom:24px;">
           <div style="display:flex;align-items:center;gap:14px;">
-            <div style="width:52px;height:52px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🎁</div>
+            <div style="width:52px;height:52px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;line-height:1;flex-shrink:0;">🎁</div>
             <div>
               <p style="font-size:15px;font-weight:700;color:#2d2d2d;margin:0;">${itemTitle}</p>
               ${price ? `<p style="font-size:14px;font-weight:700;color:#ff8060;margin:4px 0 0;">${price}</p>` : ''}
@@ -124,7 +124,7 @@ function buildOrganizerSummaryEmail({ organiserName, circleTitle, daysUntil, unp
   <div style="max-width:520px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🎁</div>
         <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
       </div>
     </div>
@@ -491,7 +491,7 @@ export async function GET(request) {
   <div style="max-width:520px;margin:0 auto;">
     <div style="text-align:center;margin-bottom:28px;">
       <div style="display:inline-flex;align-items:center;gap:10px;">
-        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;">🎁</div>
+        <div style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:22px;line-height:1;">🎁</div>
         <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
       </div>
     </div>
