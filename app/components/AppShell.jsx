@@ -216,6 +216,7 @@ export default function AppShell({ children }) {
         await supabase.from("contact_invites").update({ status: "revoked" }).eq("id", invite.id);
       } else {
         await supabase.from("circle_invites").update({ status: "declined" }).eq("id", invite.id);
+        supabase.functions.invoke("notify-circle-decline", { body: { invite_id: invite.id } }).catch(() => {});
       }
       await loadInviteCount();
     } finally {
