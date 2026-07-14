@@ -1528,7 +1528,7 @@ function CreateCircleModal({
   function canNext() {
     if (step === 1) return eventMode === 'new' ? !!form.eventDate : !!selectedEventId;
     if (step === 2) return !!form.title?.trim() && !!form.deadline;
-    if (step === 3) return parseAmount(form.goalValue) >= 10;
+    if (step === 3) return parseAmount(form.goalValue) >= 1;
     if (step === 4) return true;
     return true;
   }
@@ -1711,9 +1711,9 @@ function CreateCircleModal({
               </div>
             )}
 
-            {liveBaseAmount > 0 && liveBaseAmount < 10 && (
+            {liveBaseAmount > 0 && liveBaseAmount < 1 && (
               <div className="rounded-[18px] border border-[#fde8b0] bg-[#fff8ee] px-4 py-3 text-sm text-[#b07a30]">
-                Minimum item price is £10. HintDrop charges £1.50 + 2% to cover payment processing and platform costs.
+                Please enter an item price of at least £1.
               </div>
             )}
             {liveBaseAmount > 0 && liveBaseAmount >= 10 && (
