@@ -664,9 +664,7 @@ export default function ShopPage() {
                 </h1>
 
                 <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
-                  This shop is curated around onboarding interests and common occasions, so it feels
-                  more like gift planning than a marketplace. When you find something right, send it
-                  off-site to the retailer or add it straight into your hints for later.
+                  Curated around the people and occasions that matter most. When you find something right, open it on the retailer's site or save it straight to your hints for later.
                 </p>
 
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
