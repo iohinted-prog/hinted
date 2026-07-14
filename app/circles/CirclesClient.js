@@ -478,7 +478,7 @@ function buildContributionMap(rows = []) {
     }
 
     const amount = Number(row.amount || 0);
-    const isPaid = String(row.payment_status || "").toLowerCase() === "paid";
+    const isPaid = ["paid", "confirmed"].includes(String(row.payment_status || "").toLowerCase());
 
     if (isPaid) {
       acc[circleId].raised = roundCurrency(acc[circleId].raised + amount);
@@ -1084,11 +1084,11 @@ function CircleCard({
                     <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${member.contributed ? "bg-[#edf6eb] text-[#4a7a3a]" : isAccepted ? "bg-[#eef4ff] text-[#5676b3]" : isInvitee ? "bg-[#fff3ee] text-[#d57a58]" : "bg-[#f3f4f6] text-slate-500"}`}>
                       {member.contributed ? "Paid" : isAccepted ? "Joined" : isInvitee ? "Invited" : "Pending"}
                     </span>
-                    {circle?.raw?.user_id === sessionUser?.id && isAccepted && !member.contributed && member.userId && (
+                    {circle?.raw?.user_id === sessionUser?.id && isAccepted && member.userId && (
                       <button type="button"
                         onClick={e => { e.stopPropagation(); onMarkPaid && onMarkPaid(circle, member); }}
-                        className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#f7fbf5] border border-[#c5dfc0] text-[#4a7a3a] hover:bg-[#edf6eb] transition">
-                        Mark paid
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full border transition ${member.contributed ? "bg-[#edf6eb] border-[#c5dfc0] text-[#4a7a3a] hover:bg-[#ffeeed] hover:border-[#f0a0a0] hover:text-[#b14f43]" : "bg-[#fff4f2] border-[#f0a0a0] text-[#b14f43] hover:bg-[#edf6eb] hover:border-[#c5dfc0] hover:text-[#4a7a3a]"}`}>
+                        {member.contributed ? "✓ Paid" : "Not paid"}
                       </button>
                     )}
                   </div>
@@ -2482,12 +2482,13 @@ export default function CirclesClient() {
   async function handleMarkPaid(circle, member) {
     if (!sessionUser?.id || !member.userId) return;
     try {
+      const newStatus = member.contributed ? 'pending_payment' : 'confirmed';
       await supabase.from('circle_contributions').upsert({
         circle_id: circle.id,
         user_id: member.userId,
         amount: 0,
         currency: circle?.pot?.currency || 'GBP',
-        payment_status: 'confirmed',
+        payment_status: newStatus,
       }, { onConflict: 'circle_id,user_id' });
       await refreshCircles();
     } catch (e) {
