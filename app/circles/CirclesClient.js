@@ -3237,7 +3237,7 @@ export default function CirclesClient() {
     }
 
     const contactsWithoutEmail = selectedPeople.filter(
-      (person) => !String(person.email || "").trim() || !isValidEmail(person.email)
+      (person) => !person.matchedProfileId && (!String(person.email || "").trim() || !isValidEmail(person.email))
     );
 
     if (contactsWithoutEmail.length > 0) {
