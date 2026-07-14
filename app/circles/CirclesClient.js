@@ -2781,17 +2781,8 @@ export default function CirclesClient() {
       total_target_amount: totals.totalAmount,
       fee_mode: "free",
       payout_mode: "release_to_organiser",
-      funding_mode: fundingModeToDb(form.fundingMode),
-      joining_window_days: form.joiningWindowDays || 7,
-      joining_deadline_at: (() => {
-        const d = new Date();
-        d.setDate(d.getDate() + (form.joiningWindowDays || 7));
-        return d.toISOString();
-      })(),
-      locked_share_amount: selectedPeople.length > 0
-        ? roundCurrencyUp((totals.itemAmount + totals.feeAmount) / (selectedPeople.length + 1))
-        : totals.itemAmount + totals.feeAmount,
-      joining_status: "open",
+      funding_mode: "flexible",
+
       status: "draft",
     };
 
@@ -2836,9 +2827,7 @@ export default function CirclesClient() {
             status: "pending",
             reminder_count: 0,
             invited_user_id: person.matchedProfileId || null,
-            locked_share_amount: selectedPeople.length > 0
-              ? roundCurrencyUp((totals.itemAmount + totals.feeAmount) / (selectedPeople.length + 1))
-              : totals.itemAmount + totals.feeAmount,
+
           };
         })
       );
@@ -2968,7 +2957,7 @@ export default function CirclesClient() {
                     <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
                       Create a circle around an event, invite people, choose a hint or paste a product link, and keep the pot warm and flexible.
                     </p>
-                    <PotTypeSummary />
+
                   </div>
 
                   <button
