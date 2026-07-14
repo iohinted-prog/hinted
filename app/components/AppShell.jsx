@@ -272,6 +272,8 @@ export default function AppShell({ children }) {
                     className={
                       isActive
                         ? "inline-flex h-11 items-center justify-center rounded-full border border-[#ffb38f] bg-[#ff875d] px-4 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#f47145] sm:px-5"
+                        : item.highlight
+                        ? "inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-[14px] font-semibold text-white shadow-sm transition sm:px-5"
                         : "inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 transition hover:bg-[#fff5f0] sm:px-5"
                     }
                   >
