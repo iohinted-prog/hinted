@@ -1,12 +1,6 @@
 "use client";
 import ContactCard from "../components/ContactCard";
-import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  PaymentElement,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
+
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -19,7 +13,6 @@ import ContactsManagerModal from "../components/ContactsManagerModal";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 const SELF_SELECTOR_ID = "__self__";
 
 const currencyOptions = [
@@ -1167,12 +1160,11 @@ function CircleCard({
                     <>
                       <p className="mt-4 text-2xl font-bold text-slate-900">{formatCurrency(perPerson, potCurrency)}</p>
                       <p className="text-sm text-slate-500">per person · {acceptedCount} {acceptedCount === 1 ? "contributor" : "contributors"}</p>
-                      <p className="text-[11px] text-slate-400 mt-1">inc. HintDrop fee · payment arranged directly</p>
+                      <p className="text-[11px] text-slate-400 mt-1">payment arranged directly between members</p>
                     </>
                   );
                 })()}
                 <div className="mt-3 flex flex-wrap justify-center gap-2">
-                  <span className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">{circle?.pot?.fundingMode}</span>
                   <span className="rounded-full bg-[#edf3ff] px-3 py-1 text-[11px] font-semibold text-slate-600">{potCurrency}</span>
                 </div>
                 {showItemPreview && (
@@ -1620,26 +1612,7 @@ function CreateCircleModal({
                 onChange={e => setForm(prev => ({ ...prev, deadline: e.target.value }))}
                 className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]" />
             </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">If people do not contribute enough</span>
-              <select value={form.fundingMode} onChange={e => setForm(prev => ({ ...prev, fundingMode: e.target.value }))}
-                className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]">
-                <option value="flexible">Flexible pot — release what was raised</option>
-                <option value="all_or_nothing">All-or-nothing — refund everyone</option>
-                <option value="organiser_covers">Organiser covers gap</option>
-              </select>
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-sm font-medium text-slate-700">Joining window</span>
-              <p className="text-[12px] text-slate-400">How long invitees have to join before you decide what to do.</p>
-              <select value={form.joiningWindowDays} onChange={e => setForm(prev => ({ ...prev, joiningWindowDays: Number(e.target.value) }))}
-                className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]">
-                <option value={3}>3 days</option>
-                <option value={5}>5 days</option>
-                <option value={7}>7 days (recommended)</option>
-                <option value={14}>14 days</option>
-              </select>
-            </label>
+
           </div>
         )}
 
@@ -1732,8 +1705,7 @@ function CreateCircleModal({
             {liveBaseAmount > 0 && liveBaseAmount >= 10 && (
               <div className="rounded-[18px] bg-[#fff4ee] p-4 space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-slate-600">Item price</span><span className="font-bold text-slate-900">{formatCurrency(liveBaseAmount, form.currency || 'GBP')}</span></div>
-                <div className="flex justify-between text-[12px] text-slate-500"><span>HintDrop fee (£1.50 + 2%)</span><span>{formatCurrency(liveTotals.platformFeeAmount, form.currency || 'GBP')}</span></div>
-                <div className="flex justify-between text-[12px] text-slate-400 border-t border-[#f0dfd6] pt-1.5"><span>Stripe fee added per contributor at payment</span><span>~1.5% + 20p</span></div>
+
               </div>
             )}
           </div>
@@ -1794,16 +1766,11 @@ function CreateCircleModal({
               <div className="flex justify-between text-sm"><span className="text-slate-500">Item price</span><span className="font-semibold text-slate-900">{formatCurrency(liveBaseAmount, form.currency || 'GBP')}</span></div>
               <div className="flex justify-between text-sm"><span className="text-slate-500">Funding</span><span className="font-semibold text-slate-900">{fundingModeToLabel(form.fundingMode)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-slate-500">People</span><span className="font-semibold text-slate-900">{selectedPeople.length > 0 ? selectedPeople.map(p => p.name).join(', ') : 'Just you'}</span></div>
-              {liveBaseAmount > 0 && (
-                <>
-                  <div className="flex justify-between text-[12px] text-slate-400"><span>HintDrop fee</span><span>{formatCurrency(liveTotals.platformFeeAmount, form.currency || 'GBP')}</span></div>
-                  {totalPeopleCount > 0 && (
-                    <div className="flex justify-between text-sm font-semibold border-t border-[#f0dfd6] pt-2 mt-1">
-                      <span className="text-slate-700">Est. per person</span>
-                      <span className="text-[#df7b59]">{formatCurrency(roundCurrencyUp((liveBaseAmount + liveTotals.platformFeeAmount) / totalPeopleCount), form.currency || 'GBP')} + Stripe fee</span>
-                    </div>
-                  )}
-                </>
+              {liveBaseAmount > 0 && totalPeopleCount > 0 && (
+                <div className="flex justify-between text-sm font-semibold border-t border-[#f0dfd6] pt-2 mt-1">
+                  <span className="text-slate-700">Suggested per person</span>
+                  <span className="text-[#df7b59]">{formatCurrency(roundCurrencyUp(liveBaseAmount / totalPeopleCount), form.currency || 'GBP')}</span>
+                </div>
               )}
             </div>
             {errorMessage && <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">{errorMessage}</div>}
