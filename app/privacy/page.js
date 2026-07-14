@@ -182,10 +182,7 @@ export default function PrivacyPage() {
                 HintDrop offers a group gifting feature called Circles, which allows users to pool contributions toward a shared gift. When you participate in a circle as an organiser or contributor, certain information is shared with other circle members, including your name, profile, and contribution status. Contribution amounts may be visible to the circle organiser.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
-                Payments made through circles are processed by Stripe, Inc., a third-party payment processor. When you make a contribution, your payment information is handled directly by Stripe and is subject to Stripe&apos;s own privacy policy and terms of service. HintDrop does not store your full payment card details.
-              </p>
-              <p className="text-[17px] leading-8 text-slate-700">
-                We retain transaction records, contribution amounts, and related circle data for legal, financial, and operational purposes, including dispute resolution and fraud prevention, for as long as required by applicable law.
+                HintDrop does not process or store payment information for circles. Contributions are arranged directly between members outside of the platform. We retain circle data, pledge amounts, and contribution records for operational purposes and to help members track their commitments.
               </p>
             </section>
 

@@ -93,9 +93,6 @@ export default function AvatarMenu() {
           <Link href="/account" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
             Account
           </Link>
-          <Link href="/billing" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
-            Billing
-          </Link>
           <Link href="/settings" className="block rounded-lg px-3 py-2 hover:bg-neutral-100">
             Settings
           </Link>

@@ -155,12 +155,10 @@ export default function TermsPage() {
                   - <strong>Platform fee.</strong> The circle target amount already includes any applicable payment processing costs and HintDrop platform fee. The fee breakdown is shown when creating a circle.
                 </li>
                 <li>
-                  - <strong>Payments via Stripe.</strong> All contributions are processed by Stripe, Inc. By contributing to a circle, you agree to{" "}
-                  <a href="https://stripe.com/gb/legal/ssa" className="font-medium text-slate-900 underline decoration-[#d8b3a3] underline-offset-4">Stripe&apos;s terms of service</a>.
-                  HintDrop does not store your full payment card details.
+                  - <strong>Payments.</strong> HintDrop does not process payments for circles. Contributions are arranged directly between members outside of the platform. HintDrop is not responsible for any payment disputes between members.
                 </li>
                 <li>
-                  - <strong>Refunds.</strong> For All-or-nothing circles where the target is not met by the deadline, contributions will be refunded to the original payment method. For Flexible and Organiser covers gap circles, contributions are non-refundable once the target is reached and funds have been released to the organiser. Refunds outside of these circumstances are at our discretion and subject to applicable law.
+                  - <strong>Refunds.</strong> Since payments are arranged directly between members, HintDrop is not responsible for issuing refunds. Any refund disputes should be resolved between the organiser and contributors directly.
                 </li>
                 <li>
                   - <strong>Disputes between members.</strong> HintDrop is a platform and is not responsible for disputes between circle members or between members and organisers. We encourage users to only participate in circles with people they trust.
