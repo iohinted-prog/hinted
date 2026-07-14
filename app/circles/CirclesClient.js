@@ -3324,73 +3324,63 @@ export default function CirclesClient() {
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-
       const inviteRows = await Promise.all(
-  selectedPeople.map(async (person) => {
-    const rawEmail = String(person.email || "").trim();
-    const normalizedEmail = rawEmail.toLowerCase();
-    const inviteToken = crypto.randomUUID();
-    const inviteTokenHash = await sha256Hex(inviteToken);
-
-    return {
-      circle_id: insertedCircle.id,
-      user_id: sessionUser.id,
-      contact_id: person.id || null,
-      invite_name: person.name || null,
-      invite_email: rawEmail,
-      invite_email_normalized: normalizedEmail,
-      invite_token: inviteToken,
-      invite_token_hash: inviteTokenHash,
-      status: "pending",
-      reminder_count: 0,
-      invited_user_id: person.matchedProfileId || null,
-    };
-  })
-);
-
-      let insertedInvites = [];
-      if (inviteRows.length > 0) {
-  const { data: inviteData, error: inviteError } = await supabase
-    .from("circle_invites")
-    .insert(inviteRows)
-    .select("*");
-
-  if (inviteError) {
-    throw new Error(
-      normalizeSupabaseError(inviteError, "Circle created but invite insert failed.")
-    );
-  }
-
-  insertedInvites = inviteData || [];
-
-  // Send invite emails via Edge Function
-  await Promise.all(
-    selectedPeople.map(async (person) => {
-      try {
-        await supabase.functions.invoke('send-circle-invite', {
-          body: {
+        selectedPeople.map(async (person) => {
+          const rawEmail = String(person.email || "").trim();
+          const normalizedEmail = rawEmail.toLowerCase();
+          const inviteToken = crypto.randomUUID();
+          const inviteTokenHash = await sha256Hex(inviteToken);
+          return {
             circle_id: insertedCircle.id,
-            email: person.email || null,
-            name: person.name || null,
-            target_user_id: person.matchedProfileId || null,
-          },
-        });
-      } catch (e) {
-        console.error('Circle invite email failed for', person.name, e);
+            user_id: sessionUser.id,
+            contact_id: person.id || null,
+            invite_name: person.name || null,
+            invite_email: rawEmail,
+            invite_email_normalized: normalizedEmail,
+            invite_token: inviteToken,
+            invite_token_hash: inviteTokenHash,
+            status: "pending",
+            reminder_count: 0,
+            invited_user_id: person.matchedProfileId || null,
+          };
+        })
+      );
+
+      if (inviteRows.length > 0) {
+        const { data: inviteData, error: inviteError } = await supabase
+          .from("circle_invites")
+          .insert(inviteRows)
+          .select("*");
+        if (inviteError) {
+          throw new Error(normalizeSupabaseError(inviteError, "Circle created but invite insert failed."));
+        }
+        await Promise.all(
+          selectedPeople.map(async (person) => {
+            try {
+              await supabase.functions.invoke("send-circle-invite", {
+                body: {
+                  circle_id: insertedCircle.id,
+                  email: person.email || null,
+                  name: person.name || null,
+                  target_user_id: person.matchedProfileId || null,
+                },
+              });
+            } catch (e) {
+              console.error("Circle invite email failed for", person.name, e);
+            }
+          })
+        );
       }
-    })
-  );
-}
+
       const currentUserName =
         getGoogleName(profile || {}) ||
         profile?.full_name ||
         profile?.invite_name ||
         "You";
-
       await refreshCircles();
       setCircleSuccess("Circle created successfully.");
       setIsCreateOpen(false);
-      initialiseCircleForm(profile, mergedCalendarEvents);
+            initialiseCircleForm(profile, mergedCalendarEvents);
     } catch (error) {
       setCircleError(error?.message || "Failed to create circle.");
     } finally {
