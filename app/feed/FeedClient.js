@@ -2523,7 +2523,7 @@ export default function FeedClient() {
           </aside>
 
           <section className={`min-w-0 ${mobileTab !== "home" ? "hidden xl:block" : ""}`}>
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-4 hidden md:flex flex-wrap gap-2">
               {feedFilters.map((filter) => {
                 const selected = activeFilter === filter.key;
                 return (
