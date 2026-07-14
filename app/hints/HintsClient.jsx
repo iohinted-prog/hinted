@@ -1283,9 +1283,14 @@ export default function HintsClient() {
   async function persistOrder(nextHints) {
     if (!currentUser) return;
     const supabase = createClient();
-
-    await Promise.all(
-      nextHints.map((hint, index) => supabase.from("hints").update({ position: index }).eq("id", hint.id))
+    // Single upsert instead of N individual updates
+    await supabase.from("hints").upsert(
+      nextHints.map((hint, index) => ({
+        id: hint.id,
+        user_id: currentUser.id,
+        position: index,
+      })),
+      { onConflict: "id" }
     );
   }
 
