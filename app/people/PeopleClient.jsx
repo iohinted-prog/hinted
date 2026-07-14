@@ -3,16 +3,35 @@ import { useEffect, useState } from "react";
 import { createClient } from "../../lib/supabase/client";
 import AddContactModal from "../components/AddContactModal";
 import EditContactModal from "../components/EditContactModal";
+import ContactCard from "../components/ContactCard";
 
 function getInitials(name) {
   return String(name || "").trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || "").join("");
 }
 
-function getColors(role) {
+function getRelationshipGradient(role) {
   const r = String(role || "").toLowerCase();
   if (r === "partner" || r === "spouse") return "from-[#e8b9a7] to-[#bf755f]";
+  if (r.includes("family") || r.includes("parent") || r.includes("child") || r.includes("sibling")) return "from-[#eac8b8] to-[#9d6957]";
   if (r === "colleague") return "from-[#b7c8db] to-[#6b88a7]";
   return "from-[#efcdbf] to-[#bb8168]";
+}
+
+function buildContact(row) {
+  const role = row?.role || "Friend";
+  return {
+    id: row.contact_id || row.id,
+    name: row.name || row.email || "Unnamed",
+    role,
+    initials: getInitials(row.name || row.email || ""),
+    colors: getRelationshipGradient(role),
+    email: row.email || "",
+    birthday: row.birthday || "",
+    avatarUrl: row.avatar_url || null,
+    matchedProfileId: row.profile_id || row.matched_profile_id || null,
+    status: row.public_state || row.status || "contact",
+    raw: row,
+  };
 }
 
 export default function PeopleClient() {
@@ -22,21 +41,30 @@ export default function PeopleClient() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [addKey, setAddKey] = useState(0);
   const [editingContact, setEditingContact] = useState(null);
+  const [profileModal, setProfileModal] = useState(null);
   const [search, setSearch] = useState("");
+  const [sessionUser, setSessionUser] = useState(null);
 
   async function loadContacts() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
+    setSessionUser(user);
     const { data } = await supabase
       .from("contact_public_state")
       .select("*")
       .eq("owner_user_id", user.id)
       .order("name", { ascending: true });
-    setContacts(data || []);
+    setContacts((data || []).map(buildContact));
     setLoading(false);
   }
 
   useEffect(() => { loadContacts(); }, []);
+
+  async function handleDelete(contact) {
+    if (!confirm(`Delete ${contact.name}?`)) return;
+    await supabase.from("contacts").delete().eq("id", contact.id);
+    await loadContacts();
+  }
 
   const filtered = contacts.filter(c =>
     !search || c.name?.toLowerCase().includes(search.toLowerCase())
@@ -67,25 +95,15 @@ export default function PeopleClient() {
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map(contact => {
-              const initials = getInitials(contact.name);
-              const colors = getColors(contact.role);
-              return (
-                <div key={contact.id} className="flex items-center gap-3 rounded-[18px] border border-[#f0dfd6] bg-white p-3">
-                  {contact.avatar_url
-                    ? <img src={contact.avatar_url} className="h-12 w-12 rounded-full object-cover shrink-0" alt="" />
-                    : <div className={"flex items-center justify-center rounded-full h-12 w-12 bg-gradient-to-b font-bold text-white text-[13px] shrink-0 " + colors}>{initials}</div>}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{contact.name}</p>
-                    <p className="text-[12px] text-slate-400">{contact.role || "Contact"}{contact.email ? " · " + contact.email : ""}</p>
-                  </div>
-                  <button type="button" onClick={() => setEditingContact(contact)}
-                    className="h-8 w-8 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400 hover:bg-[#fff5f0] shrink-0 text-sm">
-                    ✎
-                  </button>
-                </div>
-              );
-            })}
+            {filtered.map(contact => (
+              <ContactCard
+                key={contact.id}
+                contact={contact}
+                onOpenProfile={setProfileModal}
+                onDeleteClick={handleDelete}
+                onEditClick={setEditingContact}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -94,6 +112,17 @@ export default function PeopleClient() {
       {editingContact && (
         <EditContactModal contact={editingContact} onClose={() => setEditingContact(null)}
           onSave={async () => { await loadContacts(); setEditingContact(null); }} />
+      )}
+      {profileModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(33,24,20,0.42)] backdrop-blur-sm" onClick={() => setProfileModal(null)}>
+          <div className="w-full max-w-[640px] rounded-t-[32px] border border-[#efdcd2] bg-white shadow-xl overflow-hidden max-h-[85dvh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f2e5de]">
+              <p className="text-[17px] font-semibold text-slate-900">{profileModal.name}</p>
+              <button type="button" onClick={() => setProfileModal(null)} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400">✕</button>
+            </div>
+            <p className="text-sm text-slate-400 text-center py-8">Hints visible when viewing their profile in the app</p>
+          </div>
+        </div>
       )}
     </main>
   );
