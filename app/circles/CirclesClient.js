@@ -1895,8 +1895,9 @@ function CreateCircleModal({
             )}
             {liveBaseAmount > 0 && liveBaseAmount >= 10 && (
               <div className="rounded-[18px] bg-[#fff4ee] p-4 space-y-2">
-                <div className="flex justify-between text-sm"><span className="text-slate-600">Total target</span><span className="font-bold text-slate-900">{formatCurrency(liveTotals.totalAmount, form.currency || 'GBP')}</span></div>
-  
+                <div className="flex justify-between text-sm"><span className="text-slate-600">Item price</span><span className="font-bold text-slate-900">{formatCurrency(liveBaseAmount, form.currency || 'GBP')}</span></div>
+                <div className="flex justify-between text-[12px] text-slate-500"><span>HintDrop fee (£1.50 + 2%)</span><span>{formatCurrency(liveTotals.platformFeeAmount, form.currency || 'GBP')}</span></div>
+                <div className="flex justify-between text-[12px] text-slate-400 border-t border-[#f0dfd6] pt-1.5"><span>Stripe fee added per contributor at payment</span><span>~1.5% + 20p</span></div>
               </div>
             )}
           </div>
