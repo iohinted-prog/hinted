@@ -334,15 +334,25 @@ export async function GET(request) {
         .maybeSingle()
       const organiserName = organiser?.full_name || 'the organiser'
 
-      // Find unpaid invites
+      // Find members who have accepted but not been confirmed as paid by organiser
       const { data: invites } = await supabase
         .from('circle_invites')
-        .select('id, invite_email, invite_name, invited_user_id, paid_at, status')
+        .select('id, invite_email, invite_name, invited_user_id, status, reminder_count, last_reminded_at')
         .eq('circle_id', circle.id)
         .eq('status', 'accepted')
-        .is('paid_at', null)
 
-      const unpaidInvites = invites || []
+      // Check contributions for who has pledged
+      const { data: contributions } = await supabase
+        .from('circle_contributions')
+        .select('user_id, payment_status')
+        .eq('circle_id', circle.id)
+        .eq('payment_status', 'confirmed')
+
+      const confirmedUserIds = new Set((contributions || []).map(c => c.user_id))
+
+      const unpaidInvites = (invites || []).filter(invite =>
+        !invite.invited_user_id || !confirmedUserIds.has(invite.invited_user_id)
+      )
 
       for (const invite of unpaidInvites) {
         try {
@@ -385,7 +395,7 @@ export async function GET(request) {
             body: JSON.stringify({
               from: 'HintDrop <hello@hintdrop.app>',
               to: recipientEmail,
-              subject: `Reminder: ${circle.title} circle closes in ${daysUntil} ${daysUntil === 1 ? 'day' : 'days'}`,
+              subject: `${circle.title} closes in ${daysUntil} ${daysUntil === 1 ? 'day' : 'days'} — don't forget your share`,
               html,
             }),
           })
@@ -433,7 +443,7 @@ export async function GET(request) {
               body: JSON.stringify({
                 from: 'HintDrop <hello@hintdrop.app>',
                 to: organiserEmail,
-                subject: `${unpaidInvites.length} ${unpaidInvites.length === 1 ? 'person hasn\'t' : 'people haven\'t'} contributed to ${circle.title} yet`,
+                subject: `${unpaidInvites.length} ${unpaidInvites.length === 1 ? 'person hasn\'t' : 'people haven\'t'} confirmed payment for ${circle.title} yet`,
                 html,
               }),
             })
