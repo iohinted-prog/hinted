@@ -3434,28 +3434,19 @@ if (inviteRows.length > 0) {
             <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
               <aside className="space-y-4">
                 <div className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Contacts</p>
-                    <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="inline-flex h-8 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-[11px] font-semibold text-white shadow-sm">View contacts</button>
-                  </div>
-                  <h1 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-slate-900">People you can add</h1>
-                  <p className="mt-2 text-[14px] leading-7 text-slate-600">
-                    Invite people into shared circles, then track who has joined and who is still pending.
-                  </p>
-
-                  <div className="mt-5 max-h-[400px] overflow-y-auto space-y-3 pr-1">
+                  <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900 hover:text-[#df7b59] transition">Contacts</button>
+                  <p className="mt-1 text-xs text-slate-500">Invite people into shared circles.</p>
+                  <div className="mt-4 max-h-[400px] overflow-y-auto space-y-3 pr-1">
                     {isLoadingContacts ? (
                       <div className="rounded-[22px] border border-dashed border-[#e5d8cf] bg-[#fffaf7] p-4 text-[13px] leading-6 text-slate-500">
                         Loading contacts...
                       </div>
                     ) : contacts.length ? (
-                      contacts.slice(0, 5).map((contact) => (
+                      contacts.slice(0, 10).map((contact) => (
                         <ContactCard
                           key={contact.id}
                           contact={contact}
-                          onDeleteClick={openDeleteContactModal}
                           onOpenProfile={setProfileModal}
-                          onEditClick={openEditContactModal}
                         />
                       ))
                     ) : (
@@ -3464,14 +3455,16 @@ if (inviteRows.length > 0) {
                       </div>
                     )}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={openAddContactModal}
-                    className="mt-5 inline-flex h-11 w-full items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg"
-                  >
-                    Add new contact
-                  </button>
+                  <div className="mt-4 flex gap-2">
+                    <button type="button" onClick={openAddContactModal}
+                      className="flex-1 h-10 inline-flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-sm font-semibold text-white shadow-lg">
+                      Add contact
+                    </button>
+                    <button type="button" onClick={() => setIsContactsManagerOpen(true)}
+                      className="flex-1 h-10 inline-flex items-center justify-center rounded-full border border-[#f0a384] bg-white px-4 text-sm font-semibold text-[#df7b59] hover:bg-[#fff4ee]">
+                      View all
+                    </button>
+                  </div>
                 </div>
 
                 <PotTypeGuide />
