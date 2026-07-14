@@ -235,7 +235,7 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <nav className="flex items-center gap-2 sm:gap-3">
+            <nav className="hidden md:flex items-center gap-2 sm:gap-3">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -406,6 +406,37 @@ export default function AppShell({ children }) {
           </div>
         </div>
       </footer>
+
+      {/* Mobile bottom tab bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur-sm px-2 pb-2">
+        <a href="/feed" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/feed" ? "text-[#ff875d]" : "text-slate-400"}`}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span className="text-[10px] font-semibold">Feed</span>
+        </a>
+        <a href="/circles" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/circles" ? "text-[#ff875d]" : "text-slate-400"}`}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/></svg>
+          <span className="text-[10px] font-semibold">Circles</span>
+        </a>
+        <a href="/hints" className="flex flex-col items-center gap-0.5 px-2 -mt-3">
+          <div className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] shadow-lg shadow-[#ff7e54]/40 ${pathname === "/hints" ? "ring-2 ring-[#ff875d] ring-offset-2" : ""}`}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          </div>
+          <span className={`text-[10px] font-semibold mt-0.5 ${pathname === "/hints" ? "text-[#ff875d]" : "text-slate-400"}`}>Hints</span>
+        </a>
+        <a href="/shop" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/shop" ? "text-[#ff875d]" : "text-slate-400"}`}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          <span className="text-[10px] font-semibold">Shop</span>
+        </a>
+        <a href="/account" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/account" ? "text-[#ff875d]" : "text-slate-400"}`}>
+          {avatarUrl ? (
+            <img src={avatarUrl} className="h-6 w-6 rounded-full object-cover" alt="" />
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          )}
+          <span className="text-[10px] font-semibold">Profile</span>
+        </a>
+      </nav>
+      <div className="h-20 md:hidden" />
     </div>
   );
 }
