@@ -3387,7 +3387,8 @@ export default function CirclesClient() {
         await Promise.all(
           selectedPeople.map(async (person) => {
             try {
-              await supabase.functions.invoke("send-circle-invite", {
+              console.log("Invoking send-circle-invite for", person.name, "email:", person.email, "profileId:", person.matchedProfileId);
+              const { data: inviteEmailData, error: inviteEmailError } = await supabase.functions.invoke("send-circle-invite", {
                 body: {
                   circle_id: insertedCircle.id,
                   email: person.email || null,
@@ -3395,6 +3396,7 @@ export default function CirclesClient() {
                   target_user_id: person.matchedProfileId || null,
                 },
               });
+              console.log("send-circle-invite result:", inviteEmailData, inviteEmailError);
             } catch (e) {
               console.error("Circle invite email failed for", person.name, e);
             }
