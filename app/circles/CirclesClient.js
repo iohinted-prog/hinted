@@ -240,16 +240,14 @@ function relationshipLabelFromArray(relationshipTypes) {
 
 function calculateFeeBreakdown(baseAmount) {
   const safeBaseAmountMinor = toMinorUnits(baseAmount);
-  const stripeFeeMinor = Math.ceil(safeBaseAmountMinor * ESTIMATED_STRIPE_FEE_RATE);
-  const platformFeeMinor = Math.ceil(safeBaseAmountMinor * HINTED_PLATFORM_FEE_RATE) + toMinorUnits(HINTED_PLATFORM_FIXED_FEE);
-  const totalFeeMinor = stripeFeeMinor + platformFeeMinor;
-  const totalAmountMinor = safeBaseAmountMinor + totalFeeMinor;
-
+  // HintDrop fee: £1.50 + 2% of item price
+  const platformFeeMinor = Math.ceil(safeBaseAmountMinor * 0.02) + toMinorUnits(1.50);
+  const totalAmountMinor = safeBaseAmountMinor + platformFeeMinor;
   return {
     itemAmount: fromMinorUnits(safeBaseAmountMinor),
-    stripeFeeAmount: fromMinorUnits(stripeFeeMinor),
+    stripeFeeAmount: 0,
     platformFeeAmount: fromMinorUnits(platformFeeMinor),
-    feeAmount: fromMinorUnits(totalFeeMinor),
+    feeAmount: fromMinorUnits(platformFeeMinor),
     totalAmount: fromMinorUnits(totalAmountMinor),
   };
 }
