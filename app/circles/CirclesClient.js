@@ -951,6 +951,36 @@ function PotTypeGuide() {
   );
 }
 
+function PotTypeSummary() {
+  const [open, setOpen] = useState(false);
+  const types = [
+    { label: "Flexible pot", color: "bg-[#edf6eb] text-[#4a7a3a]", text: "Anyone can contribute what they want. Funds release when the target is reached." },
+    { label: "All-or-nothing", color: "bg-[#fff3ee] text-[#d57a58]", text: "Only goes ahead if the full target is met by the deadline. Otherwise everyone is refunded." },
+    { label: "Organiser covers gap", color: "bg-[#eef4ff] text-[#5676b3]", text: "The organiser tops up any shortfall. The gift happens regardless." },
+  ];
+  return (
+    <div className="mt-4">
+      <button type="button" onClick={() => setOpen(p => !p)}
+        className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#df7b59] hover:text-[#b14f43] transition">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full border border-[#f0a384] text-[11px]">?</span>
+        How do pot types work?
+        <span className="text-[10px]">{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-3 rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] p-4 space-y-3">
+          <p className="text-[12px] text-slate-500">When a pot reaches its target, the organiser receives the funds to make the purchase. The target already includes our platform fee.</p>
+          {types.map(t => (
+            <div key={t.label} className="flex items-start gap-3">
+              <span className={`mt-0.5 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${t.color}`}>{t.label}</span>
+              <p className="text-[13px] text-slate-600 leading-6">{t.text}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CircleCard({
   circle,
   onDeleteCircleClick,
@@ -3457,7 +3487,6 @@ export default function CirclesClient() {
                   </div>
                 </div>
 
-                <PotTypeGuide />
               </aside>
 
               <section className="min-w-0">
@@ -3472,6 +3501,7 @@ export default function CirclesClient() {
                     <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
                       Create a circle around an event, invite people, choose a hint or paste a product link, and keep the pot warm and flexible.
                     </p>
+                    <PotTypeSummary />
                   </div>
 
                   <button
