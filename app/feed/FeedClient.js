@@ -1619,6 +1619,7 @@ export default function FeedClient() {
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [mobileTab, setMobileTab] = useState("home");
 
   const [commentsByFeedId, setCommentsByFeedId] = useState({});
   const [reactionsByFeedId, setReactionsByFeedId] = useState({});
@@ -2466,8 +2467,17 @@ export default function FeedClient() {
           </div>
         ) : null}
 
+        {/* Mobile tab pills */}
+        <div className="flex gap-2 mb-4 xl:hidden">
+          {[["home","Home"],["contacts","Contacts"],["calendar","Calendar"]].map(([key,label]) => (
+            <button key={key} type="button" onClick={() => setMobileTab(key)}
+              className={`flex-1 h-10 rounded-full text-sm font-semibold transition ${mobileTab === key ? "bg-[#2f3b2d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
+              {label}
+            </button>
+          ))}
+        </div>
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
-          <aside className="space-y-5">
+          <aside className={`space-y-5 ${mobileTab !== "contacts" ? "hidden xl:block" : ""}`}>
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <button type="button" onClick={() => setIsContactsManagerOpen(true)} className="text-[22px] font-semibold tracking-[-0.04em] text-slate-900 hover:text-[#df7b59] transition">Contacts</button>
@@ -2510,7 +2520,7 @@ export default function FeedClient() {
 
           </aside>
 
-          <section className="min-w-0">
+          <section className={`min-w-0 ${mobileTab !== "home" ? "hidden xl:block" : ""}`}>
             <div className="mb-4 flex flex-wrap gap-2">
               {feedFilters.map((filter) => {
                 const selected = activeFilter === filter.key;
@@ -2606,7 +2616,7 @@ export default function FeedClient() {
             </div>
           </section>
 
-          <aside className="space-y-5">
+          <aside className={`space-y-5 ${mobileTab !== "calendar" ? "hidden xl:block" : ""}`}>
             <MiniCalendar
               eventsByDate={eventsByDate}
               calendarLoading={calendarLoading}
