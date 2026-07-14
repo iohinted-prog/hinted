@@ -716,7 +716,7 @@ function ContributionChart({ members, target, raised, currency, formatCurrency }
     <div className="mt-5 w-full">
       <div className="flex items-center gap-5">
         <div className="shrink-0">
-          <svg viewBox="0 0 120 120" width="110" height="110" style={{transform: "rotate(-90deg)"}}>
+          <svg viewBox="0 0 120 120" width="160" height="160" style={{transform: "rotate(-90deg)"}}>
             {segments.map((seg, i) => {
               const dash = (seg.pct / 100) * circ;
               const segOffset = segments.slice(0, i).reduce((a, s) => a + (s.pct / 100) * circ, 0);
