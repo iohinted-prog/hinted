@@ -424,7 +424,7 @@ function buildCircleViewModel(circleRow, inviteRows = [], currentUserName = "You
       colors: getRelationshipGradient(invite.invite_name || "Friend"),
       status: getAvatarState(invite.status),
       email: invite.invite_email_normalized || invite.invite_email || "",
-      userId: invite.invited_user_id || null,
+      userId: invite.invited_user_id || invite.matched_profile_id || null,
     })),
   ];
 
@@ -813,18 +813,18 @@ function MemberPill({ member, currency = "GBP", formatCurrency }) {
 
 function ContributionRing({ raised, target, ringId }) {
   const percentage = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
-  const radius = 54;
+  const radius = 70;
   const circumference = 2 * Math.PI * radius;
   const dash = circumference - (percentage / 100) * circumference;
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative flex h-[148px] w-[148px] items-center justify-center">
-        <svg className="h-[148px] w-[148px] -rotate-90" viewBox="0 0 140 140" aria-hidden="true">
-          <circle cx="70" cy="70" r={radius} stroke="#f1e3db" strokeWidth="12" fill="none" />
+      <div className="relative flex h-[180px] w-[180px] items-center justify-center">
+        <svg className="h-[180px] w-[180px] -rotate-90" viewBox="0 0 160 160" aria-hidden="true">
+          <circle cx="80" cy="80" r={radius} stroke="#f1e3db" strokeWidth="12" fill="none" />
           <circle
-            cx="70"
-            cy="70"
+            cx="80"
+            cy="80"
             r={radius}
             stroke={`url(#${ringId})`}
             strokeWidth="12"
@@ -842,7 +842,7 @@ function ContributionRing({ raised, target, ringId }) {
         </svg>
 
         <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-white/80">
-          <span className="text-[28px] font-semibold tracking-[-0.06em] text-slate-900">
+          <span className="text-[32px] font-semibold tracking-[-0.06em] text-slate-900">
             {Math.round(percentage)}%
           </span>
           <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-slate-400">
@@ -962,7 +962,7 @@ function CircleCard({
   onOpenProfile,
 }) {
   const [showAllMembers, setShowAllMembers] = useState(false);
-  const MAX_VISIBLE = 5;
+  const MAX_VISIBLE = 4;
 
   const safeMembers = (Array.isArray(circle?.members) ? circle.members : []).map((member) => {
     if (member.avatarUrl) return member;
