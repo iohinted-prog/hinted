@@ -557,6 +557,94 @@ export async function GET(request) {
       }
     }
 
+    // ── Joining window expiry check ──────────────────────────────────
+    const now = new Date()
+    const { data: expiredJoiningCircles } = await supabase
+      .from('circles')
+      .select('id, title, user_id, locked_share_amount, currency, joining_deadline_at')
+      .eq('joining_status', 'open')
+      .eq('status', 'draft')
+      .lt('joining_deadline_at', now.toISOString())
+
+    for (const circle of expiredJoiningCircles || []) {
+      try {
+        const { data: invites } = await supabase
+          .from('circle_invites')
+          .select('id, invite_name, invite_email_normalized, status')
+          .eq('circle_id', circle.id)
+
+        const accepted = invites?.filter(i => i.status === 'accepted') || []
+        const pending = invites?.filter(i => i.status === 'pending') || []
+        const total = invites?.length || 0
+
+        // Mark joining as closed
+        await supabase.from('circles').update({ joining_status: 'closed' }).eq('id', circle.id)
+
+        // Get organiser email
+        const { data: organiserAuth } = await supabase.auth.admin.getUserById(circle.user_id)
+        const organiserEmail = organiserAuth?.user?.email
+        if (!organiserEmail) continue
+
+        const { data: organiserProfile } = await supabase.from('profiles').select('full_name').eq('id', circle.user_id).maybeSingle()
+        const organiserName = organiserProfile?.full_name || 'there'
+
+        const continueUrl = `https://hintdrop.app/api/circles/joining-decision?action=continue&circle_id=${circle.id}&token=${circle.user_id}`
+        const closeUrl = `https://hintdrop.app/api/circles/joining-decision?action=close&circle_id=${circle.id}&token=${circle.user_id}`
+        const askUrl = `https://hintdrop.app/api/circles/joining-decision?action=ask_members&circle_id=${circle.id}&token=${circle.user_id}`
+
+        const pendingNames = pending.map(i => i.invite_name || i.invite_email_normalized || 'Someone').join(', ')
+
+        const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5ede8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<div style="background:#f5ede8;padding:40px 20px;">
+  <div style="max-width:520px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;gap:10px;">
+        <table cellpadding="0" cellspacing="0" style="display:inline-table;"><tr><td style="width:44px;height:44px;background:linear-gradient(160deg,#ffb899,#ff8f6b);border-radius:14px;text-align:center;vertical-align:middle;font-size:22px;line-height:44px;">🎁</td></tr></table>
+        <span style="font-size:22px;font-weight:800;color:#2d2d2d;letter-spacing:-0.5px;">Hint<span style="color:#ff8060;">Drop</span></span>
+      </div>
+    </div>
+    <div style="background:#fffaf7;border-radius:28px;border:1px solid #efdcd2;box-shadow:0 20px 60px rgba(88,46,31,0.12);overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#7a4a2a,#a0603a);padding:36px 40px 32px;">
+        <p style="font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin:0 0 10px;">Joining window closed</p>
+        <h1 style="font-size:24px;font-weight:700;color:white;line-height:1.2;margin:0;">${accepted.length} of ${total} people joined ${circle.title}</h1>
+      </div>
+      <div style="padding:36px 40px;">
+        <p style="font-size:15px;line-height:1.7;color:#5a4a42;margin:0 0 16px;">Hi ${organiserName}, the ${circle.joining_window_days || 7}-day joining window for <strong>${circle.title}</strong> has closed.</p>
+        ${pending.length > 0 ? `<p style="font-size:14px;color:#5a4a42;margin:0 0 24px;"><strong>${pendingNames}</strong> ${pending.length === 1 ? 'has' : 'have'} not joined yet.</p>` : ''}
+        <p style="font-size:14px;font-weight:700;color:#2d2d2d;margin:0 0 16px;">What would you like to do?</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${accepted.length > 0 ? `<a href="${continueUrl}" style="display:block;text-align:center;background:linear-gradient(160deg,#3d4f3a,#2f3b2d);color:white;font-size:14px;font-weight:700;padding:14px 24px;border-radius:50px;text-decoration:none;">Continue with ${accepted.length} ${accepted.length === 1 ? 'person' : 'people'}</a>` : ''}
+          ${accepted.length > 0 && pending.length > 0 ? `<a href="${askUrl}" style="display:block;text-align:center;background:linear-gradient(160deg,#ff966f,#ff7e54);color:white;font-size:14px;font-weight:700;padding:14px 24px;border-radius:50px;text-decoration:none;">Ask joined members to cover the gap</a>` : ''}
+          <a href="${closeUrl}" style="display:block;text-align:center;background:white;border:2px solid #efc0ba;color:#b14f43;font-size:14px;font-weight:700;padding:12px 24px;border-radius:50px;text-decoration:none;">Close the circle</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`
+
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from: 'HintDrop <hello@hintdrop.app>',
+            to: organiserEmail,
+            subject: `${accepted.length} of ${total} people joined ${circle.title} — what next?`,
+            html,
+          }),
+        })
+
+        sent.push({ type: 'joining_window_closed', circle: circle.title, to: organiserEmail })
+      } catch (err) {
+        errors.push({ type: 'joining_window', circle: circle.title, error: err.message })
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────
+
     return NextResponse.json({ ok: true, sent, errors, total: sent.length })
   } catch (err) {
     return NextResponse.json({ ok: false, error: err.message }, { status: 500 })
