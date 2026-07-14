@@ -676,6 +676,96 @@ function ModalShell({
 }
 
 
+
+const MEMBER_COLORS = [
+  "#ff8060", "#4e9e6e", "#5b8dd9", "#c97ad4", "#e8a23a",
+  "#e05c7a", "#4db8b0", "#9b7fd4", "#d4875c", "#5c9e8a",
+];
+
+function ContributionChart({ members, target, raised, currency, formatCurrency }) {
+  const contributed = members.filter(m => m.contributed && m.amount > 0);
+  const unraised = Math.max(0, target - raised);
+  const total = target || raised || 1;
+
+  // Build segments
+  const segments = [
+    ...contributed.map((m, i) => ({
+      name: m.name,
+      amount: m.amount,
+      color: MEMBER_COLORS[i % MEMBER_COLORS.length],
+      pct: (m.amount / total) * 100,
+    })),
+    ...(unraised > 0 ? [{ name: "Remaining", amount: unraised, color: "#f1e3db", pct: (unraised / total) * 100 }] : []),
+  ];
+
+  // Build SVG donut
+  const cx = 60, cy = 60, r = 50, stroke = 18;
+  const circ = 2 * Math.PI * r;
+  let offset = 0;
+  const paths = segments.map((seg, i) => {
+    const dash = (seg.pct / 100) * circ;
+    const gap = circ - dash;
+    const path = (
+      `<circle key="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${stroke}" stroke-dasharray="${dash} ${gap}" stroke-dashoffset="${-offset}" />`
+    );
+    offset += dash;
+    return { ...seg, dash, gap, offset: offset - dash };
+  });
+
+  return (
+    <div className="mt-5 w-full">
+      <div className="flex items-center gap-5">
+        <div className="shrink-0">
+          <svg viewBox="0 0 120 120" width="110" height="110" style={{transform: "rotate(-90deg)"}}>
+            {segments.map((seg, i) => {
+              const dash = (seg.pct / 100) * circ;
+              const segOffset = segments.slice(0, i).reduce((a, s) => a + (s.pct / 100) * circ, 0);
+              return (
+                <circle
+                  key={i}
+                  cx={cx} cy={cy} r={r}
+                  fill="none"
+                  stroke={seg.color}
+                  strokeWidth={stroke}
+                  strokeDasharray={`${dash} ${circ - dash}`}
+                  strokeDashoffset={-segOffset}
+                />
+              );
+            })}
+            <text x="60" y="56" textAnchor="middle" dominantBaseline="middle"
+              style={{transform: "rotate(90deg) translate(0, -120px)", fontSize: "14px", fontWeight: "600", fill: "#1e293b"}}>
+              {Math.round((raised / total) * 100)}%
+            </text>
+            <text x="60" y="70" textAnchor="middle" dominantBaseline="middle"
+              style={{transform: "rotate(90deg) translate(0, -120px)", fontSize: "9px", fill: "#94a3b8"}}>
+              funded
+            </text>
+          </svg>
+        </div>
+        <div className="flex-1 min-w-0 space-y-2">
+          {contributed.map((seg, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{background: MEMBER_COLORS[i % MEMBER_COLORS.length]}} />
+              <span className="text-xs font-medium text-slate-700 truncate flex-1">{seg.name}</span>
+              <span className="text-xs font-semibold text-slate-900 shrink-0">{formatCurrency(seg.amount, currency)}</span>
+            </div>
+          ))}
+          {contributed.length === 0 && (
+            <p className="text-xs text-slate-400">No contributions yet</p>
+          )}
+          {unraised > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="h-2.5 w-2.5 rounded-full shrink-0 bg-[#f1e3db]" />
+              <span className="text-xs text-slate-400 flex-1">Remaining</span>
+              <span className="text-xs font-semibold text-slate-400">{formatCurrency(unraised, currency)}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MemberPill({ member, currency = "GBP", formatCurrency }) {
   const avatarState = getAvatarState(member.status);
   const isAccepted = avatarState === "accepted";
@@ -1006,27 +1096,13 @@ function CircleCard({
                   Suggested share of the full target: {suggestedShare} each
                 </p>
 
-                <div className="mt-4 flex -space-x-3">
-                  {safeMembers.map((member) => (
-                    member.avatarUrl ? (
-                      <img
-                        key={`${circle?.id}-${member.name}-avatar`}
-                        src={member.avatarUrl}
-                        alt={member.name}
-                        className="h-11 w-11 rounded-full object-cover border-4 border-white shadow-sm"
-                        title={member.name}
-                      />
-                    ) : (
-                      <div
-                        key={`${circle?.id}-${member.name}-avatar`}
-                        className={`${getAvatarClasses(member.colors, member.status, "lg")} border-4 border-white shadow-sm`}
-                        title={member.name}
-                      >
-                        {member.initials}
-                      </div>
-                    )
-                  ))}
-                </div>
+                <ContributionChart
+                  members={safeMembers}
+                  target={circle?.pot?.target || 0}
+                  raised={circle?.pot?.raised || 0}
+                  currency={potCurrency}
+                  formatCurrency={formatCurrency}
+                />
 
                 <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
                   <span className="rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold text-[#df7b59]">
