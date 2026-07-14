@@ -1693,7 +1693,7 @@ function CreateCircleModal({
   function canNext() {
     if (step === 1) return eventMode === 'new' ? !!form.eventDate : !!selectedEventId;
     if (step === 2) return !!form.title?.trim() && !!form.deadline;
-    if (step === 3) return parseAmount(form.goalValue) > 0;
+    if (step === 3) return parseAmount(form.goalValue) >= 10;
     if (step === 4) return true;
     return true;
   }
@@ -1875,7 +1875,12 @@ function CreateCircleModal({
               </div>
             )}
 
-            {liveBaseAmount > 0 && (
+            {liveBaseAmount > 0 && liveBaseAmount < 10 && (
+              <div className="rounded-[18px] border border-[#fde8b0] bg-[#fff8ee] px-4 py-3 text-sm text-[#b07a30]">
+                Minimum circle target is £10 to cover payment processing costs.
+              </div>
+            )}
+            {liveBaseAmount > 0 && liveBaseAmount >= 10 && (
               <div className="rounded-[18px] bg-[#fff4ee] p-4 space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-slate-600">Total target</span><span className="font-bold text-slate-900">{formatCurrency(liveTotals.totalAmount, form.currency || 'GBP')}</span></div>
                 <div className="flex justify-between text-[12px] text-slate-500"><span>Suggested per person</span><span>{formatCurrency(recommendedPerPerson, form.currency || 'GBP')}</span></div>
