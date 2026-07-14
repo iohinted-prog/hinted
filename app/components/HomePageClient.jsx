@@ -573,7 +573,7 @@ export default function HomePageClient() {
               </span>
             </div>
 
-            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]" style={{fontFamily: "var(--font-nunito), system-ui, sans-serif", fontWeight: 800}}>
+            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]" style={{fontFamily: "var(--font-nunito), system-ui, sans-serif", fontWeight: 800}}">
               Never forget.
               <br />
               <span className="text-[#ff8060]">Always thoughtful.</span>
@@ -706,10 +706,207 @@ export default function HomePageClient() {
           </div>
         </section>
 
+        <section className="mt-20 rounded-[36px] border border-[#eeddd3] bg-[#fff7f2] px-5 py-8 shadow-[0_18px_60px_rgba(173,101,72,0.1)] md:px-8 md:py-10">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 ring-1 ring-slate-200">
+                Plan ahead
+              </div>
+              <h2 className="mt-4 text-[30px] font-semibold tracking-[-0.04em] text-slate-900 sm:text-[38px]">
+                Calendar and reminders
+              </h2>
+              <p className="mt-3 max-w-[680px] text-[16px] leading-7 text-slate-600">
+                Track birthdays, anniversaries, and follow-ups in one calm view,
+                then branch into circles and curated shopping when it is time to
+                act.
+              </p>
+            </div>
+          </div>
 
-      </section>
+          <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_2fr_300px]">
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Live updates
+                  </p>
+                  <h3 className="mt-1 text-[20px] font-semibold tracking-[-0.04em] text-slate-900">
+                    Your feed
+                  </h3>
+                </div>
+                <span className="flex h-2 w-2 rounded-full bg-[#f36f64]">
+                  <span className="h-2 w-2 animate-ping rounded-full bg-[#f36f64] opacity-75" />
+                </span>
+              </div>
 
-    </div>
-  </main>
+              <div className="space-y-3">
+                {feedItems.map((item) => (
+                  <FeedItem key={item.id} item={item} />
+                ))}
+              </div>
+
+              <button
+                className="mt-4 w-full rounded-[18px] border border-slate-200 py-2.5 text-[13px] font-medium text-slate-500 hover:bg-slate-50"
+                type="button"
+              >
+                See all activity
+              </button>
+            </div>
+
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">
+                    Dashboard
+                  </p>
+                  <h3 className="mt-1 text-[26px] font-semibold tracking-[-0.04em] text-slate-900">
+                    July calendar
+                  </h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+                    type="button"
+                  >
+                    ←
+                  </button>
+                  <button
+                    className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500"
+                    type="button"
+                  >
+                    →
+                  </button>
+                </div>
+              </div>
+
+              <div className="mb-3 grid grid-cols-7 gap-2 text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+                <div>Sun</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, index) => (
+                  <div
+                    key={`${day}-${index}`}
+                    className={`min-h-[72px] rounded-[16px] border p-2 ${
+                      day === "13"
+                        ? "border-[#f5b49a] bg-[#fff1ea]"
+                        : "border-slate-100 bg-[#fffdfa]"
+                    }`}
+                  >
+                    <div
+                      className={`text-sm font-semibold ${
+                        index < 7 || index > 30
+                          ? "text-slate-300"
+                          : "text-slate-700"
+                      }`}
+                    >
+                      {day}
+                    </div>
+                    {["29", "6", "10", "16", "24"].includes(day) ? (
+                      <div className="mt-1.5 h-2 w-2 rounded-full bg-[#b78671]" />
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-[#f0dfd6] bg-white p-4 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="text-base font-semibold text-slate-900">
+                  Upcoming reminders
+                </h3>
+                <span className="rounded-full bg-[#fff5ef] px-2.5 py-1 text-[11px] font-semibold text-[#e77756]">
+                  3 soon
+                </span>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {lowerReminders.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-[22px] border border-[#f1e4dc] bg-[#fffdfa] p-4 shadow-sm"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-1 h-11 w-11 shrink-0 rounded-2xl bg-gradient-to-b ${item.colors}`}
+                      />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-800">
+                          {item.title}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-500">{item.date}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-5 rounded-[24px] bg-[#2f5d50] p-5 text-white">
+                <p className="text-xs uppercase tracking-[0.14em] text-white/60">
+                  Gift prompt
+                </p>
+                <p className="mt-2 text-sm leading-7 text-white/90">
+                  Sarah saved "ceramic dinnerware" and "weekend city break" to
+                  her wishlist.
+                </p>
+                <button
+                  className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-800"
+                  type="button"
+                >
+                  View ideas
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-8 grid gap-6 lg:grid-cols-2">
+            <CircleTeaserCard />
+            <ShopTeaserCard />
+          </div>
+        </section>
+
+        <DemoVideoSection />
+
+        <footer className="mt-16 border-t border-[#eaded6] bg-[#fffaf7]">
+          <div className="flex flex-col gap-4 px-0 py-6 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
+            <p className="max-w-[720px] text-xs leading-5 text-slate-500 lg:text-sm">
+              By continuing, you agree to{" "}
+              <Link
+                href="/terms"
+                className="font-medium text-slate-700 underline underline-offset-2 transition hover:text-slate-900"
+              >
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link
+                href="/privacy"
+                className="font-medium text-slate-700 underline underline-offset-2 transition hover:text-slate-900"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+              <Link href="/about" className="transition hover:text-slate-900">
+                About
+              </Link>
+              <Link href="/for-brands" className="transition hover:text-slate-900">
+                For Brands
+              </Link>
+              <Link href="/contact" className="transition hover:text-slate-900">
+                Contact
+              </Link>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </main>
   );
 }
