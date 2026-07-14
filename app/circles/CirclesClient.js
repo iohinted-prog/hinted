@@ -1480,10 +1480,12 @@ function ContributeModal({
   const [loadingIntent, setLoadingIntent] = useState(false);
   const [inlineError, setInlineError] = useState("");
 
-  const livePeopleInPotCount = Math.max(circle?.members?.length || 0, 1);
-  const liveRecommendedContribution = roundCurrencyUp(
-    Number(circle?.pot?.target || 0) / livePeopleInPotCount
-  );
+  const livePeopleInPotCount = Math.max(circle?.members?.filter(m => m.status === "accepted")?.length || 1, 1);
+  const itemPrice = Number(circle?.pot?.target || 0);
+  const hintdropFeePerPerson = roundCurrency(1.50 / livePeopleInPotCount + (itemPrice / livePeopleInPotCount) * 0.02);
+  const liveRecommendedContribution = roundCurrencyUp(itemPrice / livePeopleInPotCount + hintdropFeePerPerson);
+  const stripeFeeOnContribution = roundCurrency(liveRecommendedContribution * 0.015 + 0.20);
+  const totalChargedToCard = roundCurrency(liveRecommendedContribution + stripeFeeOnContribution);
 
   useEffect(() => {
     if (!open || !circle) {
@@ -1599,19 +1601,20 @@ function ContributeModal({
                 />
               </label>
 
-              <p className="mt-3 text-[12px] leading-5 text-slate-500">
-                Raised: {formatCurrency(circle?.pot?.raised || 0, circle?.pot?.currency || "GBP")} of{" "}
-                {formatCurrency(circle?.pot?.target || 0, circle?.pot?.currency || "GBP")}
-              </p>
-
-              <p className="mt-2 text-[12px] leading-5 text-slate-500">
-                Recommended share of the full target:{" "}
-                {formatCurrency(
-                  liveRecommendedContribution || 0,
-                  circle?.pot?.currency || "GBP"
-                )}{" "}
-                each
-              </p>
+              <div className="mt-3 rounded-[14px] bg-[#fff4ee] px-3 py-2.5 space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-slate-500">Your share ({livePeopleInPotCount} {livePeopleInPotCount === 1 ? "contributor" : "contributors"})</span>
+                  <span className="font-semibold text-slate-900">{formatCurrency(liveRecommendedContribution, circle?.pot?.currency || "GBP")}</span>
+                </div>
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-slate-400">Stripe processing fee</span>
+                  <span className="text-slate-500">{formatCurrency(stripeFeeOnContribution, circle?.pot?.currency || "GBP")}</span>
+                </div>
+                <div className="flex justify-between text-[12px] border-t border-[#f0dfd6] pt-1.5">
+                  <span className="font-semibold text-slate-700">Total charged to your card</span>
+                  <span className="font-bold text-slate-900">{formatCurrency(totalChargedToCard, circle?.pot?.currency || "GBP")}</span>
+                </div>
+              </div>
             </div>
 
             {inlineError ? (
