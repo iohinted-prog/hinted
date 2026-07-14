@@ -485,8 +485,9 @@ function buildContributionMap(rows = []) {
       acc[circleId].count += 1;
 
       if (row.user_id) {
+        // Store at least 1 to mark as contributed even if amount is 0
         acc[circleId].byUserId[row.user_id] = roundCurrency(
-          (acc[circleId].byUserId[row.user_id] || 0) + amount
+          (acc[circleId].byUserId[row.user_id] || 0) + Math.max(amount, 0.01)
         );
       }
     }
@@ -502,6 +503,15 @@ function applyContributionDataToCircle(circleVm, contributionState, currentUserI
 
   const members = Array.isArray(circleVm.members)
     ? circleVm.members.map((member) => {
+        const memberUserId = member.userId || (member.name === currentUserName || member.name === "You" ? currentUserId : null);
+        if (memberUserId && paidByUserId[memberUserId]) {
+          const paidAmount = roundCurrency(paidByUserId[memberUserId] || 0);
+          return {
+            ...member,
+            contributed: paidAmount > 0,
+            amount: paidAmount,
+          };
+        }
         if (member.name === currentUserName || member.name === "You") {
           const myAmount = roundCurrency(paidByUserId[currentUserId] || 0);
           return {
