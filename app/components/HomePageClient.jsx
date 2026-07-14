@@ -873,7 +873,7 @@ export default function HomePageClient() {
 
         {/* <DemoVideoSection /> */}
 
-        <footer className="hidden mt-16 border-t border-[#eaded6] bg-[#fffaf7]">
+        <footer className="mt-16 border-t border-[#eaded6] bg-[#fffaf7]">
           <div className="flex flex-col gap-4 px-0 py-6 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
             <p className="max-w-[720px] text-xs leading-5 text-slate-500 lg:text-sm">
               By continuing, you agree to{" "}
