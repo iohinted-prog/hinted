@@ -573,7 +573,7 @@ export default function HomePageClient() {
               </span>
             </div>
 
-            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]" style={{fontFamily: "var(--font-nunito), system-ui, sans-serif", fontWeight: 800}}">
+            <h1 className="mt-7 max-w-[580px] text-[48px] font-extrabold leading-[0.98] tracking-[-0.065em] text-slate-900 sm:text-[64px] lg:text-[82px]" style={{fontFamily: "var(--font-nunito), system-ui, sans-serif", fontWeight: 800}}>
               Never forget.
               <br />
               <span className="text-[#ff8060]">Always thoughtful.</span>
