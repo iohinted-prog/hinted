@@ -17,10 +17,9 @@ import EditContactModal from "../components/EditContactModal";
 import ContactsManagerModal from "../components/ContactsManagerModal";
 import { useCurrencyFormatter } from "../../lib/useCurrencyFormatter";
 
-const TOTAL_PLATFORM_FEE_RATE = 0.0475;
 const ESTIMATED_STRIPE_FEE_RATE = 0.0175;
-const HINTED_PLATFORM_FEE_RATE =
-  Math.round((TOTAL_PLATFORM_FEE_RATE - ESTIMATED_STRIPE_FEE_RATE + Number.EPSILON) * 100) / 100;
+const HINTED_PLATFORM_FEE_RATE = 0.02;
+const HINTED_PLATFORM_FIXED_FEE = 1.50;
 const SELF_SELECTOR_ID = "__self__";
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -251,7 +250,7 @@ function relationshipLabelFromArray(relationshipTypes) {
 function calculateFeeBreakdown(baseAmount) {
   const safeBaseAmountMinor = toMinorUnits(baseAmount);
   const stripeFeeMinor = Math.ceil(safeBaseAmountMinor * ESTIMATED_STRIPE_FEE_RATE);
-  const platformFeeMinor = Math.ceil(safeBaseAmountMinor * HINTED_PLATFORM_FEE_RATE);
+  const platformFeeMinor = Math.ceil(safeBaseAmountMinor * HINTED_PLATFORM_FEE_RATE) + toMinorUnits(HINTED_PLATFORM_FIXED_FEE);
   const totalFeeMinor = stripeFeeMinor + platformFeeMinor;
   const totalAmountMinor = safeBaseAmountMinor + totalFeeMinor;
 
@@ -1877,13 +1876,13 @@ function CreateCircleModal({
 
             {liveBaseAmount > 0 && liveBaseAmount < 10 && (
               <div className="rounded-[18px] border border-[#fde8b0] bg-[#fff8ee] px-4 py-3 text-sm text-[#b07a30]">
-                Minimum circle target is £10 to cover payment processing costs.
+                Minimum item price is £10. HintDrop charges £1.50 + 2% to cover payment processing and platform costs.
               </div>
             )}
             {liveBaseAmount > 0 && liveBaseAmount >= 10 && (
               <div className="rounded-[18px] bg-[#fff4ee] p-4 space-y-2">
                 <div className="flex justify-between text-sm"><span className="text-slate-600">Total target</span><span className="font-bold text-slate-900">{formatCurrency(liveTotals.totalAmount, form.currency || 'GBP')}</span></div>
-                <div className="flex justify-between text-[12px] text-slate-500"><span>Suggested per person</span><span>{formatCurrency(recommendedPerPerson, form.currency || 'GBP')}</span></div>
+  
               </div>
             )}
           </div>
@@ -1944,6 +1943,11 @@ function CreateCircleModal({
               <div className="flex justify-between text-sm"><span className="text-slate-500">Target</span><span className="font-semibold text-slate-900">{formatCurrency(liveTotals.totalAmount, form.currency || 'GBP')}</span></div>
               <div className="flex justify-between text-sm"><span className="text-slate-500">Funding</span><span className="font-semibold text-slate-900">{fundingModeToLabel(form.fundingMode)}</span></div>
               <div className="flex justify-between text-sm"><span className="text-slate-500">People</span><span className="font-semibold text-slate-900">{selectedPeople.length > 0 ? selectedPeople.map(p => p.name).join(', ') : 'Just you'}</span></div>
+              {liveTotals.totalAmount > 0 && totalPeopleCount > 1 && (
+                <div className="flex justify-between text-sm"><span className="text-slate-500">Suggested per person</span><span className="font-semibold text-[#df7b59]">{formatCurrency(recommendedPerPerson, form.currency || 'GBP')}</span></div>
+              )}
+              <div className="flex justify-between text-[12px] text-slate-400"><span>HintDrop fee</span><span>{formatCurrency(liveTotals.platformFeeAmount, form.currency || 'GBP')}</span></div>
+              <div className="flex justify-between text-[12px] text-slate-400"><span>Stripe processing (est.)</span><span>{formatCurrency(liveTotals.stripeFeeAmount, form.currency || 'GBP')}</span></div>
             </div>
             {errorMessage && <div className="rounded-[18px] border border-[#efc0ba] bg-[#fff4f2] px-4 py-3 text-sm text-[#b14f43]">{errorMessage}</div>}
           </div>
