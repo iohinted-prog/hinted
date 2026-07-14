@@ -3030,6 +3030,7 @@ export default function CirclesClient() {
                             onContributeClick={openPledgeModal}
                             sessionUser={sessionUser}
                             onOpenProfile={setProfileModal}
+                            onMarkPaid={handleMarkPaid}
                           />
                         ))}
                       </div>
