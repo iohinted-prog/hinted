@@ -265,19 +265,19 @@ export default function AppShell({ children }) {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
 
+                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/shop": "🛍️" };
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[13px] font-semibold transition ${
                       isActive
-                        ? "inline-flex h-11 items-center justify-center rounded-full border border-[#ffb38f] bg-[#ff875d] px-4 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#f47145] sm:px-5"
-                        : item.highlight
-                        ? "inline-flex h-11 items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] px-4 text-[14px] font-semibold text-white shadow-sm transition sm:px-5"
-                        : "inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-4 text-[14px] font-semibold text-slate-700 transition hover:bg-[#fff5f0] sm:px-5"
-                    }
+                        ? "bg-[#ff875d] text-white shadow-sm"
+                        : "text-slate-500 hover:bg-[#fff5f0] hover:text-slate-800"
+                    }`}
                   >
-                    {item.label}
+                    <span>{icons[item.href]}</span>
+                    <span>{item.label}</span>
                   </Link>
                 );
               })}
