@@ -148,9 +148,8 @@ export default function AppShell({ children }) {
 
   const navItems = [
     { href: "/feed", label: "Feed" },
+    { href: "/hints", label: "Hints" },
     { href: "/circles", label: "Circles" },
-    { href: "/hints", label: "Hints", highlight: true },
-    { href: "/people", label: "People" },
     { href: "/shop", label: "Shop" },
   ];
 
@@ -268,38 +267,38 @@ export default function AppShell({ children }) {
   return (
     <div className="min-h-screen bg-[#fffaf7] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur">
-        <div className="mx-auto grid max-w-[1380px] grid-cols-[1fr_auto_1fr] items-center px-5 py-4 md:px-8">
-          <Link href="/feed" className="flex items-center gap-3.5 shrink-0">
+        <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
+          <Link href="/feed" className="flex items-center gap-3.5">
             <LogoMark />
             <div className="text-[22px] font-extrabold tracking-[-0.05em] text-slate-900">
               Hint<span className="text-[#ff875d]">Drop</span>
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center justify-center gap-1">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <nav className="hidden md:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-                const icons = { "/feed": "🏠", "/circles": "⭕", "/hints": "🎁", "/people": "👥", "/shop": "🛍️" };
+                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/shop": "🛍️" };
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`inline-flex items-center justify-center gap-2 rounded-full font-semibold transition ${
-                      item.href === "/hints"
-                        ? \`h-12 px-5 text-[14px] bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-lg \${isActive ? "ring-2 ring-offset-1 ring-[#ff875d]" : "hover:opacity-90"}\`
-                        : \`h-11 px-4 text-[13px] \${isActive ? "bg-[#ff875d] text-white shadow-sm" : "text-slate-500 hover:bg-[#fff5f0] hover:text-slate-800"}\`
-                    }\`}
+                    className={`inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[13px] font-semibold transition ${
+                      isActive
+                        ? "bg-[#ff875d] text-white shadow-sm"
+                        : "text-slate-500 hover:bg-[#fff5f0] hover:text-slate-800"
+                    }`}
                   >
                     <span>{icons[item.href]}</span>
                     <span>{item.label}</span>
                   </Link>
                 );
               })}
-          </nav>
+            </nav>
 
-          <div className="flex items-center justify-end gap-3">
             <div className="relative" ref={notifRef}>
               <button type="button" onClick={() => setNotifOpen(prev => !prev)}
                 className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
@@ -506,10 +505,6 @@ export default function AppShell({ children }) {
             🎁
           </div>
           <span className={`text-[10px] font-semibold mt-0.5 ${pathname === "/hints" ? "text-[#ff875d]" : "text-slate-400"}`}>Hints</span>
-        </a>
-        <a href="/people" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/people" ? "text-[#ff875d]" : "text-slate-400"}`}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span className="text-[10px] font-semibold">People</span>
         </a>
         <a href="/shop" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/shop" ? "text-[#ff875d]" : "text-slate-400"}`}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
