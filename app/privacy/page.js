@@ -79,9 +79,8 @@ export default function PrivacyPage() {
                 <li>- Create and manage your account.</li>
                 <li>- Authenticate users and keep accounts secure.</li>
                 <li>
-                  - Provide core features such as hints, reminders, circles,
-                  contact management, invite flows, gift planning, and saved
-                  content.
+                  - Provide core features such as hints, reminders, contacts,
+                  circles, invite flows, gift planning, and saved content.
                 </li>
                 <li>
                   - Personalise your experience and show more relevant prompts,
@@ -119,11 +118,17 @@ export default function PrivacyPage() {
               <p className="text-[17px] leading-8 text-slate-700">
                 If you choose to use contact search features, we request
                 read-only access to your Google Contacts using the
-                `contacts.readonly` and `contacts.other.readonly` scopes. We use
-                this Google user data only to help you find and add people you
-                already know to HintDrop, for example by displaying matching
-                names and email addresses so you can select a contact and send
-                an invite.
+                <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 text-[15px]">
+                  contacts.readonly
+                </code>
+                and
+                <code className="mx-1 rounded bg-slate-100 px-1.5 py-0.5 text-[15px]">
+                  contacts.other.readonly
+                </code>
+                scopes. We use this Google user data only to help you find and
+                add people you already know to HintDrop, for example by
+                displaying matching names and email addresses so you can select
+                a contact and send an invite.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not sell Google user data. We do not use Google user data
