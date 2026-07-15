@@ -21,8 +21,12 @@ const geistMono = Geist_Mono({
 
 export const metadata = {
   icons: {
-    icon: "/favicon.svg",
-    apple: "/favicon.svg",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
+    apple: "/hintdrop-icon-120.png",
+    shortcut: "/favicon.png",
   },
   title: "HintDrop",
   description:
