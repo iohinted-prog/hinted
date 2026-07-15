@@ -1556,7 +1556,7 @@ export default function HintsClient() {
   }
 
   async function submitNewHint() {
-    if (!currentUser || !pendingHint) return;
+    if (!currentUser || !pendingHint || isSubmittingNewHint) return;
 
     setIsSubmittingNewHint(true);
     setError("");
