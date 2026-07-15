@@ -229,18 +229,34 @@ function isUsablePreview(result) {
 
 // Retailers known to block HTML scraping — skip straight to LinkPreview
 const BLOCKED_RETAILERS = [
-  "amazon.co.uk",
-  "amazon.com",
-  "amazon.de",
-  "amazon.fr",
-  "amazon.es",
-  "amazon.it",
-  "amazon.ca",
-  "amazon.com.au",
-  "asos.com",
-  "zara.com",
-  "net-a-porter.com",
-  "farfetch.com",
+  // Amazon
+  "amazon.co.uk", "amazon.com", "amazon.de", "amazon.fr",
+  "amazon.es", "amazon.it", "amazon.ca", "amazon.com.au",
+  // Fashion — known Cloudflare/bot protection
+  "asos.com", "zara.com", "endclothing.com", "end.com",
+  "net-a-porter.com", "farfetch.com", "matchesfashion.com",
+  "ssense.com", "luisaviaroma.com", "mytheresa.com",
+  "flannels.com", "selfridges.com", "harrods.com",
+  "harveynichols.com", "browns.com", "mrporter.com",
+  "nordstrom.com", "saksfifthavenue.com", "barneys.com",
+  "revolve.com", "nastygal.com", "prettylittlething.com",
+  "boohoo.com", "shein.com", "misguided.com",
+  // Sports
+  "nike.com", "adidas.com", "adidas.co.uk",
+  "jdsports.co.uk", "footlocker.com", "footlocker.co.uk",
+  // Beauty
+  "sephora.com", "sephora.co.uk", "lookfantastic.com",
+  "cultbeauty.co.uk", "spacenk.com", "beautybay.com",
+  // Home / Tech
+  "ikea.com", "made.com", "wayfair.com", "wayfair.co.uk",
+  "apple.com", "currys.co.uk", "argos.co.uk",
+  // Travel / Experiences
+  "airbnb.com", "airbnb.co.uk", "booking.com",
+  "expedia.com", "expedia.co.uk", "hotels.com",
+  "viator.com", "getyourguide.com",
+  // Luxury
+  "gucci.com", "louisvuitton.com", "chanel.com",
+  "prada.com", "burberry.com", "alexandermcqueen.com",
 ];
 
 function isBlockedRetailer(url = "") {
