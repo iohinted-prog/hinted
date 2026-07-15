@@ -869,8 +869,8 @@ function HintCard({
 
   return (
     <article
-      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 ${
-        isDragging ? "scale-[1.02]" : "hover:-translate-y-1"
+      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 cursor-grab active:cursor-grabbing ${
+        isDragging ? "scale-[1.03] shadow-2xl ring-2 ring-white/40" : "hover:-translate-y-1"
       }`}
       style={{
         aspectRatio: `${ratio}`,
@@ -1032,7 +1032,7 @@ function SortableHintCard({
     id: hint.id,
     animateLayoutChanges,
     transition: {
-      duration: 240,
+      duration: 200,
       easing: "cubic-bezier(0.25, 1, 0.5, 1)",
     },
   });
@@ -1045,7 +1045,7 @@ function SortableHintCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid">
+    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid" {...attributes} {...listeners}>
       <HintCard
         hint={hint}
         imageRatios={imageRatios}
@@ -1053,8 +1053,8 @@ function SortableHintCard({
         onToggleStarred={onToggleStarred}
         onTogglePrivate={onTogglePrivate}
         isDragging={isDragging}
-        dragHandleAttributes={attributes}
-        dragHandleListeners={listeners}
+        dragHandleAttributes={{}}
+        dragHandleListeners={{}}
         formatCurrency={formatCurrency}
       />
     </div>
@@ -1115,7 +1115,7 @@ export default function HintsClient() {
   const busyLongTimerRef = useRef(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 0 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
