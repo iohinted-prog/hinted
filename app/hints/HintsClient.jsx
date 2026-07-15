@@ -901,6 +901,7 @@ function HintCard({
               }`}
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.18)] to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center text-[56px] opacity-30">🎁</div>
           </>
         )}
       </div>
