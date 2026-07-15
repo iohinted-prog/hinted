@@ -1642,6 +1642,7 @@ export default function HintsClient() {
       }
 
       setHints((current) => [newHint, ...current].map((item, index) => ({ ...item, position: index })));
+      closeBusy();
       closeAddModal();
     } catch (err) {
       setError(errorToMessage(err));
