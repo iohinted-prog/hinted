@@ -2433,28 +2433,21 @@ export default function CirclesClient() {
         if (!active) return;
         setSessionUser(user);
 
+        // Run profile, contacts, calendar, hints and circles in parallel
         let currentProfile = null;
-        try {
-          currentProfile = await loadProfile(user.id);
-          if (active) setProfile(currentProfile);
-        } catch {
-          if (active) setProfile(null);
-        }
-
-        const [loadedContacts, loadedEvents] = await Promise.all([
+        const [profileResult, loadedContacts, loadedEvents] = await Promise.all([
+          loadProfile(user.id).catch(() => null),
           loadContacts(user.id),
           loadCalendarEvents(user.id),
           loadOwnHints(user.id),
+          loadCircles(user.id, null),
         ]);
-
+        currentProfile = profileResult;
+        if (active) setProfile(currentProfile);
         await loadPublicHintsForContacts(loadedContacts);
-
         if (!active) return;
-
         const merged = [...buildGenericCalendarEvents(), ...buildContactBirthdayEvents(loadedContacts), ...(loadedEvents || [])];
         initialiseCircleForm(currentProfile, merged);
-
-        await loadCircles(user.id, currentProfile);
       } catch (error) {
         if (active) {
           setPageError(error?.message || "Failed to load the Circles page.");
