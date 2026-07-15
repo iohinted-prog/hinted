@@ -677,16 +677,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
             hint_count: 1,
           },
         }).catch(() => {});
-        // Notify hint owner
-        supabase.from("notifications").insert({
-          user_id: userId,
-          actor_user_id: currentUserId,
-          type: "hint_claim",
-          entity_id: hint.id,
-          title: "Someone is getting one of your hints",
-          body: hint.title || "",
-          data: { hint_id: hint.id, hint_title: hint.title },
-        }).catch(() => {});
+
       }
     }
   }
