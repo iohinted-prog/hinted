@@ -30,6 +30,8 @@ function buildContact(row) {
     avatarUrl: row.avatar_url || null,
     matchedProfileId: row.profile_id || row.matched_profile_id || null,
     status: row.public_state || row.status || "contact",
+    interests: Array.isArray(row.interests) ? row.interests : [],
+    note: Array.isArray(row.interests) && row.interests.length ? row.interests.slice(0, 3).join(" · ") : (row.role || "Friend"),
     raw: row,
   };
 }

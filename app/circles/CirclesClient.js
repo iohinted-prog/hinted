@@ -359,7 +359,7 @@ function buildContactRecordFromRow(row) {
       avatarState === "accepted" || Boolean(row?.profile_id || row?.matched_profile_id),
     name: safeName,
     role: relationship || "Friend",
-    note: getStatusLabel(publicState),
+    note: Array.isArray(row?.interests) && row.interests.length ? row.interests.slice(0, 3).join(" · ") : (relationship || "Friend"),
     initials: getInitials(safeName),
     colors: getRelationshipGradient(relationship || "Friend"),
     email: row?.email || "",
