@@ -55,14 +55,6 @@ export default function InviteAuthButtons({ inviteToken, inviteType }) {
       setPageError(error?.message || "Google sign in failed.");
       setLoadingProvider(null);
     }
-  },
-      });
-
-      if (error) throw error;
-    } catch (error) {
-      setPageError(error?.message || "Microsoft sign in failed.");
-      setLoadingProvider(null);
-    }
   }
 
   return (
@@ -77,9 +69,6 @@ export default function InviteAuthButtons({ inviteToken, inviteType }) {
           ? "Connecting Google..."
           : "Continue with Google"}
       </button>
-
-      <button
-        type="button"
 
       {pageError ? (
         <p className="rounded-[18px] border border-[#f1d2c6] bg-[#fff4ef] px-4 py-3 text-sm text-[#b85c3e]">

@@ -2212,6 +2212,8 @@ export default function FeedClient() {
         user_id: sessionUser.id,
         body: trimmed,
       });
+      if (error) throw new Error(normalizeSupabaseError(error, "Could not save comment."));
+      if (item.owner_user_id && item.owner_user_id !== sessionUser.id) {
         supabase.from("notifications").insert({
           user_id: item.owner_user_id,
           actor_user_id: sessionUser.id,
