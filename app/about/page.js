@@ -1,9 +1,9 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "About | HintDrop",
-  description:
-    "Learn about HintDrop, the relationship-aware gifting and reminder app designed to help people stay thoughtful.",
+  title: "About HintDrop",
+  description: "HintDrop helps you save gift ideas, remember birthdays and milestones, and plan group gifts with friends. Built for people who care about getting it right.",
+  alternates: { canonical: "https://hintdrop.app/about" },
 };
 
 export default function AboutPage() {
@@ -16,12 +16,10 @@ export default function AboutPage() {
               About HintDrop
             </p>
             <h1 className="text-3xl font-semibold tracking-[-0.03em] text-slate-900 sm:text-4xl">
-              Thoughtful gifting starts with knowing people better
+              Save hints. Remember people. Plan gifts together.
             </h1>
             <p className="mt-4 text-[17px] leading-8 text-slate-600">
-              HintDrop is designed to help you remember important dates, discover
-              better gift ideas, and keep track of the people, moments, and
-              details that make giving more personal.
+              HintDrop is a wishlist and gifting app built around the people you care about. Save hints from any retailer, remember birthdays and milestones, and plan group gifts with friends — all in one place.
             </p>
           </div>
 
@@ -48,9 +46,7 @@ export default function AboutPage() {
                 What you can do with HintDrop
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop combines reminder tools with gift exploration and
-                relationship context, so you can keep track of who matters to
-                you and what might make them feel genuinely seen.
+                HintDrop brings together hint lists, birthday reminders, group gifting circles, and a curated gift shop — so the right idea is always within reach when it matters.
               </p>
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
                 <li>
