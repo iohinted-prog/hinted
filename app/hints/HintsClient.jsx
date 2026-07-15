@@ -988,9 +988,10 @@ function HintCard({
             <button
               type="button"
               onClick={() => onTogglePrivate(hint)}
-              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-white/76 text-[16px] backdrop-blur-md hover:bg-white"
+              title={hint.private ? "Private" : "Public"}
             >
-              {hint.private ? "🔒 Private" : "🔓 Public"}
+              {hint.private ? "🔒" : "👁️"}
             </button>
 
             <a
