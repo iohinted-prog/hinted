@@ -134,10 +134,9 @@ export default function PrivacyPage() {
                 We do not sell Google user data. We do not use Google user data
                 for advertising, profiling, data brokering, or any unrelated
                 purpose. We do not use raw or derived Google user data obtained
-                through Google Workspace APIs to develop, improve, or train
-                generalised AI or machine learning models, and we do not
-                transfer Google user data to third-party AI services for model
-                training.
+                through Google APIs to develop, improve, or train generalised AI
+                or machine learning models, and we do not transfer Google user
+                data to third-party AI services for model training.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not store your full Google Contacts address book on our
@@ -197,24 +196,21 @@ export default function PrivacyPage() {
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-                5. Circles and payments
+                5. Circles and group gifting
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
                 HintDrop offers a group gifting feature called Circles, which
-                allows users to coordinate around a shared gift. When you
-                participate in a circle as an organiser or contributor, certain
-                information may be visible to other circle members, including
-                your name, profile, and contribution status. Contribution
-                amounts may be visible to the circle organiser where relevant to
-                the feature.
+                helps users coordinate around a shared gift or occasion. At this
+                time, HintDrop does not process, hold, receive, or transfer
+                payments for circles.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop does not process or store payment card information for
-                circles in the version of the service described here.
-                Contributions are arranged directly between members outside of
-                the platform. We may retain circle-related records, pledge
-                amounts, and contribution data for operational, support, and
-                record-keeping purposes.
+                If you participate in a circle, certain information may be
+                visible to other participants depending on how the feature
+                works, such as your name, profile, participation status, or
+                contribution intent. Any money collection, reimbursement, or
+                purchase arrangement happens directly between users outside the
+                platform.
               </p>
             </section>
 
