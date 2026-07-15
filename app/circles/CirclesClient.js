@@ -209,7 +209,7 @@ function getAvatarState(status) {
 
 function getStatusLabel(status) {
   const avatarState = getAvatarState(status);
-  if (avatarState === "accepted") return "Accepted";
+  if (avatarState === "accepted") return "Joined";
   if (avatarState === "invitee") return "Invitee";
   return "Contact";
 }
@@ -383,7 +383,7 @@ function buildSelfRecord(profile) {
     type: "self",
     name: safeName,
     role: "You",
-    note: "Accepted",
+    note: "You",
     initials: getInitials(safeName || "You"),
     colors: "from-[#4e596d] to-[#212a3c]",
     email: profile?.invite_email || "",
@@ -779,7 +779,7 @@ function MemberPill({ member, currency = "GBP", formatCurrency }) {
       ? "bg-[#fff3ee] text-[#d57a58]"
       : "bg-[#f3f4f6] text-slate-600";
 
-  const statusLabel = isAccepted ? "Accepted" : isInvitee ? "Invitee" : "Contact";
+  const statusLabel = isAccepted ? "Joined" : isInvitee ? "Invitee" : "Contact";
 
   return (
     <div className="rounded-[20px] border border-[#eee1d9] bg-[#fffdfa] p-3">
