@@ -247,6 +247,9 @@ const BLOCKED_RETAILERS = [
   // Beauty
   "sephora.com", "sephora.co.uk", "lookfantastic.com",
   "cultbeauty.co.uk", "spacenk.com", "beautybay.com",
+  // Department stores
+  "johnlewis.com", "marksandspencer.com", "debenhams.com",
+  "next.co.uk", "dunelm.com", "habitat.co.uk",
   // Home / Tech
   "ikea.com", "made.com", "wayfair.com", "wayfair.co.uk",
   "apple.com", "currys.co.uk", "argos.co.uk",
@@ -436,6 +439,22 @@ async function tryHtmlPreview(inputUrl, preferredCurrency) {
   const html = await res.text();
   if (!html.trim()) {
     throw new Error("Empty HTML response.");
+  }
+
+  // Fast-fail if response looks like a bot challenge page
+  const htmlLower = html.slice(0, 4000).toLowerCase();
+  if (
+    includesBlockedText(htmlLower) ||
+    res.status === 403 ||
+    res.status === 429 ||
+    htmlLower.includes("cf-browser-verification") ||
+    htmlLower.includes("challenge-form") ||
+    htmlLower.includes("turnstile") ||
+    htmlLower.includes("datadome") ||
+    htmlLower.includes("perimeterx") ||
+    htmlLower.includes("imperva")
+  ) {
+    throw new Error("BLOCKED: Site returned a bot challenge page.");
   }
 
   return parseHtmlPreview({
