@@ -5,8 +5,23 @@ import HomePageClient from "./components/HomePageClient";
 
 export const metadata = {
   title: "HintDrop | Never forget. Always thoughtful.",
-  description:
-    "HintDrop helps you remember important moments, save better gift ideas, build circles, and explore curated shopping with help from your friends.",
+  description: "Save what you actually want. Remember who matters. Plan gifts together. HintDrop is the thoughtful gifting app for hints, reminders, and group gifting.",
+  keywords: ["gift ideas", "wishlist app", "group gifting", "birthday reminders", "hint list", "gift planning"],
+  openGraph: {
+    title: "HintDrop | Never forget. Always thoughtful.",
+    description: "Save what you actually want. Remember who matters. Plan gifts together.",
+    url: "https://hintdrop.app",
+    siteName: "HintDrop",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "HintDrop | Never forget. Always thoughtful.",
+    description: "Save what you actually want. Remember who matters. Plan gifts together.",
+  },
+  alternates: {
+    canonical: "https://hintdrop.app",
+  },
   other: {
     "impact-site-verification": "e9b128fe-f48f-4547-98f7-037ee4183d82",
   },

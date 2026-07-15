@@ -28,9 +28,12 @@ export const metadata = {
     apple: "/hintdrop-icon-120.png",
     shortcut: "/favicon.png",
   },
-  title: "HintDrop",
-  description:
-    "Build circles, hints, and reminders to stay close to the people who matter.",
+  title: {
+    default: "HintDrop",
+    template: "%s | HintDrop",
+  },
+  description: "Save what you actually want. Remember who matters. Plan gifts together. HintDrop is the thoughtful gifting app for hints, reminders, and group gifting.",
+  metadataBase: new URL("https://hintdrop.app"),
 };
 
 export default function RootLayout({ children }) {
