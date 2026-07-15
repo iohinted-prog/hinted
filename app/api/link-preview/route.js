@@ -228,38 +228,12 @@ function isUsablePreview(result) {
 }
 
 // Retailers known to block HTML scraping — skip straight to LinkPreview
+// Only list sites where we have a specific strategy (Amazon URL parsing).
+// All other sites try HTML first — the fast-fail block detector handles the rest.
 const BLOCKED_RETAILERS = [
-  // Amazon
   "amazon.co.uk", "amazon.com", "amazon.de", "amazon.fr",
   "amazon.es", "amazon.it", "amazon.ca", "amazon.com.au",
-  // Fashion — known Cloudflare/bot protection
-  "asos.com", "zara.com", "endclothing.com", "end.com",
-  "net-a-porter.com", "farfetch.com", "matchesfashion.com",
-  "ssense.com", "luisaviaroma.com", "mytheresa.com",
-  "flannels.com", "selfridges.com", "harrods.com",
-  "harveynichols.com", "browns.com", "mrporter.com",
-  "nordstrom.com", "saksfifthavenue.com", "barneys.com",
-  "revolve.com", "nastygal.com", "prettylittlething.com",
-  "boohoo.com", "shein.com", "misguided.com",
-  // Sports
-  "nike.com", "adidas.com", "adidas.co.uk",
-  "jdsports.co.uk", "footlocker.com", "footlocker.co.uk",
-  // Beauty
-  "sephora.com", "sephora.co.uk", "lookfantastic.com",
-  "cultbeauty.co.uk", "spacenk.com", "beautybay.com",
-  // Department stores
-  "johnlewis.com", "marksandspencer.com", "debenhams.com",
-  "next.co.uk", "dunelm.com", "habitat.co.uk",
-  // Home / Tech
-  "made.com", "wayfair.com", "wayfair.co.uk",
-  "apple.com", "currys.co.uk", "argos.co.uk",
-  // Travel / Experiences
-  "airbnb.com", "airbnb.co.uk", "booking.com",
-  "expedia.com", "expedia.co.uk", "hotels.com",
-  "viator.com", "getyourguide.com",
-  // Luxury
-  "gucci.com", "louisvuitton.com", "chanel.com",
-  "prada.com", "burberry.com", "alexandermcqueen.com",
+  "amazon.co.jp", "amazon.in",
 ];
 
 function isBlockedRetailer(url = "") {
