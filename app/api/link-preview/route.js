@@ -251,7 +251,7 @@ const BLOCKED_RETAILERS = [
   "johnlewis.com", "marksandspencer.com", "debenhams.com",
   "next.co.uk", "dunelm.com", "habitat.co.uk",
   // Home / Tech
-  "ikea.com", "made.com", "wayfair.com", "wayfair.co.uk",
+  "made.com", "wayfair.com", "wayfair.co.uk",
   "apple.com", "currys.co.uk", "argos.co.uk",
   // Travel / Experiences
   "airbnb.com", "airbnb.co.uk", "booking.com",
