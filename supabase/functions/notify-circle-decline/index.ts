@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
 </html>`
 
     // Insert organiser notification
-    await supabase.from('circle_notifications').insert({
+    const { error: notifError } = await supabase.from('circle_notifications').insert({
       circle_id: circle.id,
       organiser_id: circle.user_id,
       type: 'invite_declined',
@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
       metadata: { invite_id, decliner_name: declinerName, circle_title: circle.title },
       acted_on: false,
     })
+    if (notifError) console.error('circle_notifications insert error:', JSON.stringify(notifError))
 
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',

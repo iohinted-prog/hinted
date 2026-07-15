@@ -386,6 +386,7 @@ function buildSelfRecord(profile) {
     note: "You",
     initials: getInitials(safeName || "You"),
     colors: "from-[#4e596d] to-[#212a3c]",
+    avatarUrl: profile?.avatar_url || null,
     email: profile?.invite_email || "",
     status: "accepted",
     raw: profile || null,
