@@ -227,6 +227,67 @@ function isUsablePreview(result) {
   return (hasTitle && hasImage) || (hasTitle && hasPrice);
 }
 
+// Retailers known to block HTML scraping — skip straight to LinkPreview
+const BLOCKED_RETAILERS = [
+  "amazon.co.uk",
+  "amazon.com",
+  "amazon.de",
+  "amazon.fr",
+  "amazon.es",
+  "amazon.it",
+  "amazon.ca",
+  "amazon.com.au",
+  "asos.com",
+  "zara.com",
+  "net-a-porter.com",
+  "farfetch.com",
+];
+
+function isBlockedRetailer(url = "") {
+  try {
+    const host = new URL(url).hostname.replace(/^www\./, "");
+    return BLOCKED_RETAILERS.some(r => host === r || host.endsWith("." + r));
+  } catch {
+    return false;
+  }
+}
+
+// Extract useful data from Amazon URLs directly
+function parseAmazonUrl(url = "") {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "");
+    if (!host.startsWith("amazon.")) return null;
+
+    // Extract ASIN from URL path
+    const asinMatch = parsed.pathname.match(/\/dp\/([A-Z0-9]{10})|\/gp\/product\/([A-Z0-9]{10})/);
+    const asin = asinMatch?.[1] || asinMatch?.[2];
+    if (!asin) return null;
+
+    // Extract title from URL slug
+    const slugMatch = parsed.pathname.match(/\/([^\/]+)\/dp\//);
+    const slug = slugMatch?.[1] || "";
+    const title = slug
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, c => c.toUpperCase())
+      .trim() || "Amazon product";
+
+    // Build Amazon image URL from ASIN
+    const image = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SX500_.jpg`;
+
+    // Detect currency from domain
+    const currency = host.endsWith(".co.uk") ? "GBP"
+      : host.endsWith(".de") || host.endsWith(".fr") || host.endsWith(".es") || host.endsWith(".it") ? "EUR"
+      : "USD";
+
+    const siteName = host.replace("amazon.", "Amazon ").replace(".co.uk", "UK").replace(".com", "").trim();
+
+    return { asin, title, image, currency, siteName, url: parsed.toString() };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchWithTimeout(url, options = {}, timeoutMs = 3500) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -492,14 +553,55 @@ export async function POST(request) {
     let htmlResult = null;
     let htmlError = null;
 
-    try {
-      htmlResult = await tryHtmlPreview(inputUrl, preferredCurrency);
-
-      if (isUsablePreview(htmlResult)) {
-        return NextResponse.json(htmlResult, { status: 200 });
+    // Check for Amazon URL — parse directly without scraping
+    const amazonData = parseAmazonUrl(inputUrl);
+    if (amazonData) {
+      const result = {
+        url: amazonData.url,
+        title: amazonData.title,
+        titleShort: amazonData.title,
+        description: "",
+        siteName: amazonData.siteName,
+        image: amazonData.image,
+        selectedImage: amazonData.image,
+        imageCandidates: [amazonData.image],
+        priceText: "",
+        numericPrice: null,
+        detectedCurrency: amazonData.currency,
+        brand: "",
+        confidence: "medium",
+        needsReview: true,
+        blocked: false,
+        blockReason: null,
+        blockMessage: "",
+        source: "amazon-parse",
+      };
+      // Still try LinkPreview in background for price
+      try {
+        const linkPreviewPayload = await fetchLinkPreview(inputUrl);
+        const linkPreviewResult = mapLinkPreviewResult(inputUrl, linkPreviewPayload, preferredCurrency);
+        if (linkPreviewResult.priceText) result.priceText = linkPreviewResult.priceText;
+        if (linkPreviewResult.numericPrice) result.numericPrice = linkPreviewResult.numericPrice;
+        if (linkPreviewResult.title && linkPreviewResult.title !== "Shared item") result.title = linkPreviewResult.title;
+        if (linkPreviewResult.image) { result.image = linkPreviewResult.image; result.selectedImage = linkPreviewResult.image; }
+        result.needsReview = !(result.title && result.image);
+        result.confidence = result.priceText ? "high" : "medium";
+      } catch {
+        // LinkPreview failed — use Amazon parse result as-is
       }
-    } catch (err) {
-      htmlError = err;
+      return NextResponse.json(result, { status: 200 });
+    }
+
+    // For known blocked retailers, skip HTML scraping entirely
+    if (!isBlockedRetailer(inputUrl)) {
+      try {
+        htmlResult = await tryHtmlPreview(inputUrl, preferredCurrency);
+        if (isUsablePreview(htmlResult)) {
+          return NextResponse.json(htmlResult, { status: 200 });
+        }
+      } catch (err) {
+        htmlError = err;
+      }
     }
 
     try {
