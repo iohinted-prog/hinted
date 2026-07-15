@@ -903,23 +903,32 @@ function FeedItem({
           </div>
           {bucket === "hint" && metadata.preview_hints?.length > 0 && (
             <div className="mt-4">
-              <div className="flex items-center gap-2">
-                {metadata.preview_hints.slice(0, 2).map((hint, i) => (
-                  <div key={i} className="relative h-16 w-16 overflow-hidden rounded-[14px] border border-[#f0dfd6] bg-[#fffaf7] shrink-0">
-                    {hint.image_url
-                      ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
-                      : <div className="h-full w-full flex items-center justify-center text-2xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]">🎁</div>
-                    }
-                  </div>
-                ))}
-                {metadata.hint_count > 2 && (
-                  <span className="text-sm font-semibold text-slate-400">+{metadata.hint_count - 2} more</span>
-                )}
-                <Link href="/hints"
-                  className="ml-auto inline-flex h-9 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
-                  See Hints
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={() => actorUserId && onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
+                className="w-full text-left"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {metadata.preview_hints.slice(0, 2).map((hint, i) => (
+                    <div key={i} className="relative aspect-square overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
+                      {hint.image_url
+                        ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
+                        : <div className="h-full w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]">🎁</div>
+                      }
+                      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                        <p className="text-[11px] font-semibold text-white truncate">{hint.title}</p>
+                        {hint.retailer && <p className="text-[10px] text-white/70 truncate">{hint.retailer}</p>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  {metadata.hint_count > 2 && (
+                    <span className="text-sm font-semibold text-slate-400">+{metadata.hint_count - 2} more hints</span>
+                  )}
+                  <span className="ml-auto text-sm font-semibold text-[#df7b59]">See all hints →</span>
+                </div>
+              </button>
             </div>
           )}
           {(bucket !== "hint") && item.cta_label && item.cta_href ? (
