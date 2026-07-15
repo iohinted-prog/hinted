@@ -567,46 +567,6 @@ export async function POST(request) {
     let htmlResult = null;
     let htmlError = null;
 
-    // Check for Amazon URL — parse directly without scraping
-    const amazonData = parseAmazonUrl(inputUrl);
-    if (amazonData) {
-      const result = {
-        url: amazonData.url,
-        title: amazonData.title,
-        titleShort: amazonData.title,
-        description: "",
-        siteName: amazonData.siteName,
-        image: "",
-        selectedImage: "",
-        imageCandidates: [],
-        priceText: "",
-        numericPrice: null,
-        detectedCurrency: amazonData.currency,
-        brand: "",
-        confidence: "medium",
-        needsReview: true,
-        blocked: false,
-        blockReason: null,
-        blockMessage: "",
-        source: "amazon-parse",
-      };
-      // Still try LinkPreview in background for price
-      try {
-        const linkPreviewPayload = await fetchLinkPreview(inputUrl);
-        const linkPreviewResult = mapLinkPreviewResult(inputUrl, linkPreviewPayload, preferredCurrency);
-        if (linkPreviewResult.priceText) result.priceText = linkPreviewResult.priceText;
-        if (linkPreviewResult.numericPrice) result.numericPrice = linkPreviewResult.numericPrice;
-        if (linkPreviewResult.title && linkPreviewResult.title !== "Shared item") result.title = linkPreviewResult.title;
-        if (linkPreviewResult.image) { result.image = linkPreviewResult.image; result.selectedImage = linkPreviewResult.image; }
-        result.needsReview = !(result.title && result.image);
-        result.confidence = result.image ? (result.priceText ? "high" : "medium") : "low";
-        result.confidence = result.priceText ? "high" : "medium";
-      } catch {
-        // LinkPreview failed — use Amazon parse result as-is
-      }
-      return NextResponse.json(result, { status: 200 });
-    }
-
     // For known blocked retailers, skip HTML scraping entirely
     if (!isBlockedRetailer(inputUrl)) {
       try {
