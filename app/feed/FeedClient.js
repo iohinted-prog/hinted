@@ -1697,6 +1697,7 @@ export default function FeedClient() {
         publicState: row.public_state,
         birthday: row.birthday || null,
         interests: Array.isArray(row.interests) ? row.interests : [],
+        interests: Array.isArray(row.interests) ? row.interests : [],
         isDemo: false,
         raw: row,
       };
