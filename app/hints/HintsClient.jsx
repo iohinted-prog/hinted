@@ -1735,7 +1735,7 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 {loadingColumns.map((column, columnIndex) => (
                   <div key={`loading-column-${columnIndex}`} className="space-y-6">
                     {column.map((ratio, index) => (
@@ -1753,7 +1753,7 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
@@ -1794,7 +1794,7 @@ export default function HintsClient() {
                 </DragOverlay>
               </DndContext>
             ) : (
-              <div className="columns-1 gap-6 md:columns-3">
+              <div className="columns-2 gap-4 md:columns-3">
                 {demoHints.map((hint) => (
                   <div key={hint.id} className="mb-6 break-inside-avoid">
                     <HintCard
