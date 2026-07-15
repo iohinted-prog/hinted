@@ -2182,11 +2182,22 @@ export default function FeedClient() {
     if (!sessionUser?.id || !isSocialFeedItem(item)) return;
 
     try {
+      const trimmed = draftComment.trim();
       const { error } = await supabase.from("feed_comments").insert({
         feed_item_id: item.id,
         user_id: sessionUser.id,
-        body: draftComment.trim(),
+        body: trimmed,
       });
+        supabase.from("notifications").insert({
+          user_id: item.owner_user_id,
+          actor_user_id: sessionUser.id,
+          type: "comment",
+          entity_id: item.id,
+          title: (sessionUser.user_metadata?.full_name || "Someone") + " commented on your hint",
+          body: trimmed.slice(0, 80),
+          data: { feed_item_id: item.id, actor_name: sessionUser.user_metadata?.full_name || "", actor_avatar_url: sessionUser.user_metadata?.avatar_url || "" },
+        }).catch(() => {});
+      }
 
       if (error) throw new Error(normalizeSupabaseError(error, "Could not save comment."));
 
