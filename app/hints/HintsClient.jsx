@@ -29,6 +29,7 @@ import AvatarMenu from "../components/AvatarMenu";
 const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
 const CARD_MAX_HEIGHT = "min(540px, 68vh)";
+const CARD_MIN_HEIGHT = "280px";
 const TIMEOUT_MODAL_MESSAGE =
   "We tried to get the title, image, and price, but this shop asked you to add them instead.";
 
@@ -874,6 +875,7 @@ function HintCard({
       style={{
         aspectRatio: `${ratio}`,
         maxHeight: CARD_MAX_HEIGHT,
+        minHeight: CARD_MIN_HEIGHT,
         boxShadow: isDragging
           ? "0 26px 70px rgba(113,74,49,0.22), inset 0 1px 0 rgba(255,255,255,0.24)"
           : "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
@@ -914,6 +916,14 @@ function HintCard({
             {...dragHandleListeners}
           >
             ⋮⋮ Drag
+          </button>
+          <button
+            type="button"
+            onClick={() => onTogglePrivate(hint)}
+            className="pointer-events-auto sm:hidden flex h-10 w-10 items-center justify-center rounded-full border border-white/45 bg-white/72 text-[16px] backdrop-blur-md"
+            title={hint.private ? "Private" : "Public"}
+          >
+            {hint.private ? "🔒" : "🔓"}
           </button>
 
 
