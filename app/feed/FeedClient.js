@@ -2644,8 +2644,22 @@ export default function FeedClient() {
 
                 <div className="mt-5 space-y-4">
                   {feedLoading ? (
-                    <div className="rounded-[24px] border border-[#f0dfd6] bg-[#fffdfa] p-5 text-sm text-slate-500">
-                      Loading feed...
+                    <div className="space-y-4">
+                      {[1,2,3].map(i => (
+                        <div key={i} className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm animate-pulse">
+                          <div className="flex items-start gap-4">
+                            <div className="h-11 w-11 rounded-full bg-[#f0e4dd] shrink-0" />
+                            <div className="flex-1 space-y-3">
+                              <div className="flex gap-2">
+                                <div className="h-4 w-24 rounded-full bg-[#f0e4dd]" />
+                                <div className="h-4 w-12 rounded-full bg-[#f5ede8]" />
+                              </div>
+                              <div className="h-4 w-3/4 rounded-full bg-[#f5ede8]" />
+                              <div className="h-8 w-36 rounded-full bg-[#f5ede8]" />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   ) : visibleFeedItems.length > 0 ? (
                     visibleFeedItems.map((item) => {
