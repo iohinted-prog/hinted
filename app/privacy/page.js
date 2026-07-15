@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 export const metadata = {
   title: "Privacy Policy | HintDrop",
   description:
@@ -9,7 +7,6 @@ export const metadata = {
 export default function PrivacyPage() {
   return (
     <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
-
       <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 rounded-[28px] border border-[#eadfd4] bg-white/80 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-10">
@@ -22,18 +19,18 @@ export default function PrivacyPage() {
             <p className="mt-4 text-base leading-8 text-slate-600">
               Effective date: June 17, 2026
               <br />
-              Last updated: July 14, 2026
+              Last updated: July 15, 2026
             </p>
           </div>
 
           <div className="space-y-6 rounded-[28px] border border-[#eadfd4] bg-white/80 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-10">
             <p className="text-[17px] leading-8 text-slate-700">
-              Hinted (&quot;HintDrop&quot;, &quot;we&quot;, &quot;our&quot;, or
+              HintDrop (&quot;HintDrop&quot;, &quot;we&quot;, &quot;our&quot;, or
               &quot;us&quot;) helps people organise gift ideas, reminders,
-              circles, important dates, and related planning. This Privacy
-              Policy explains what information we collect, how we use it, when
-              we share it, and the choices you have in relation to your
-              information.
+              contacts, circles, important dates, and related planning. This
+              Privacy Policy explains what information we collect, how we use
+              it, when we share it, how we protect it, and the choices you have
+              in relation to your information.
             </p>
 
             <section className="space-y-3">
@@ -41,7 +38,7 @@ export default function PrivacyPage() {
                 1. Information we collect
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                We may collect information you provide directly, information
+                We collect information you provide directly, information
                 collected automatically when you use HintDrop, and information
                 received from third parties where you choose to connect them to
                 your account.
@@ -49,11 +46,11 @@ export default function PrivacyPage() {
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
                 <li>
                   - Account information such as your name, email address,
-                  password, profile details, preferences, and login details.
+                  profile details, preferences, and login details.
                 </li>
                 <li>
                   - Information you add to HintDrop, including birthdays,
-                  interests, relationships, reminders, gift ideas, saved links,
+                  interests, reminders, contacts, gift ideas, saved links,
                   notes, circles, invite details, and contribution-related
                   information.
                 </li>
@@ -64,7 +61,8 @@ export default function PrivacyPage() {
                 </li>
                 <li>
                   - Information provided by third-party sign-in providers, such
-                  as Google, if you choose to use social sign-in.
+                  as Google, if you choose to use social sign-in or contact
+                  search features.
                 </li>
               </ul>
             </section>
@@ -74,15 +72,16 @@ export default function PrivacyPage() {
                 2. How we use information
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                We use information we collect to operate, improve, and secure
-                HintDrop.
+                We use information we collect to operate, improve, secure, and
+                support HintDrop.
               </p>
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
                 <li>- Create and manage your account.</li>
                 <li>- Authenticate users and keep accounts secure.</li>
                 <li>
                   - Provide core features such as hints, reminders, circles,
-                  invite flows, gift planning, and saved content.
+                  contact management, invite flows, gift planning, and saved
+                  content.
                 </li>
                 <li>
                   - Personalise your experience and show more relevant prompts,
@@ -108,29 +107,44 @@ export default function PrivacyPage() {
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-                3. Social sign-in and Google data
+                3. Google sign-in and Google Contacts data
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                If you choose to sign in with Google, we receive basic account
-                information such as your name, email address, and profile image.
-                We use that information to authenticate your account, create or
-                maintain your profile, and support the features you choose to
-                use inside HintDrop.
+                If you choose to sign in with Google, we may receive basic
+                Google account information such as your name, email address, and
+                profile image. We use this information to authenticate your
+                account, create or maintain your HintDrop profile, and support
+                the features you choose to use inside the product.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
-                When you choose to search for contacts to add on HintDrop, we
-                request read-only access to your Google Contacts
-                (contacts.readonly and contacts.other.readonly scopes). This
-                access is used solely to help you find and add people you already
-                know — we display matching names and email addresses so you can
-                send them a HintDrop invite. We do not store your Google Contacts
-                data on our servers, sync your address book, or use your contacts
-                for any purpose other than the search you initiate in that moment.
+                If you choose to use contact search features, we request
+                read-only access to your Google Contacts using the
+                `contacts.readonly` and `contacts.other.readonly` scopes. We use
+                this Google user data only to help you find and add people you
+                already know to HintDrop, for example by displaying matching
+                names and email addresses so you can select a contact and send
+                an invite.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not sell Google user data. We do not use Google user data
-                for advertising, profiling, or any purpose other than providing
-                and improving HintDrop. Our use of Google user data complies with
+                for advertising, profiling, data brokering, or any unrelated
+                purpose. We do not use raw or derived Google user data obtained
+                through Google Workspace APIs to develop, improve, or train
+                generalised AI or machine learning models, and we do not
+                transfer Google user data to third-party AI services for model
+                training.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                We do not store your full Google Contacts address book on our
+                servers or sync your entire Google Contacts account into
+                HintDrop. Contact search results are used only in connection
+                with the search or selection flow you initiate. If you choose to
+                add or invite a person, we may store the limited contact details
+                you select, such as a name or email address, as part of your
+                HintDrop account data so the feature can work as expected.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                Our use of information received from Google APIs will adhere to
                 the Google API Services User Data Policy, including the Limited
                 Use requirements.
               </p>
@@ -146,14 +160,13 @@ export default function PrivacyPage() {
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
                 <li>
                   - With service providers who help us run HintDrop, such as
-                  hosting, analytics, authentication, communications, and
-                  customer support providers.
+                  hosting, infrastructure, analytics, authentication,
+                  communications, and customer support providers.
                 </li>
                 <li>
                   - With other users where this is part of the product
                   experience, such as accepted contacts, shared circles, or
-                  group gifting and contribution flows that you choose to take
-                  part in.
+                  contribution flows that you choose to participate in.
                 </li>
                 <li>
                   - If required by law, legal process, regulation, or
@@ -170,7 +183,10 @@ export default function PrivacyPage() {
               </ul>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not sell your personal information in the ordinary meaning
-                of that term.
+                of that term. We do not sell or transfer Google user data to
+                advertisers, data brokers, or other third parties except as
+                necessary to provide or secure the user-facing features you
+                request.
               </p>
             </section>
 
@@ -179,10 +195,21 @@ export default function PrivacyPage() {
                 5. Circles and payments
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop offers a group gifting feature called Circles, which allows users to pool contributions toward a shared gift. When you participate in a circle as an organiser or contributor, certain information is shared with other circle members, including your name, profile, and contribution status. Contribution amounts may be visible to the circle organiser.
+                HintDrop offers a group gifting feature called Circles, which
+                allows users to coordinate around a shared gift. When you
+                participate in a circle as an organiser or contributor, certain
+                information may be visible to other circle members, including
+                your name, profile, and contribution status. Contribution
+                amounts may be visible to the circle organiser where relevant to
+                the feature.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop does not process or store payment information for circles. Contributions are arranged directly between members outside of the platform. We retain circle data, pledge amounts, and contribution records for operational purposes and to help members track their commitments.
+                HintDrop does not process or store payment card information for
+                circles in the version of the service described here.
+                Contributions are arranged directly between members outside of
+                the platform. We may retain circle-related records, pledge
+                amounts, and contribution data for operational, support, and
+                record-keeping purposes.
               </p>
             </section>
 
@@ -191,11 +218,11 @@ export default function PrivacyPage() {
                 6. Visibility and sharing choices
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop is designed to help people coordinate around gifting and
-                important moments. Some information may be visible to accepted
-                contacts, members of a shared circle, or participants in a
-                shared contribution flow, depending on how the feature works. We
-                aim to make those sharing contexts clear in the product.
+                HintDrop is designed to help people coordinate around gifting
+                and important moments. Depending on the feature, some
+                information may be visible to accepted contacts, members of a
+                shared circle, or participants in a shared contribution flow.
+                We aim to make those sharing contexts clear in the product.
               </p>
             </section>
 
@@ -205,23 +232,31 @@ export default function PrivacyPage() {
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
                 We may use cookies and similar technologies to keep you signed
-                in, remember preferences, understand usage, measure performance,
-                and improve the service. You can usually control cookies through
-                your browser settings, although some parts of HintDrop may not
-                work properly if they are disabled.
+                in, remember preferences, understand usage, measure
+                performance, and improve the service. You can usually control
+                cookies through your browser settings, although some parts of
+                HintDrop may not work properly if they are disabled.
               </p>
             </section>
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-                8. Data retention
+                8. Data retention and deletion
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                We keep personal information for as long as reasonably necessary
-                to provide HintDrop, maintain records, resolve disputes, enforce
-                our agreements, and comply with legal obligations. Some
-                information may be retained after account closure where needed
-                for legal, security, fraud prevention, or operational reasons.
+                We keep personal information for as long as reasonably
+                necessary to provide HintDrop, maintain records, resolve
+                disputes, enforce our agreements, and comply with legal
+                obligations.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                Google Contacts search data is not stored by us as a synced
+                address book. If you select a contact or send an invite, we may
+                retain the specific contact details you chose to add as part of
+                your account data until you delete that contact, remove the
+                related data, or delete your account, subject to any limited
+                retention required for legal, security, fraud-prevention, or
+                operational reasons.
               </p>
             </section>
 
@@ -232,9 +267,14 @@ export default function PrivacyPage() {
               <p className="text-[17px] leading-8 text-slate-700">
                 We use reasonable technical and organisational measures designed
                 to protect personal information against unauthorised access,
-                loss, misuse, or alteration. However, no internet transmission
-                or storage system is completely secure, so we cannot guarantee
-                absolute security.
+                loss, misuse, or alteration. These measures may include access
+                controls, authenticated systems, encrypted transmission, and
+                restrictions on who can access personal information within our
+                systems.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                No method of internet transmission or electronic storage is
+                completely secure, so we cannot guarantee absolute security.
               </p>
             </section>
 
@@ -248,6 +288,11 @@ export default function PrivacyPage() {
                 personal information, and to withdraw consent where processing
                 depends on consent. You may also opt out of marketing
                 communications at any time.
+              </p>
+              <p className="text-[17px] leading-8 text-slate-700">
+                If you connected Google to HintDrop, you can also revoke
+                HintDrop&apos;s access from your Google account permissions
+                settings.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 To make a privacy-related request, contact us at{" "}
@@ -266,8 +311,8 @@ export default function PrivacyPage() {
                 11. Children&apos;s privacy
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop is not intended for children under the age of 13, or any
-                higher minimum age required by local law to use the service
+                HintDrop is not intended for children under the age of 13, or
+                any higher minimum age required by local law to use the service
                 independently. We do not knowingly collect personal information
                 from children in violation of applicable law.
               </p>
@@ -278,11 +323,11 @@ export default function PrivacyPage() {
                 12. International users
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop may process and store information in countries other than
-                the one where you live. By using the service, you understand
-                that your information may be transferred to and processed in
-                places where data protection laws may differ from those in your
-                jurisdiction.
+                HintDrop may process and store information in countries other
+                than the one where you live. By using the service, you
+                understand that your information may be transferred to and
+                processed in places where data protection laws may differ from
+                those in your jurisdiction.
               </p>
             </section>
 
