@@ -1177,40 +1177,29 @@ export default function HintsClient() {
 
   useEffect(() => {
     const supabase = createClient();
+    let cancelled = false;
 
-    async function loadSession() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    async function loadSessionAndHints() {
+      setIsLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (cancelled) return;
+
       setCurrentUser(user || null);
-    }
 
-    loadSession();
-  }, []);
-
-  useEffect(() => {
-    if (currentUser === null) {
-      setIsLoading(true);
-      return;
-    }
-
-    if (!currentUser) {
-      setHints([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const supabase = createClient();
-
-    async function loadHints() {
-      setIsLoading(true);
+      if (!user) {
+        setHints([]);
+        setIsLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from("hints")
-        .select("*")
-        .eq("user_id", currentUser.id)
+        .select("id, title, url, image_url, retailer, price_text, numeric_price, currency, starred, is_private, position, created_at, occasions")
+        .eq("user_id", user.id)
         .order("position", { ascending: true })
         .order("created_at", { ascending: false });
+
+      if (cancelled) return;
 
       if (error) {
         setError(errorToMessage(error));
@@ -1241,8 +1230,9 @@ export default function HintsClient() {
       setIsLoading(false);
     }
 
-    loadHints();
-  }, [currentUser]);
+    loadSessionAndHints();
+    return () => { cancelled = true; };
+  }, []);
 
   const visibleHints = hints;
   const activeHint = visibleHints.find((hint) => hint.id === activeId) || null;
