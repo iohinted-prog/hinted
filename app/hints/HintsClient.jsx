@@ -29,7 +29,6 @@ import AvatarMenu from "../components/AvatarMenu";
 const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
 const CARD_MAX_HEIGHT = "min(540px, 68vh)";
-const CARD_MIN_HEIGHT = "280px";
 const TIMEOUT_MODAL_MESSAGE =
   "We tried to get the title, image, and price, but this shop asked you to add them instead.";
 
@@ -869,13 +868,12 @@ function HintCard({
 
   return (
     <article
-      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 cursor-grab active:cursor-grabbing ${
-        isDragging ? "scale-[1.03] shadow-2xl ring-2 ring-white/40" : "hover:-translate-y-1"
+      className={`group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 ${
+        isDragging ? "scale-[1.02]" : "hover:-translate-y-1"
       }`}
       style={{
         aspectRatio: `${ratio}`,
         maxHeight: CARD_MAX_HEIGHT,
-        minHeight: CARD_MIN_HEIGHT,
         boxShadow: isDragging
           ? "0 26px 70px rgba(113,74,49,0.22), inset 0 1px 0 rgba(255,255,255,0.24)"
           : "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
@@ -892,7 +890,6 @@ function HintCard({
               } ${hint.private ? "opacity-84" : ""}`}
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={() => setImgError(true)}
             />
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.42)_26%,rgba(16,12,10,0.10)_50%,rgba(255,255,255,0)_72%)]" />
           </>
@@ -904,14 +901,20 @@ function HintCard({
               }`}
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.18)] to-transparent" />
-            <div className="absolute inset-0 flex items-center justify-center text-[56px] opacity-30">🎁</div>
           </>
         )}
       </div>
 
       <div className="absolute left-4 right-4 top-4 z-30 flex items-start justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-
+          <button
+            type="button"
+            className="pointer-events-auto flex min-h-[40px] cursor-grab items-center gap-1 rounded-full border border-white/45 bg-white/72 px-3 py-2 text-[11px] font-semibold text-slate-700 backdrop-blur-md active:cursor-grabbing"
+            {...dragHandleAttributes}
+            {...dragHandleListeners}
+          >
+            ⋮⋮ Drag
+          </button>
 
           {hint.starred && (
             <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
@@ -988,10 +991,9 @@ function HintCard({
             <button
               type="button"
               onClick={() => onTogglePrivate(hint)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-white/45 bg-white/76 text-[16px] backdrop-blur-md hover:bg-white"
-              title={hint.private ? "Private" : "Public"}
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
             >
-              {hint.private ? "🔒" : "👁️"}
+              {hint.private ? "🔒 Private" : "🔓 Public"}
             </button>
 
             <a
@@ -1026,7 +1028,7 @@ function SortableHintCard({
     id: hint.id,
     animateLayoutChanges,
     transition: {
-      duration: 200,
+      duration: 240,
       easing: "cubic-bezier(0.25, 1, 0.5, 1)",
     },
   });
@@ -1039,7 +1041,7 @@ function SortableHintCard({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid" {...attributes} {...listeners}>
+    <div ref={setNodeRef} style={style} className="mb-6 break-inside-avoid">
       <HintCard
         hint={hint}
         imageRatios={imageRatios}
@@ -1047,8 +1049,8 @@ function SortableHintCard({
         onToggleStarred={onToggleStarred}
         onTogglePrivate={onTogglePrivate}
         isDragging={isDragging}
-        dragHandleAttributes={{}}
-        dragHandleListeners={{}}
+        dragHandleAttributes={attributes}
+        dragHandleListeners={listeners}
         formatCurrency={formatCurrency}
       />
     </div>
@@ -1062,7 +1064,6 @@ function LoadingHintCard({ ratio = "0.92" }) {
       style={{
         aspectRatio: ratio,
         maxHeight: CARD_MAX_HEIGHT,
-        minHeight: CARD_MIN_HEIGHT,
         boxShadow: "0 10px 30px rgba(176,118,86,0.08), inset 0 1px 0 rgba(255,255,255,0.24)",
       }}
     >
@@ -1109,7 +1110,7 @@ export default function HintsClient() {
   const busyLongTimerRef = useRef(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8, delay: 0 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
@@ -1554,7 +1555,7 @@ export default function HintsClient() {
   }
 
   async function submitNewHint() {
-    if (!currentUser || !pendingHint || isSubmittingNewHint) return;
+    if (!currentUser || !pendingHint) return;
 
     setIsSubmittingNewHint(true);
     setError("");
@@ -1604,35 +1605,6 @@ export default function HintsClient() {
 
       if (error) throw new Error(errorToMessage(error));
 
-      // Insert feed item — fire and forget
-      const allHints = [newHint, ...hints];
-      const publicHints = allHints.filter(h => !h.private);
-      const previewHints = publicHints.slice(0, 2).map(h => ({
-        id: h.id, title: h.title, image_url: h.image || "", retailer: h.retailer,
-      }));
-      supabase.from("feed_items").insert({
-        owner_user_id: currentUser.id,
-        actor_user_id: currentUser.id,
-        family: "hint",
-        item_type: "hint_save_session",
-        visibility: "contacts",
-        headline: `Added a new hint${newHint.title && newHint.title !== "Hint" ? ": " + newHint.title : ""}`,
-        body: newHint.retailer || "",
-        cta_label: "See Hints",
-        cta_href: "/hints",
-        occurred_at: new Date().toISOString(),
-        metadata: {
-          actor_name: currentUser.user_metadata?.full_name || currentUser.email || "You",
-          actor_avatar_url: currentUser.user_metadata?.avatar_url || null,
-          hint_title: newHint.title,
-          hint_image: newHint.image || "",
-          hint_retailer: newHint.retailer,
-          hint_count: publicHints.length,
-          preview_hints: previewHints,
-          social_enabled: true,
-        },
-      }).then(r => { if (r.error) console.error("feed insert error:", r.error); }).catch(e => console.error("feed insert catch:", e));
-
       if (image) {
         const ratio = await loadImageAspectRatio(image);
         if (ratio) {
@@ -1641,7 +1613,6 @@ export default function HintsClient() {
       }
 
       setHints((current) => [newHint, ...current].map((item, index) => ({ ...item, position: index })));
-      closeBusy();
       closeAddModal();
     } catch (err) {
       setError(errorToMessage(err));
@@ -1764,7 +1735,7 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-6">
+              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                 {loadingColumns.map((column, columnIndex) => (
                   <div key={`loading-column-${columnIndex}`} className="space-y-6">
                     {column.map((ratio, index) => (
@@ -1782,7 +1753,7 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="hidden md:grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
@@ -1804,8 +1775,6 @@ export default function HintsClient() {
                       </div>
                     </SortableContext>
                   ))}
-                  </div>
-                  </div>
                 </div>
 
                 <DragOverlay dropAnimation={{ duration: 180, easing: "cubic-bezier(0.25, 1, 0.5, 1)" }}>
@@ -1824,26 +1793,8 @@ export default function HintsClient() {
                   ) : null}
                 </DragOverlay>
               </DndContext>
-              {/* Mobile 2-col masonry — no drag */}
-              <div className="md:hidden columns-2 gap-3 mt-0">
-                {visibleHints.map((hint) => (
-                  <div key={hint.id} className="mb-3 break-inside-avoid">
-                    <HintCard
-                      hint={hint}
-                      imageRatios={imageRatios}
-                      onEdit={openEditModal}
-                      onToggleStarred={toggleStarred}
-                      onTogglePrivate={togglePrivate}
-                      isDragging={false}
-                      dragHandleAttributes={{}}
-                      dragHandleListeners={{}}
-                      formatCurrency={formatCurrency}
-                    />
-                  </div>
-                ))}
-              </div>
             ) : (
-              <div className="columns-2 gap-3 md:columns-3 md:gap-6">
+              <div className="columns-2 gap-4 md:columns-3">
                 {demoHints.map((hint) => (
                   <div key={hint.id} className="mb-6 break-inside-avoid">
                     <HintCard
