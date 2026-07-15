@@ -901,7 +901,28 @@ function FeedItem({
               {formatRelativeFromDate(item.occurred_at || item.created_at)}
             </span>
           </div>
-          {item.cta_label && item.cta_href ? (
+          {bucket === "hint" && metadata.preview_hints?.length > 0 && (
+            <div className="mt-4">
+              <div className="flex items-center gap-2">
+                {metadata.preview_hints.slice(0, 2).map((hint, i) => (
+                  <div key={i} className="relative h-16 w-16 overflow-hidden rounded-[14px] border border-[#f0dfd6] bg-[#fffaf7] shrink-0">
+                    {hint.image_url
+                      ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
+                      : <div className="h-full w-full flex items-center justify-center text-2xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]">🎁</div>
+                    }
+                  </div>
+                ))}
+                {metadata.hint_count > 2 && (
+                  <span className="text-sm font-semibold text-slate-400">+{metadata.hint_count - 2} more</span>
+                )}
+                <Link href="/hints"
+                  className="ml-auto inline-flex h-9 items-center justify-center rounded-full border border-[#ebdfd8] bg-white px-4 text-sm font-medium text-slate-600 hover:bg-slate-50">
+                  See Hints
+                </Link>
+              </div>
+            </div>
+          )}
+          {(bucket !== "hint") && item.cta_label && item.cta_href ? (
             <div className="mt-4">
               <Link
                 href={item.cta_href}
