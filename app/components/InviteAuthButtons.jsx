@@ -55,20 +55,7 @@ export default function InviteAuthButtons({ inviteToken, inviteType }) {
       setPageError(error?.message || "Google sign in failed.");
       setLoadingProvider(null);
     }
-  }
-
-  async function handleMicrosoftSignIn() {
-    try {
-      setPageError("");
-      setLoadingProvider("azure");
-      rememberProvider("azure");
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "azure",
-        options: {
-          scopes: "openid profile email",
-          redirectTo: buildRedirectTo(inviteToken, inviteType),
-        },
+  },
       });
 
       if (error) throw error;
@@ -93,14 +80,6 @@ export default function InviteAuthButtons({ inviteToken, inviteType }) {
 
       <button
         type="button"
-        onClick={handleMicrosoftSignIn}
-        disabled={loadingProvider !== null}
-        className="inline-flex h-12 w-full items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-800 transition hover:bg-[#f8f5f2] disabled:cursor-not-allowed disabled:opacity-70"
-      >
-        {loadingProvider === "azure"
-          ? "Connecting Microsoft..."
-          : "Continue with Microsoft"}
-      </button>
 
       {pageError ? (
         <p className="rounded-[18px] border border-[#f1d2c6] bg-[#fff4ef] px-4 py-3 text-sm text-[#b85c3e]">

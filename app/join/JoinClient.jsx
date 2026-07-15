@@ -18,7 +18,7 @@ export default function JoinClient() {
   const title = hasInvite ? "Accept your invite" : "Join HintDrop";
   const subtitle = hasInvite
     ? "Sign in or create an account to continue. You will then be taken to onboarding or straight to your feed."
-    : "Use Google or Microsoft to sign in. New users will go to onboarding and returning users will go straight to the feed.";
+    : "Use Google to sign in. New users will go to onboarding and returning users will go straight to the feed.";
 
   return (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
@@ -73,7 +73,7 @@ export default function JoinClient() {
               </div>
 
               <div className="rounded-full bg-[#fff0e8] px-3 py-2 text-[12px] font-bold text-[#ea7451]">
-                Google or Microsoft
+                Google
               </div>
             </div>
 
@@ -85,7 +85,7 @@ export default function JoinClient() {
 
               <div className="rounded-[22px] border border-[#f3e4db] bg-[#fff8f4] p-4">
                 <p className="text-sm leading-6 text-slate-600">
-                  New here? Use Google or Microsoft to create your account.
+                  New here? Use Google to create your account.
                   Returning users can log in the exact same way. After sign-in,
                   HintDrop will always take you either to onboarding or straight
                   to your feed.
