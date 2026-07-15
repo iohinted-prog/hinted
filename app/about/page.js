@@ -49,22 +49,10 @@ export default function AboutPage() {
                 HintDrop brings together hint lists, birthday reminders, group gifting circles, and a curated gift shop — so the right idea is always within reach when it matters.
               </p>
               <ul className="space-y-3 text-[17px] leading-8 text-slate-700">
-                <li>
-                  - Save gift ideas and organise them around real people and
-                  occasions.
-                </li>
-                <li>
-                  - Keep track of birthdays, celebrations, and important
-                  reminders.
-                </li>
-                <li>
-                  - Build circles and social contexts around friends, family,
-                  and shared moments.
-                </li>
-                <li>
-                  - Explore curated gifting inspiration before and after signing
-                  in.
-                </li>
+                <li>- Save hints from any retailer — title, image, and price pulled automatically.</li>
+                <li>- Remember birthdays, anniversaries, and milestones with gentle reminders.</li>
+                <li>- Plan group gifts with friends through circles — coordinate who contributes what.</li>
+                <li>- Browse a curated gift shop built around the people and occasions that matter.</li>
               </ul>
             </section>
 
@@ -73,16 +61,7 @@ export default function AboutPage() {
                 How the experience works
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
-                HintDrop has two connected layers. The public side introduces the
-                product, the idea behind it, and a preview of gifting content
-                for new visitors. The signed-in experience becomes more personal,
-                with features such as onboarding, saved ideas, reminders, and
-                account-based planning.
-              </p>
-              <p className="text-[17px] leading-8 text-slate-700">
-                This structure allows HintDrop to feel approachable at first
-                glance while still supporting a richer product experience for
-                returning users.
+                Sign up with Google, save your first hint from any product page, and add the people who matter. HintDrop builds around your relationships — so when a birthday comes up, you already know what to get.
               </p>
             </section>
 
