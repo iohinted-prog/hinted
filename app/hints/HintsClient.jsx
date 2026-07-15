@@ -890,7 +890,7 @@ function HintCard({
               } ${hint.private ? "opacity-84" : ""}`}
               loading="lazy"
               referrerPolicy="no-referrer"
-              onError={e => { e.target.style.display = 'none'; e.target.parentNode.parentNode.querySelector('.fallback-gradient')?.classList.remove('hidden'); }}
+              onError={() => setImgError(true)}
             />
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.42)_26%,rgba(16,12,10,0.10)_50%,rgba(255,255,255,0)_72%)]" />
           </>
