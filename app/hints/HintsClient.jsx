@@ -1632,7 +1632,7 @@ export default function HintsClient() {
           preview_hints: previewHints,
           social_enabled: true,
         },
-      }).catch(() => {});
+      }).then(r => { if (r.error) console.error("feed insert error:", r.error); }).catch(e => console.error("feed insert catch:", e));
 
       if (image) {
         const ratio = await loadImageAspectRatio(image);
