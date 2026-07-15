@@ -1709,7 +1709,10 @@ function CreateCircleModal({
                         {hint.image_url && <img src={hint.image_url} className="h-10 w-10 rounded-[8px] object-cover shrink-0" alt="" />}
                         <div className="min-w-0 flex-1">
                           <p className="text-[13px] font-semibold text-slate-900 line-clamp-2">{hint.title}</p>
-                          {extractHintAmount(hint) > 0 && <p className="text-[12px] font-bold text-[#ff8060] mt-0.5">{formatCurrency(extractHintAmount(hint), hint.currency || form.currency)}</p>}
+                          {extractHintAmount(hint) > 0
+                            ? <p className="text-[12px] font-bold text-[#ff8060] mt-0.5">{formatCurrency(extractHintAmount(hint), hint.currency || form.currency)}</p>
+                            : <p className="text-[11px] text-slate-400 mt-0.5">No price — add one below</p>
+                          }
                         </div>
                         <input type="radio" name="hint" className="mt-1 h-4 w-4 accent-[#f36f64] shrink-0" checked={form.selectedHintId === hint.id} onChange={() => handleSelectHint(hint)} />
                       </label>
@@ -1721,6 +1724,21 @@ function CreateCircleModal({
               </div>
             )}
 
+            {form.selectedHintId && form.goalType === 'item' && form.itemSource === 'hint' && !parseAmount(form.goalValue) && (
+              <div className="rounded-[18px] border border-[#ead8ce] bg-[#fffaf7] p-4 space-y-2">
+                <p className="text-sm font-semibold text-slate-700">This hint has no price — add one to continue</p>
+                <div className="flex items-center gap-2">
+                  <select value={form.currency} onChange={e => setForm(prev => ({ ...prev, currency: e.target.value }))}
+                    className="h-11 rounded-[14px] border border-[#ead8ce] bg-white px-3 text-sm text-slate-700 outline-none focus:border-[#f19b7e]">
+                    {currencyOptions.map(c => <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>)}
+                  </select>
+                  <input type="text" inputMode="decimal" value={form.goalValue}
+                    onChange={e => setForm(prev => ({ ...prev, goalValue: e.target.value }))}
+                    placeholder="0.00"
+                    className="flex-1 h-11 rounded-[14px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]" />
+                </div>
+              </div>
+            )}
             {liveBaseAmount > 0 && liveBaseAmount < 1 && (
               <div className="rounded-[18px] border border-[#fde8b0] bg-[#fff8ee] px-4 py-3 text-sm text-[#b07a30]">
                 Please enter an item price of at least £1.
