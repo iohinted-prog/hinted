@@ -207,7 +207,12 @@ export default function AppShell({ children }) {
     setInviteCount(merged.length + cn.length + (notifData?.length || 0));
   }, [supabase]);
 
-  useEffect(() => { loadInviteCount(); }, [loadInviteCount]);
+  useEffect(() => {
+    loadInviteCount();
+    // Poll every 30 seconds for new notifications
+    const interval = setInterval(loadInviteCount, 30000);
+    return () => clearInterval(interval);
+  }, [loadInviteCount]);
 
   useEffect(() => {
     function handleClick(e) {
