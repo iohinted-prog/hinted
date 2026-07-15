@@ -997,7 +997,7 @@ function HintCard({
             <button
               type="button"
               onClick={() => onTogglePrivate(hint)}
-              className="hidden sm:block rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white hidden"
             >
               {hint.private ? "🔒 Private" : "🔓 Public"}
             </button>
