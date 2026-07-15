@@ -292,7 +292,7 @@ function parseAmazonUrl(url = "") {
       .trim() || "Amazon product";
 
     // Build Amazon image URL from ASIN
-    const image = `https://images-na.ssl-images-amazon.com/images/P/${asin}.01._SX500_.jpg`;
+    const image = ""; // LinkPreview will provide the image
 
     // Detect currency from domain
     const currency = host.endsWith(".co.uk") ? "GBP"
@@ -597,9 +597,9 @@ export async function POST(request) {
         titleShort: amazonData.title,
         description: "",
         siteName: amazonData.siteName,
-        image: amazonData.image,
-        selectedImage: amazonData.image,
-        imageCandidates: [amazonData.image],
+        image: "",
+        selectedImage: "",
+        imageCandidates: [],
         priceText: "",
         numericPrice: null,
         detectedCurrency: amazonData.currency,
@@ -620,6 +620,7 @@ export async function POST(request) {
         if (linkPreviewResult.title && linkPreviewResult.title !== "Shared item") result.title = linkPreviewResult.title;
         if (linkPreviewResult.image) { result.image = linkPreviewResult.image; result.selectedImage = linkPreviewResult.image; }
         result.needsReview = !(result.title && result.image);
+        result.confidence = result.image ? (result.priceText ? "high" : "medium") : "low";
         result.confidence = result.priceText ? "high" : "medium";
       } catch {
         // LinkPreview failed — use Amazon parse result as-is
