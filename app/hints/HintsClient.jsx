@@ -1822,7 +1822,7 @@ export default function HintsClient() {
                   ) : null}
                 </DragOverlay>
               </DndContext>
-              {/* Mobile 2-col masonry — no drag */}
+              <>{/* Mobile 2-col masonry — no drag */}
               <div className="md:hidden columns-2 gap-3 mt-0">
                 {visibleHints.map((hint) => (
                   <div key={hint.id} className="mb-3 break-inside-avoid">
@@ -1840,6 +1840,7 @@ export default function HintsClient() {
                   </div>
                 ))}
               </div>
+              </>
             ) : (
               <div className="columns-2 gap-3 md:columns-3 md:gap-6">
                 {demoHints.map((hint) => (
