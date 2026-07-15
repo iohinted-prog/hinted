@@ -396,7 +396,7 @@ function getContactVisualState(contact) {
       badgeLabel: "C",
       cardClass: "border-[#dce8d8] bg-[#f7fbf5]",
       roleLabel: contact.role || "Contact",
-      noteLabel: "HintDrop user",
+      noteLabel: contact.interests?.length ? contact.interests.slice(0, 3).join(" · ") : (contact.role || "Friend"),
     };
   }
   if (contact.contactState === "invitee") {
@@ -406,7 +406,7 @@ function getContactVisualState(contact) {
       badgeLabel: "I",
       cardClass: "border-[#e6ddd7] bg-white",
       roleLabel: contact.role || "Invitee",
-      noteLabel: "Invitee",
+      noteLabel: "Invited",
     };
   }
   return {
@@ -415,7 +415,7 @@ function getContactVisualState(contact) {
     badgeLabel: "P",
     cardClass: "border-[#f0dfd6] bg-white",
     roleLabel: contact.role || "Contact",
-    noteLabel: contact.note || "Contact",
+    noteLabel: contact.interests?.length ? contact.interests.slice(0, 3).join(" · ") : (contact.role || "Friend"),
   };
 }
 
@@ -1696,6 +1696,7 @@ export default function FeedClient() {
         profileId: row.profile_id,
         publicState: row.public_state,
         birthday: row.birthday || null,
+        interests: Array.isArray(row.interests) ? row.interests : [],
         isDemo: false,
         raw: row,
       };
