@@ -492,9 +492,9 @@ function mapLinkPreviewResult(inputUrl, payload, preferredCurrency = "GBP") {
   const title = cleanText(payload?.title || "");
   const description = cleanText(payload?.description || "");
   const image = String(payload?.image || "").trim();
-  const siteName =
-    cleanText(payload?.site_name || payload?.siteName || "") ||
-    hostname(finalUrl);
+  // Always use hostname as primary retailer — siteName from LinkPreview is inconsistent
+  const siteName = hostname(finalUrl) ||
+    cleanText(payload?.site_name || payload?.siteName || "");
 
   const rawPrice =
     String(payload?.price || "").trim() ||
