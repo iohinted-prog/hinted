@@ -852,6 +852,7 @@ function EditHintModal({
 
 function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, formatCurrency }) {
   const [imgError, setImgError] = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const GRADIENTS = [
     "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
     "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
@@ -861,46 +862,62 @@ function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, format
   ];
   const gradient = GRADIENTS[hint.id ? hint.id.charCodeAt(0) % GRADIENTS.length : 0];
   return (
-    <article className="rounded-[22px] border border-[rgba(255,255,255,0.14)] bg-white shadow-sm overflow-hidden">
-      {/* Image area - fixed square */}
-      <div className="relative w-full bg-white" style={{ minHeight: "140px" }}>
-        {hint.image && !imgError ? (
-          <img src={hint.image} alt={hint.title} className="w-full h-full object-cover"
-            onError={() => setImgError(true)} loading="lazy" referrerPolicy="no-referrer" />
-        ) : (
-          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-4xl`}>🎁</div>
-        )}
-        {/* Privacy + star top row */}
-        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
-          <button type="button" onClick={() => onTogglePrivate(hint)}
-            className="h-8 w-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-[14px]">
-            {hint.private ? "🔒" : "🔓"}
-          </button>
-          <button type="button" onClick={() => onToggleStarred(hint)}
-            className={`h-8 w-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-[14px] ${hint.starred ? "text-[#ff875d]" : "text-slate-400"}`}>
-            ★
-          </button>
-        </div>
-      </div>
-      {/* Info block */}
-      <div className="p-3">
-        <p className="text-[13px] font-semibold text-slate-900 leading-tight line-clamp-2 mb-1">{hint.title || "Hint"}</p>
-        {hint.retailer && <p className="text-[11px] text-slate-400 truncate mb-2">{hint.retailer}</p>}
-        {hint.rawPrice && <p className="text-[12px] font-bold text-[#df7b59] mb-2">{hint.rawPrice}</p>}
-        <div className="flex gap-2">
-          <button type="button" onClick={() => onEdit(hint)}
-            className="flex-1 h-8 rounded-full border border-[#ead8ce] bg-white text-[11px] font-semibold text-slate-600">
-            Edit
-          </button>
-          {hint.url && (
-            <a href={hint.url} target="_blank" rel="noopener noreferrer"
-              className="flex-1 h-8 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[11px] font-semibold text-white flex items-center justify-center">
-              Open
-            </a>
+    <>
+      <article className="rounded-[22px] overflow-hidden shadow-sm cursor-pointer" onClick={() => setShowModal(true)}>
+        <div className="relative w-full">
+          {hint.image && !imgError ? (
+            <img src={hint.image} alt={hint.title} className="w-full object-cover"
+              onError={() => setImgError(true)} loading="lazy" referrerPolicy="no-referrer" />
+          ) : (
+            <div className={`w-full bg-gradient-to-br ${gradient} flex items-center justify-center text-4xl`} style={{ minHeight: "160px" }}>🎁</div>
           )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          <div className="absolute top-2 left-2 text-[13px]">{hint.private ? "🔒" : ""}</div>
+          <div className="absolute bottom-0 left-0 right-0 p-2">
+            <p className="text-[12px] font-semibold text-white leading-tight line-clamp-1">{hint.title || "Hint"}</p>
+          </div>
         </div>
-      </div>
-    </article>
+      </article>
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowModal(false)}>
+          <div className="w-full max-w-[480px] rounded-t-[28px] bg-[#fffaf7] border border-[#efdcd2] shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="relative">
+              {hint.image && !imgError
+                ? <img src={hint.image} alt={hint.title} className="w-full object-cover" style={{ maxHeight: "280px" }} />
+                : <div className={`w-full bg-gradient-to-br ${gradient} flex items-center justify-center text-6xl`} style={{ height: "200px" }}>🎁</div>
+              }
+            </div>
+            <div className="p-5">
+              <p className="text-[18px] font-semibold text-slate-900 leading-tight mb-1">{hint.title || "Hint"}</p>
+              {hint.retailer && <p className="text-[13px] text-slate-400 mb-1">{hint.retailer}</p>}
+              {hint.rawPrice && <p className="text-[15px] font-bold text-[#df7b59] mb-4">{hint.rawPrice}</p>}
+              <div className="flex gap-3 mb-3">
+                <button type="button" onClick={() => { onTogglePrivate(hint); }}
+                  className="flex-1 h-10 rounded-full border border-[#ead8ce] bg-white text-[13px] font-semibold text-slate-600">
+                  {hint.private ? "🔒 Private" : "🔓 Public"}
+                </button>
+                <button type="button" onClick={() => { onToggleStarred(hint); }}
+                  className={`flex-1 h-10 rounded-full border text-[13px] font-semibold ${hint.starred ? "border-[#ffd8c9] bg-[#fff2ea] text-[#e27956]" : "border-[#ead8ce] bg-white text-slate-600"}`}>
+                  {hint.starred ? "★ Top pick" : "☆ Star"}
+                </button>
+              </div>
+              <div className="flex gap-3">
+                <button type="button" onClick={() => { setShowModal(false); onEdit(hint); }}
+                  className="flex-1 h-11 rounded-full border border-[#ead8ce] bg-white text-[13px] font-semibold text-slate-700">
+                  Edit
+                </button>
+                {hint.url && (
+                  <a href={hint.url} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 h-11 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white flex items-center justify-center shadow-lg">
+                    Open →
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
