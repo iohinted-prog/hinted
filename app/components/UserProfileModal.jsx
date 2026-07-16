@@ -190,8 +190,22 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
           ) : hints.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
           ) : (
+          <div className="px-0 pt-2 pb-1 flex gap-2 overflow-x-auto">
+            {["default", "starred", "price_low", "price_high"].map(f => (
+              <button key={f} type="button" onClick={() => setFilter(f)}
+                className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${filter === f ? "bg-[#ff875d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
+                {f === "default" ? "All" : f === "starred" ? "⭐ Faves" : f === "price_low" ? "Price ↑" : "Price ↓"}
+              </button>
+            ))}
+            {allOccasions.map(o => (
+              <button key={o} type="button" onClick={() => setOccasionFilter(occasionFilter === o ? "" : o)}
+                className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${occasionFilter === o ? "bg-[#2f3b2d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
+                {o}
+              </button>
+            ))}
+          </div>
             <div className="columns-2 gap-3">
-              {hints.map((hint) => {
+              {filteredHints.map((hint) => {
                 const myClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by === currentUserId);
                 const otherClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by !== currentUserId);
                 const isViewingOther = currentUserId && currentUserId !== userId;
