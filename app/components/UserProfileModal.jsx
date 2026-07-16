@@ -94,12 +94,30 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
 
   const allOccasions = [...new Set(hints.flatMap(h => h.occasions || []))].filter(Boolean);
   const filteredHints = hints
-    .filter(h => !occasionFilter || (h.occasions || []).includes(occasionFilter))
+    .filter(h => {
+      if (filter === "starred") return h.starred;
+      if (occasionFilter) return (h.occasions || []).includes(occasionFilter);
+      return true;
+    })
     .sort((a, b) => {
-      if (filter === "starred") return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
-      if (filter === "price_low") return (a.numeric_price || 0) - (b.numeric_price || 0);
-      if (filter === "price_high") return (b.numeric_price || 0) - (a.numeric_price || 0);
-      return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
+      const aPrice = a.numeric_price || 0;
+      const bPrice = b.numeric_price || 0;
+      const aHasPrice = aPrice > 0;
+      const bHasPrice = bPrice > 0;
+      if (filter === "price_low") {
+        if (aHasPrice && !bHasPrice) return -1;
+        if (!aHasPrice && bHasPrice) return 1;
+        return aPrice - bPrice;
+      }
+      if (filter === "price_high") {
+        if (aHasPrice && !bHasPrice) return -1;
+        if (!aHasPrice && bHasPrice) return 1;
+        return bPrice - aPrice;
+      }
+      if (b.starred !== a.starred) return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
+      if (aHasPrice && !bHasPrice) return -1;
+      if (!aHasPrice && bHasPrice) return 1;
+      return bPrice - aPrice;
     });
 
   return (
