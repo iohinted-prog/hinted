@@ -29,7 +29,7 @@ import AvatarMenu from "../components/AvatarMenu";
 const BASE_CURRENCY = "GBP";
 const PREVIEW_TIMEOUT_MS = 18000;
 const CARD_MAX_HEIGHT = "min(540px, 68vh)";
-const CARD_MIN_HEIGHT = "280px";
+const CARD_MIN_HEIGHT = "220px";
 const TIMEOUT_MODAL_MESSAGE =
   "We tried to get the title, image, and price, but this shop asked you to add them instead.";
 
@@ -442,7 +442,7 @@ function fallbackCardRatio(hint) {
   if (ratioMap[hint?.id]) return ratioMap[hint.id];
   if (hint?.image) {
     // Vary heights based on hint id so mobile grid feels alive
-    const fallbacks = [0.72, 0.95, 0.82, 1.1, 0.68, 1.0, 0.85, 1.2, 0.75, 0.9];
+    const fallbacks = [0.55, 1.2, 0.65, 1.4, 0.5, 1.1, 0.7, 1.5, 0.6, 1.3];
     const idx = hint.id ? hint.id.charCodeAt(0) % fallbacks.length : 0;
     return fallbacks[idx];
   }
