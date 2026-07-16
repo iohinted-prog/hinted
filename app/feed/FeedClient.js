@@ -882,7 +882,7 @@ function FeedItem({
             onClick={() => onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white transition hover:scale-[1.03] overflow-hidden"
           >
-            {actorAvatarUrl ? <img src={actorAvatarUrl} alt={metadata.actor_name || ""} className="h-full w-full object-cover" /> : actorInitials}
+            {actorAvatarUrl ? <img src={actorAvatarUrl} alt={metadata.actor_name || ""} className="w-full object-contain block" /> : actorInitials}
           </button>
         ) : (
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[12px] font-bold text-white">
@@ -934,7 +934,7 @@ function FeedItem({
               >
                 <div className="grid grid-cols-2 gap-2">
                   {metadata.preview_hints.slice(0, 2).map((hint, i) => (
-                    <div key={i} className="relative aspect-square overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
+                    <div key={i} className="relative overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
                       {hint.image_url
                         ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
                         : <div className="h-full w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]">🎁</div>
