@@ -179,6 +179,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                   </div>
                 ))}
               </div>
+          </>
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <p className="text-sm font-semibold text-slate-700">Add as a contact to see their hints</p>
                 <button type="button" onClick={onAddContact}
@@ -200,7 +201,6 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
             ))}
             {allOccasions.map(o => (
               <button key={o} type="button" onClick={() => setOccasionFilter(occasionFilter === o ? "" : o)}
-          </>
                 className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${occasionFilter === o ? "bg-[#2f3b2d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
                 {o}
               </button>
