@@ -4,6 +4,7 @@ import { createClient } from "../../lib/supabase/client";
 import AddContactModal from "../components/AddContactModal";
 import EditContactModal from "../components/EditContactModal";
 import ContactCard from "../components/ContactCard";
+import UserProfileModal from "../components/UserProfileModal";
 
 function getInitials(name) {
   return String(name || "").trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() || "").join("");
@@ -155,15 +156,19 @@ export default function PeopleClient() {
           onSave={async () => { await loadContacts(); setEditingContact(null); }} />
       )}
       {profileModal && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(33,24,20,0.42)] backdrop-blur-sm" onClick={() => setProfileModal(null)}>
-          <div className="w-full max-w-[640px] rounded-t-[32px] border border-[#efdcd2] bg-white shadow-xl overflow-hidden max-h-[85dvh] flex flex-col" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b border-[#f2e5de]">
-              <p className="text-[17px] font-semibold text-slate-900">{profileModal.name}'s Hints</p>
-              <button type="button" onClick={() => setProfileModal(null)} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400">✕</button>
-            </div>
-            <HintsPreview userId={profileModal.userId} supabase={supabase} />
-          </div>
-        </div>
+        <UserProfileModal
+          userId={profileModal.userId}
+          name={profileModal.name}
+          avatarUrl={profileModal.avatarUrl}
+          initials={profileModal.initials}
+          onClose={() => setProfileModal(null)}
+          currentUserId={sessionUser?.id}
+          isContact={contacts.some(c => c.profileId === profileModal.userId)}
+          onAddContact={async () => {
+            await handleSaveContact({ name: profileModal.name, email: "" });
+            setProfileModal(null);
+          }}
+        />
       )}
     </main>
   );
