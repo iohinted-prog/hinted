@@ -190,6 +190,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
           ) : hints.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
           ) : (
+          <>
           <div className="px-0 pt-2 pb-1 flex gap-2 overflow-x-auto">
             {["default", "starred", "price_low", "price_high"].map(f => (
               <button key={f} type="button" onClick={() => setFilter(f)}
@@ -199,6 +200,7 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
             ))}
             {allOccasions.map(o => (
               <button key={o} type="button" onClick={() => setOccasionFilter(occasionFilter === o ? "" : o)}
+          </>
                 className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${occasionFilter === o ? "bg-[#2f3b2d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
                 {o}
               </button>
