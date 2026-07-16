@@ -1787,7 +1787,7 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <div className="columns-2 gap-3 md:columns-3 md:gap-6 [&>*]:mb-3 [&>*]:break-inside-avoid">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
