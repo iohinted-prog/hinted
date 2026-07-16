@@ -440,7 +440,12 @@ function fallbackCardRatio(hint) {
   };
 
   if (ratioMap[hint?.id]) return ratioMap[hint.id];
-  if (hint?.image) return 0.82;
+  if (hint?.image) {
+    // Vary heights based on hint id so mobile grid feels alive
+    const fallbacks = [0.72, 0.95, 0.82, 1.1, 0.68, 1.0, 0.85, 1.2, 0.75, 0.9];
+    const idx = hint.id ? hint.id.charCodeAt(0) % fallbacks.length : 0;
+    return fallbacks[idx];
+  }
   return 1;
 }
 
