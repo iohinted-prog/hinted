@@ -934,9 +934,9 @@ function FeedItem({
               >
                 <div className="grid grid-cols-2 gap-2">
                   {metadata.preview_hints.slice(0, 2).map((hint, i) => (
-                    <div key={i} className="relative overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
+                    <div key={i} className="relative aspect-square overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
                       {hint.image_url
-                      ? <img src={hint.image_url} alt={hint.title} className="w-full object-contain block" />
+                      ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
                       : <div className="w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]" style={{ minHeight: "120px" }}>🎁</div>
                       }
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
