@@ -2,21 +2,9 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../lib/supabase/client";
 
-function loadImageAspectRatio(src) {
-  return new Promise((resolve) => {
-    const img = new window.Image();
-    img.onload = () => resolve(img.naturalWidth / img.naturalHeight);
-    img.onerror = () => resolve(null);
-    img.src = src;
-  });
-}
-
 function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentUserId, isContact, onAddContact }) {
   const supabase = createClient();
   const [hints, setHints] = useState([]);
-  const [imageRatios, setImageRatios] = useState({});
-  const [filter, setFilter] = useState("default"); // default, starred, price_low, price_high, occasion
-  const [occasionFilter, setOccasionFilter] = useState("");
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [claims, setClaims] = useState([]);
@@ -40,21 +28,6 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
           .in("hint_id", hintsList.map(h => h.id));
         setClaims(claimsData || []);
       }
-      // Load image aspect ratios
-      const withImages = hintsList.filter(h => h.image_url);
-      const ratios = {};
-      await Promise.all(withImages.map(async h => {
-        try {
-          const r = await new Promise(res => {
-            const img = new window.Image();
-            img.onload = () => res(img.naturalWidth / img.naturalHeight);
-            img.onerror = () => res(null);
-            img.src = h.image_url;
-          });
-          if (r) ratios[h.id] = r;
-        } catch {}
-      }));
-      setImageRatios(ratios);
       setLoading(false);
     }
     load();
@@ -107,18 +80,14 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
   const displayName = profile?.full_name || name || "User";
   const displayAvatar = profile?.avatar_url || avatarUrl;
   const interests = Array.isArray(profile?.interests) ? profile.interests : [];
-
   const allOccasions = [...new Set(hints.flatMap(h => h.occasions || []))].filter(Boolean);
-
   const filteredHints = hints
     .filter(h => !occasionFilter || (h.occasions || []).includes(occasionFilter))
     .sort((a, b) => {
       if (filter === "starred") return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
       if (filter === "price_low") return (a.numeric_price || 0) - (b.numeric_price || 0);
       if (filter === "price_high") return (b.numeric_price || 0) - (a.numeric_price || 0);
-      // default: starred first
-      if (b.starred !== a.starred) return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
-      return 0;
+      return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
     });
 
   return (
@@ -166,9 +135,9 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                   <div key={hint.id} className="mb-3 break-inside-avoid">
                     <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7]">
                       {hint.image_url ? (
-                        <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }}  />
+                        <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
                       ) : (
-                        <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" >
+                        <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
                           <span className="text-2xl">🎁</span>
                         </div>
                       )}
@@ -179,7 +148,6 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                   </div>
                 ))}
               </div>
-          </>
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
                 <p className="text-sm font-semibold text-slate-700">Add as a contact to see their hints</p>
                 <button type="button" onClick={onAddContact}
@@ -191,23 +159,8 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
           ) : hints.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
           ) : (
-          <>
-          <div className="px-0 pt-2 pb-1 flex gap-2 overflow-x-auto">
-            {["default", "starred", "price_low", "price_high"].map(f => (
-              <button key={f} type="button" onClick={() => setFilter(f)}
-                className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${filter === f ? "bg-[#ff875d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
-                {f === "default" ? "All" : f === "starred" ? "⭐ Faves" : f === "price_low" ? "Price ↑" : "Price ↓"}
-              </button>
-            ))}
-            {allOccasions.map(o => (
-              <button key={o} type="button" onClick={() => setOccasionFilter(occasionFilter === o ? "" : o)}
-                className={`shrink-0 h-8 px-3 rounded-full text-[11px] font-semibold transition ${occasionFilter === o ? "bg-[#2f3b2d] text-white" : "border border-[#ead8ce] bg-white text-slate-600"}`}>
-                {o}
-              </button>
-            ))}
-          </div>
             <div className="columns-2 gap-3">
-              {filteredHints.map((hint) => {
+              {hints.map((hint) => {
                 const myClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by === currentUserId);
                 const otherClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by !== currentUserId);
                 const isViewingOther = currentUserId && currentUserId !== userId;
@@ -216,9 +169,9 @@ function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentU
                     <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors">
                       <a href={hint.url} target="_blank" rel="noopener noreferrer" className="block">
                         {hint.image_url ? (
-                          <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }}  />
+                          <img src={hint.image_url} alt={hint.title} className="w-full object-cover" style={{ aspectRatio: "1/1" }} />
                         ) : (
-                          <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" >
+                          <div className="flex items-center justify-center bg-gradient-to-br from-[#f3d5cc] to-[#d98c76]" style={{ aspectRatio: "1/1" }}>
                             <span className="text-2xl">🎁</span>
                           </div>
                         )}
