@@ -1780,7 +1780,6 @@ export default function HintsClient() {
             ) : hints.length > 0 ? (
               <>
               <>
-              <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 measuring={measuring}
