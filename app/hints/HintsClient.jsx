@@ -440,12 +440,7 @@ function fallbackCardRatio(hint) {
   };
 
   if (ratioMap[hint?.id]) return ratioMap[hint.id];
-  if (hint?.image) {
-    // Vary heights based on hint id so mobile grid feels alive
-    const fallbacks = [0.55, 1.2, 0.65, 1.4, 0.5, 1.1, 0.7, 1.5, 0.6, 1.3];
-    const idx = hint.id ? hint.id.charCodeAt(0) % fallbacks.length : 0;
-    return fallbacks[idx];
-  }
+  if (hint?.image) { const fb = [0.55,1.2,0.65,1.4,0.5,1.1,0.7,1.5,0.6,1.3]; return fb[hint.id ? hint.id.charCodeAt(0) % fb.length : 0]; }
   return 1;
 }
 
@@ -901,12 +896,14 @@ function HintCard({
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.42)_26%,rgba(16,12,10,0.10)_50%,rgba(255,255,255,0)_72%)]" />
           </>
         ) : (
+          <>
             <div
               className={`absolute inset-0 bg-gradient-to-br ${hint.fallbackGradient} ${
                 hint.private ? "opacity-80" : ""
               }`}
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.18)] to-transparent" />
+            <div className="absolute inset-0 flex items-center justify-center text-[56px] opacity-30">🎁</div>
           </>
         )}
       </div>
@@ -921,16 +918,12 @@ function HintCard({
           >
             ⋮⋮ Drag
           </button>
-          <button
-            type="button"
-            onClick={() => onTogglePrivate(hint)}
-            className="pointer-events-auto sm:hidden flex h-10 w-10 items-center justify-center rounded-full border border-white/45 bg-white/72 text-[16px] backdrop-blur-md"
-            title={hint.private ? "Private" : "Public"}
-          >
-            {hint.private ? "🔒" : "🔓"}
-          </button>
 
-
+          {hint.starred && (
+            <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
+              Top pick
+            </div>
+          )}
 
           {hint.private && (
             <div className="rounded-full border border-white/45 bg-white/72 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-md">
@@ -1001,9 +994,9 @@ function HintCard({
             <button
               type="button"
               onClick={() => onTogglePrivate(hint)}
-              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white hidden"
+              className="rounded-full border border-white/45 bg-white/76 px-3 py-1.5 text-[12px] font-medium text-slate-700 backdrop-blur-md hover:bg-white"
             >
-              {hint.private ? "🔒 Private" : "🔓 Public"}
+              {hint.private ? "🔒" : "🔓"}
             </button>
 
             <a
@@ -1615,29 +1608,6 @@ export default function HintsClient() {
 
       if (error) throw new Error(errorToMessage(error));
 
-      const allHints = [newHint, ...hints];
-      const publicHints = allHints.filter(h => !h.private);
-      const previewHints = publicHints.slice(0, 2).map(h => ({ id: h.id, title: h.title, image_url: h.image || "", retailer: h.retailer || "" }));
-      Promise.resolve(supabase.from("feed_items").insert({
-        owner_user_id: currentUser.id,
-        actor_user_id: currentUser.id,
-        family: "hint",
-        item_type: "hint_save_session",
-        headline: "Added a new hint" + (newHint.title && newHint.title !== "Hint" ? ": " + newHint.title : ""),
-        body: newHint.retailer || "",
-        cta_label: "See Hints",
-        cta_href: "/hints",
-        visibility: "contacts",
-        occurred_at: new Date().toISOString(),
-        metadata: {
-          actor_name: currentUser.user_metadata?.full_name || currentUser.email || "You",
-          actor_avatar_url: currentUser.user_metadata?.avatar_url || null,
-          hint_count: publicHints.length,
-          preview_hints: previewHints,
-          social_enabled: true,
-        },
-      })).catch(() => {});
-
       if (image) {
         const ratio = await loadImageAspectRatio(image);
         if (ratio) {
@@ -1779,7 +1749,7 @@ export default function HintsClient() {
               </div>
             ) : hints.length > 0 ? (
               <>
-              <>
+              <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
                 measuring={measuring}
@@ -1787,8 +1757,7 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="hidden md:block">
-                <div className="grid grid-cols-3 gap-6">
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
@@ -1827,30 +1796,19 @@ export default function HintsClient() {
                     </div>
                   ) : null}
                 </DragOverlay>
-                </div>
-                </div>
               </DndContext>
-                <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
-                  {visibleHints.map((hint, idx) => {
-                    const mobileRatios = [0.6, 1.2, 0.55, 1.35, 0.65, 1.1, 0.5, 1.3];
-                    const mobileRatio = mobileRatios[idx % mobileRatios.length];
-                    return (
-                      <div key={hint.id} className="break-inside-avoid">
-                        <HintCard
-                          hint={hint}
-                          imageRatios={{ ...imageRatios, [hint.id]: mobileRatio }}
-                          onEdit={openEditModal}
-                          onToggleStarred={toggleStarred}
-                          onTogglePrivate={togglePrivate}
-                          isDragging={false}
-                          dragHandleAttributes={{}}
-                          dragHandleListeners={{}}
-                          formatCurrency={formatCurrency}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+              <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+                {visibleHints.map((hint, idx) => {
+                  const mr = [0.6,1.2,0.55,1.35,0.65,1.1,0.5,1.3];
+                  return (
+                    <div key={hint.id} style={{ marginBottom: "12px" }} className="break-inside-avoid">
+                      <HintCard hint={hint} imageRatios={{ ...imageRatios, [hint.id]: mr[idx % mr.length] }}
+                        onEdit={openEditModal} onToggleStarred={toggleStarred} onTogglePrivate={togglePrivate}
+                        isDragging={false} dragHandleAttributes={{}} dragHandleListeners={{}} formatCurrency={formatCurrency} />
+                    </div>
+                  );
+                })}
+              </div>
               </>
             ) : (
               <div className="columns-2 gap-4 md:columns-3">
