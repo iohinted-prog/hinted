@@ -1854,7 +1854,6 @@ export default function HintsClient() {
                   })}
                 </div>
               </>
-              </>
             ) : (
               <div className="columns-2 gap-4 md:columns-3">
                 {demoHints.map((hint) => (
