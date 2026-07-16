@@ -875,10 +875,10 @@ function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, format
           <div className="absolute top-2 left-2 text-[13px]">{hint.private ? "🔒" : ""}</div>
           <div className="absolute bottom-0 left-0 right-0 p-2">
             <div className="flex items-end justify-between gap-1">
-              <p className="text-[13px] font-bold text-white leading-tight line-clamp-2 flex-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>{hint.title || "Hint"}</p>
+              <p className="text-[15px] font-bold text-white leading-tight line-clamp-2 flex-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{hint.title || "Hint"}</p>
               <div className="flex items-center gap-1 shrink-0">
-                {hint.starred && <span className="text-[12px]">⭐</span>}
-                {hint.rawPrice && <span className="text-[11px] font-bold text-white/90 bg-black/30 rounded-full px-1.5 py-0.5">{hint.rawPrice}</span>}
+                {hint.starred && <span className="text-[14px]" style={{ color: "#ff875d" }}>★</span>}
+                {hint.rawPrice && <span className="text-[11px] font-bold text-white rounded-full px-1.5 py-0.5" style={{ background: "#ff875d" }}>{hint.rawPrice}</span>}
               </div>
             </div>
           </div>
@@ -886,10 +886,10 @@ function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, format
       </article>
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" style={{ animation: "fadeIn 0.15s ease" }} onClick={() => setShowModal(false)}>
-          <div className="w-full max-w-[480px] rounded-t-[28px] bg-[#fffaf7] border border-[#efdcd2] shadow-xl overflow-y-auto" style={{ maxHeight: "85dvh", animation: "slideUp 0.2s ease" }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-[480px] rounded-t-[28px] bg-[#fffaf7] border border-[#efdcd2] shadow-xl overflow-y-auto" style={{ maxHeight: "92dvh", animation: "slideUp 0.2s ease" }} onClick={e => e.stopPropagation()}>
             <div className="relative">
               {hint.image && !imgError
-                ? <img src={hint.image} alt={hint.title} className="w-full object-cover" style={{ maxHeight: "280px" }} />
+                ? <img src={hint.image} alt={hint.title} className="w-full object-contain" />
                 : <div className={`w-full bg-gradient-to-br ${gradient} flex items-center justify-center text-6xl`} style={{ height: "200px" }}>🎁</div>
               }
             </div>
