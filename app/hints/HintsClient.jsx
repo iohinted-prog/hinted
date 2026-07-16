@@ -1738,7 +1738,7 @@ export default function HintsClient() {
             />
 
             {isLoading ? (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+              <div className="hidden md:grid md:grid-cols-3 md:gap-6">
                 {loadingColumns.map((column, columnIndex) => (
                   <div key={`loading-column-${columnIndex}`} className="space-y-6">
                     {column.map((ratio, index) => (
@@ -1757,7 +1757,7 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                <div className="hidden md:grid md:grid-cols-3 md:gap-6">
                   {columns.map((columnHints, columnIndex) => (
                     <SortableContext
                       key={`column-${columnIndex}`}
