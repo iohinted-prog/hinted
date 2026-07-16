@@ -507,6 +507,10 @@ export default function AppShell({ children }) {
           </div>
           <span className={`text-[10px] font-semibold mt-0.5 ${pathname === "/hints" ? "text-[#ff875d]" : "text-slate-400"}`}>Hints</span>
         </a>
+        <a href="/people" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/people" ? "text-[#ff875d]" : "text-slate-400"}`}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span className="text-[10px] font-semibold">People</span>
+        </a>
         <a href="/shop" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/shop" ? "text-[#ff875d]" : "text-slate-400"}`}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
           <span className="text-[10px] font-semibold">Shop</span>
