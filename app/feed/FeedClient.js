@@ -936,8 +936,8 @@ function FeedItem({
                   {metadata.preview_hints.slice(0, 2).map((hint, i) => (
                     <div key={i} className="relative overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
                       {hint.image_url
-                        ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
-                        : <div className="h-full w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]">🎁</div>
+                      ? <img src={hint.image_url} alt={hint.title} className="w-full object-contain block" />
+                      : <div className="w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]" style={{ minHeight: "120px" }}>🎁</div>
                       }
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2">
                         <p className="text-[11px] font-semibold text-white truncate">{hint.title}</p>
