@@ -1832,21 +1832,25 @@ export default function HintsClient() {
                 </div>
               </DndContext>
                 <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
-                  {visibleHints.map((hint) => (
-                    <div key={hint.id} className="break-inside-avoid">
-                      <HintCard
-                        hint={hint}
-                        imageRatios={imageRatios}
-                        onEdit={openEditModal}
-                        onToggleStarred={toggleStarred}
-                        onTogglePrivate={togglePrivate}
-                        isDragging={false}
-                        dragHandleAttributes={{}}
-                        dragHandleListeners={{}}
-                        formatCurrency={formatCurrency}
-                      />
-                    </div>
-                  ))}
+                  {visibleHints.map((hint, idx) => {
+                    const mobileRatios = [0.6, 1.2, 0.55, 1.35, 0.65, 1.1, 0.5, 1.3];
+                    const mobileRatio = mobileRatios[idx % mobileRatios.length];
+                    return (
+                      <div key={hint.id} className="break-inside-avoid">
+                        <HintCard
+                          hint={hint}
+                          imageRatios={{ ...imageRatios, [hint.id]: mobileRatio }}
+                          onEdit={openEditModal}
+                          onToggleStarred={toggleStarred}
+                          onTogglePrivate={togglePrivate}
+                          isDragging={false}
+                          dragHandleAttributes={{}}
+                          dragHandleListeners={{}}
+                          formatCurrency={formatCurrency}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             ) : (
