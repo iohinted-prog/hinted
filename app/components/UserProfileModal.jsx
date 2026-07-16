@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "../../lib/supabase/client";
 
 function UserProfileModal({ userId, name, avatarUrl, initials, onClose, currentUserId, isContact, onAddContact }) {
+  const supabase = createClient();
   const [hints, setHints] = useState([]);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
