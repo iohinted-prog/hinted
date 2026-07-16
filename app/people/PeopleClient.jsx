@@ -34,6 +34,13 @@ function buildContact(row) {
   };
 }
 
+const GRADIENTS = [
+  "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
+  "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
+  "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
+  "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
+  "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+];
 function HintsPreview({ userId, supabase }) {
   const [hints, setHints] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,15 +56,18 @@ function HintsPreview({ userId, supabase }) {
   if (!hints.length) return <div className="p-6 text-sm text-slate-400">No public hints yet.</div>;
   return (
     <div className="overflow-y-auto p-4 grid grid-cols-2 gap-3">
-      {hints.map(hint => (
-        <a key={hint.id} href={hint.url} target="_blank" rel="noopener noreferrer" className="rounded-[18px] border border-[#f0dfd6] bg-white overflow-hidden">
+      {hints.map((hint, i) => (
+        <a key={hint.id} href={hint.url} target="_blank" rel="noopener noreferrer"
+          className="relative overflow-hidden rounded-[22px] border border-[rgba(255,255,255,0.14)] bg-white shadow-sm"
+          style={{ aspectRatio: "3/4", minHeight: "200px" }}>
           {hint.image_url
-            ? <img src={hint.image_url} alt={hint.title} className="w-full aspect-square object-cover" />
-            : <div className="w-full aspect-square bg-gradient-to-br from-[#ead8ca] to-[#c4a17f] flex items-center justify-center text-3xl">🎁</div>
+            ? <img src={hint.image_url} alt={hint.title} className="absolute inset-0 h-full w-full object-cover" />
+            : <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} flex items-center justify-center text-4xl opacity-80`}>🎁</div>
           }
-          <div className="p-2">
-            <p className="text-[12px] font-semibold text-slate-900 truncate">{hint.title}</p>
-            {hint.retailer && <p className="text-[11px] text-slate-400 truncate">{hint.retailer}</p>}
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.42)_30%,rgba(255,255,255,0)_60%)]" />
+          <div className="absolute inset-x-0 bottom-0 p-3">
+            <p className="text-[12px] font-semibold text-white leading-tight line-clamp-2">{hint.title || "Hint"}</p>
+            {hint.retailer && <p className="text-[10px] text-white/60 mt-0.5 truncate">{hint.retailer}</p>}
           </div>
         </a>
       ))}
