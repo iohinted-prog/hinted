@@ -1619,7 +1619,7 @@ export default function HintsClient() {
       const allHints = [newHint, ...hints];
       const publicHints = allHints.filter(h => !h.private);
       const previewHints = publicHints.slice(0, 2).map(h => ({ id: h.id, title: h.title, image_url: h.image || "", retailer: h.retailer || "" }));
-      supabase.from("feed_items").insert({
+      Promise.resolve(supabase.from("feed_items").insert({
         owner_user_id: currentUser.id,
         actor_user_id: currentUser.id,
         family: "hint",
@@ -1637,7 +1637,7 @@ export default function HintsClient() {
           preview_hints: previewHints,
           social_enabled: true,
         },
-      }).catch(() => {});
+      })).catch(() => {});
 
       if (image) {
         const ratio = await loadImageAspectRatio(image);
