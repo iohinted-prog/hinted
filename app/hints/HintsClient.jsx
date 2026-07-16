@@ -875,7 +875,7 @@ function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, format
           <div className="absolute top-2 left-2 text-[13px]">{hint.private ? "🔒" : ""}</div>
           <div className="absolute bottom-0 left-0 right-0 p-2">
             <div className="flex items-end justify-between gap-1">
-              <p className="text-[15px] font-bold text-white leading-tight line-clamp-2 flex-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{hint.title || "Hint"}</p>
+              <p className="text-[17px] font-bold text-white leading-tight line-clamp-2 flex-1" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>{hint.title || "Hint"}</p>
               <div className="flex items-center gap-1 shrink-0">
                 {hint.starred && <span className="text-[14px]" style={{ color: "#ff875d" }}>★</span>}
                 {hint.rawPrice && <span className="text-[11px] font-bold text-white rounded-full px-1.5 py-0.5" style={{ background: "#ff875d" }}>{hint.rawPrice}</span>}
