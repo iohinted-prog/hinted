@@ -849,6 +849,61 @@ function EditHintModal({
   );
 }
 
+
+function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, formatCurrency }) {
+  const [imgError, setImgError] = useState(false);
+  const GRADIENTS = [
+    "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
+    "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
+    "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
+    "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
+    "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+  ];
+  const gradient = GRADIENTS[hint.id ? hint.id.charCodeAt(0) % GRADIENTS.length : 0];
+  return (
+    <article className="rounded-[22px] border border-[rgba(255,255,255,0.14)] bg-white shadow-sm overflow-hidden">
+      {/* Image area - fixed square */}
+      <div className="relative w-full aspect-square bg-white">
+        {hint.image && !imgError ? (
+          <img src={hint.image} alt={hint.title} className="w-full h-full object-cover"
+            onError={() => setImgError(true)} loading="lazy" referrerPolicy="no-referrer" />
+        ) : (
+          <div className={`w-full h-full bg-gradient-to-br ${gradient} flex items-center justify-center text-4xl`}>🎁</div>
+        )}
+        {/* Privacy + star top row */}
+        <div className="absolute top-2 left-2 right-2 flex items-center justify-between">
+          <button type="button" onClick={() => onTogglePrivate(hint)}
+            className="h-8 w-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-[14px]">
+            {hint.private ? "🔒" : "🔓"}
+          </button>
+          <button type="button" onClick={() => onToggleStarred(hint)}
+            className={`h-8 w-8 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-sm text-[14px] ${hint.starred ? "text-[#ff875d]" : "text-slate-400"}`}>
+            ★
+          </button>
+        </div>
+      </div>
+      {/* Info block */}
+      <div className="p-3">
+        <p className="text-[13px] font-semibold text-slate-900 leading-tight line-clamp-2 mb-1">{hint.title || "Hint"}</p>
+        {hint.retailer && <p className="text-[11px] text-slate-400 truncate mb-2">{hint.retailer}</p>}
+        {hint.rawPrice && <p className="text-[12px] font-bold text-[#df7b59] mb-2">{hint.rawPrice}</p>}
+        <div className="flex gap-2">
+          <button type="button" onClick={() => onEdit(hint)}
+            className="flex-1 h-8 rounded-full border border-[#ead8ce] bg-white text-[11px] font-semibold text-slate-600">
+            Edit
+          </button>
+          {hint.url && (
+            <a href={hint.url} target="_blank" rel="noopener noreferrer"
+              className="flex-1 h-8 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[11px] font-semibold text-white flex items-center justify-center">
+              Open
+            </a>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function HintCard({
   hint,
   imageRatios,
@@ -1799,10 +1854,10 @@ export default function HintsClient() {
               </DndContext>
               <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
                 {visibleHints.map((hint) => (
-                  <div key={hint.id} style={{ marginBottom: "12px" }} className="break-inside-avoid">
-                    <HintCard hint={hint} imageRatios={imageRatios}
-                      onEdit={openEditModal} onToggleStarred={toggleStarred} onTogglePrivate={togglePrivate}
-                      isDragging={false} dragHandleAttributes={{}} dragHandleListeners={{}} formatCurrency={formatCurrency} />
+                  <div key={hint.id} className="break-inside-avoid mb-3">
+                    <MobileHintCard hint={hint} onEdit={openEditModal}
+                      onToggleStarred={toggleStarred} onTogglePrivate={togglePrivate}
+                      formatCurrency={formatCurrency} />
                   </div>
                 ))}
               </div>
