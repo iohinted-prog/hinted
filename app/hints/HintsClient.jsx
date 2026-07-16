@@ -1787,23 +1787,6 @@ export default function HintsClient() {
                 onDragEnd={handleDragEnd}
                 onDragCancel={handleDragCancel}
               >
-                <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
-                  {visibleHints.map((hint) => (
-                    <div key={hint.id} className="break-inside-avoid">
-                      <HintCard
-                        hint={hint}
-                        imageRatios={imageRatios}
-                        onEdit={openEditModal}
-                        onToggleStarred={toggleStarred}
-                        onTogglePrivate={togglePrivate}
-                        isDragging={false}
-                        dragHandleAttributes={{}}
-                        dragHandleListeners={{}}
-                        formatCurrency={formatCurrency}
-                      />
-                    </div>
-                  ))}
-                </div>
                 <div className="hidden md:block">
                 <div className="grid grid-cols-3 gap-6">
                   {columns.map((columnHints, columnIndex) => (
@@ -1847,6 +1830,23 @@ export default function HintsClient() {
                 </div>
                 </div>
               </DndContext>
+                <div className="block md:hidden columns-2 gap-3 [&>*]:mb-3 [&>*]:break-inside-avoid">
+                  {visibleHints.map((hint) => (
+                    <div key={hint.id} className="break-inside-avoid">
+                      <HintCard
+                        hint={hint}
+                        imageRatios={imageRatios}
+                        onEdit={openEditModal}
+                        onToggleStarred={toggleStarred}
+                        onTogglePrivate={togglePrivate}
+                        isDragging={false}
+                        dragHandleAttributes={{}}
+                        dragHandleListeners={{}}
+                        formatCurrency={formatCurrency}
+                      />
+                    </div>
+                  ))}
+                </div>
             ) : (
               <div className="columns-2 gap-4 md:columns-3">
                 {demoHints.map((hint) => (
