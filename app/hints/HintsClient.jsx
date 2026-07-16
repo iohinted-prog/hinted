@@ -1780,6 +1780,7 @@ export default function HintsClient() {
               </div>
             ) : hints.length > 0 ? (
               <>
+              <>
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
@@ -1852,6 +1853,7 @@ export default function HintsClient() {
                     );
                   })}
                 </div>
+              </>
               </>
             ) : (
               <div className="columns-2 gap-4 md:columns-3">
