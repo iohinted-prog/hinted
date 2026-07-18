@@ -148,7 +148,6 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Link href={`/profile/${userId}`} onClick={onClose} className="h-9 px-3 flex items-center justify-center rounded-full border border-[#ead8ce] text-[11px] font-semibold text-slate-600 hover:bg-[#fff5f0]">Full profile</Link>
               <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]">✕</button>
             </div>
           </div>
@@ -180,8 +179,10 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
                   <div key={hint.id} className="mb-3 break-inside-avoid">
                     <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors">
                       {hint.image_url ? (
+                        <a href={hint.url || "#"} target="_blank" rel="noopener noreferrer" className="block">
                         <img src={hint.image_url} alt={hint.title} className="w-full object-cover"
                           style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }} />
+                        </a>
                       ) : (
                         <div className="w-full bg-gradient-to-br from-[#f3d5cc] to-[#d98c76] flex items-center justify-center text-2xl" style={{ aspectRatio: "3/4" }}>🎁</div>
                       )}
@@ -224,6 +225,12 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
               See full profile →
             </a>
           </div>
+        <div className="px-4 pb-5 pt-2 shrink-0">
+          <Link href={`/profile/${userId}`} onClick={onClose}
+            className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
+            See full profile →
+          </Link>
+        </div>
         </div>
       </div>
     </div>
