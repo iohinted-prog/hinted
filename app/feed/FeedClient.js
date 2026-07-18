@@ -4,6 +4,7 @@ import ContactCard from "../components/ContactCard";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import UserProfileModal from "../components/UserProfileModal";
+import SessionHintsModal from "../components/SessionHintsModal";
 import { createClient } from "../../lib/supabase/client";
 import AvatarMenu from "../components/AvatarMenu";
 import AddContactModal from "../components/AddContactModal";
@@ -736,7 +737,7 @@ function FeedItem({
                   {metadata.hint_count > 2 && (
                     <span className="text-sm font-semibold text-slate-400">+{metadata.hint_count - 2} more hints</span>
                   )}
-                  <span className="ml-auto text-sm font-semibold text-[#df7b59]">See all hints →</span>
+                  <button type="button" onClick={e => { e.stopPropagation(); setSessionHintsModal({ hints: metadata.preview_hints || [], actorUserId, actorName: metadata.actor_name, actorAvatar: actorAvatarUrl }); }} className="ml-auto text-sm font-semibold text-[#df7b59]">See new hints →</button>
                 </div>
               </button>
             </div>
@@ -1455,7 +1456,8 @@ export default function FeedClient() {
   const [deleteContactError, setDeleteContactError] = useState("");
 
   const [feedItems, setFeedItems] = useState([]);
-  const [profileModal, setProfileModal] = useState(null); // { userId, name, avatarUrl, initials }
+  const [profileModal, setProfileModal] = useState(null);
+  const [sessionHintsModal, setSessionHintsModal] = useState(null); // { userId, name, avatarUrl, initials }
   const [feedLoading, setFeedLoading] = useState(true);
   const [feedError, setFeedError] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -2565,6 +2567,16 @@ export default function FeedClient() {
         isDeleting={isDeletingContact}
         errorMessage={deleteContactError}
       />
+      {sessionHintsModal && (
+        <SessionHintsModal
+          hints={sessionHintsModal.hints}
+          actorUserId={sessionHintsModal.actorUserId}
+          actorName={sessionHintsModal.actorName}
+          actorAvatar={sessionHintsModal.actorAvatar}
+          currentUserId={sessionUser?.id}
+          onClose={() => setSessionHintsModal(null)}
+        />
+      )}
       {profileModal && (
         <UserProfileModal
           userId={profileModal.userId}
