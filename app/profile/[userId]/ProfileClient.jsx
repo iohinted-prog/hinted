@@ -38,6 +38,7 @@ export default function ProfileClient({ userId }) {
   const [filter, setFilter] = useState("default");
   const [occasionFilter, setOccasionFilter] = useState("");
   const [claimingId, setClaimingId] = useState(null);
+  const [selectedHint, setSelectedHint] = useState(null);
   const [isContact, setIsContact] = useState(false);
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function ProfileClient({ userId }) {
       const [{ data: profileData }, { data: hintsData }] = await Promise.all([
         supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
         supabase.from("hints")
-          .select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions, position")
+          .select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions, position, size, size_type")
           .eq("user_id", userId)
           .eq("is_private", false)
           .order("position", { ascending: true })
@@ -183,7 +184,7 @@ export default function ProfileClient({ userId }) {
               const gradient = GRADIENTS[hint.id ? hint.id.charCodeAt(0) % GRADIENTS.length : 0];
               return (
                 <div key={hint.id} className="mb-4 break-inside-avoid">
-                  <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedHint(hint)}>
                     {hint.image_url ? (
                       <img src={hint.image_url} alt={hint.title} className="w-full object-cover"
                         style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }} />
@@ -233,6 +234,54 @@ export default function ProfileClient({ userId }) {
           </div>
         )}
       </div>
+    {selectedHint && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center sm:px-4" onClick={() => setSelectedHint(null)}>
+          <div className="w-full max-w-[480px] rounded-t-[28px] sm:rounded-[28px] bg-[#fffaf7] border border-[#efdcd2] shadow-xl overflow-hidden flex flex-col" style={{ maxHeight: "88dvh" }} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-end px-4 pt-3 shrink-0">
+              <button type="button" onClick={() => setSelectedHint(null)} className="h-8 w-8 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400">✕</button>
+            </div>
+            {selectedHint.image_url
+              ? <img src={selectedHint.image_url} alt={selectedHint.title} className="w-full object-contain max-h-[280px]" />
+              : <div className="w-full bg-gradient-to-br from-[#ead8ca] to-[#c4a17f] flex items-center justify-center text-6xl" style={{ height: "200px" }}>🎁</div>
+            }
+            <div className="p-5 overflow-y-auto">
+              {selectedHint.starred && <p className="text-[11px] font-semibold text-[#ff875d] mb-1">⭐ Top pick</p>}
+              <p className="text-[18px] font-semibold text-slate-900 leading-tight">{selectedHint.title || "Hint"}</p>
+              {selectedHint.retailer && <p className="text-[13px] text-slate-400 mt-1">{selectedHint.retailer}</p>}
+              {selectedHint.numeric_price > 0 && (
+                <p className="text-[16px] font-bold text-[#df7b59] mt-2">{new Intl.NumberFormat("en-GB", { style: "currency", currency: selectedHint.currency || "GBP" }).format(selectedHint.numeric_price)}</p>
+              )}
+              {selectedHint.size && (
+                <p className="text-[13px] text-slate-600 mt-2">📏 Size: <strong>{selectedHint.size}</strong>{selectedHint.size_type ? ` (${selectedHint.size_type})` : ""}</p>
+              )}
+              {selectedHint.occasions?.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {selectedHint.occasions.map(o => <span key={o} className="rounded-full bg-[#fff4ee] px-2.5 py-0.5 text-[11px] font-semibold text-[#df7b59]">{o}</span>)}
+                </div>
+              )}
+              <div className="mt-4 flex gap-3">
+                {selectedHint.url && (
+                  <a href={selectedHint.url} target="_blank" rel="noopener noreferrer"
+                    className="flex-1 h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
+                    Open →
+                  </a>
+                )}
+                {isViewingOther && (() => {
+                  const myClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by === currentUser?.id);
+                  const otherClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by !== currentUser?.id);
+                  return (
+                    <button type="button" disabled={claimingId === selectedHint.id}
+                      onClick={() => { setClaimingId(selectedHint.id); handleToggleClaim(selectedHint).finally(() => setClaimingId(null)); }}
+                      className={\`flex-1 h-11 rounded-full text-[13px] font-semibold border transition \${myClaim ? "bg-[#edf6eb] text-[#4a7a3a] border-[#c5dfc0]" : otherClaim ? "bg-[#fff8ee] text-[#b87a2a] border-[#f0d9a0]" : "bg-[#fff4ee] text-[#df7b59] border-[#f0c9b5] hover:bg-[#ffe9db]"}\`}>
+                      {myClaim ? "✓ On it" : otherClaim ? "Buy anyway?" : "I'm getting this"}
+                    </button>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
