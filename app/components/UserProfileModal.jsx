@@ -36,7 +36,7 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
       setLoading(true);
       const [{ data: profileData }, { data: hintsData }] = await Promise.all([
         supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
-        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions").eq("user_id", userId).eq("is_private", false).order("starred", { ascending: false }).order("position", { ascending: true }).limit(40),
+        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions").eq("user_id", userId).eq("is_private", false).order("starred", { ascending: false }).order("position", { ascending: true }).limit(6),
       ]);
       setProfile(profileData);
       const hintsList = hintsData || [];
@@ -218,6 +218,12 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
             </div>
             </>
           )}
+        <div className="px-4 pb-4 shrink-0">
+            <a href={`/profile/${userId}`}
+              className="w-full h-10 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
+              See full profile →
+            </a>
+          </div>
         </div>
       </div>
     </div>
