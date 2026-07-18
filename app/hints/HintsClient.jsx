@@ -1481,6 +1481,8 @@ export default function HintsClient() {
           numeric_price: priceMeta.numericPrice,
           currency: priceMeta.originalCurrency || BASE_CURRENCY,
           occasions: editForm.occasions || [],
+        size: editForm.size || null,
+        size_type: editForm.size_type || null,
         })
         .eq("id", editingHintId);
 
@@ -1511,6 +1513,8 @@ export default function HintsClient() {
                 numericPrice: priceMeta.numericPrice,
                 currency: priceMeta.originalCurrency || BASE_CURRENCY,
                 occasions: editForm.occasions || [],
+        size: editForm.size || null,
+        size_type: editForm.size_type || null,
                 needsReview: false,
               }
             : hint
@@ -1743,6 +1747,8 @@ export default function HintsClient() {
         position: 0,
         source: newHintForm.source || "user",
         occasions: newHintForm.occasions || [],
+        size: newHintForm.size || null,
+        size_type: newHintForm.size_type || null,
       });
 
       if (error) throw new Error(errorToMessage(error));
