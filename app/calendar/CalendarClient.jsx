@@ -80,7 +80,7 @@ export default function CalendarClient() {
       if (!user) return;
       setUserId(user.id);
       const [{ data: calEvents }, { data: contacts }] = await Promise.all([
-        supabase.from("calendar_events").select("*").or(`user_id.eq.${user.id},is_shared.eq.true`).order("event_date"),
+        supabase.from("calendar_events").select("*").or("user_id.eq." + user.id + ",is_shared.eq.true").order("event_date"),
         supabase.from("contact_public_state").select("*").eq("owner_user_id", user.id),
       ]);
       const birthdayEvents = buildContactBirthdayEvents(contacts || []);
