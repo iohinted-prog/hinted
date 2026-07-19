@@ -1569,7 +1569,11 @@ export default function FeedClient() {
         .limit(50) : Promise.resolve({ data: [], error: null }),
     ]);
     const error = ownResult.error || contactResult.error;
-    const combined = [...(ownResult.data || []), ...(contactResult.data || [])];
+      const rawCombined = [...(ownResult.data || []), ...(contactResult.data || [])];
+      const combined = rawCombined.filter(item => {
+        const hideFrom = item.metadata?.hide_from_user_id;
+        return !hideFrom || hideFrom !== userId;
+      });
     const seen = new Set();
     const data = combined
       .filter(item => { if (seen.has(item.id)) return false; seen.add(item.id); return true; })
