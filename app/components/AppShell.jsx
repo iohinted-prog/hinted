@@ -51,6 +51,7 @@ export default function AppShell({ children }) {
   const [fullName, setFullName] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   const initials = useMemo(() => getInitials(fullName, email), [fullName, email]);
 
@@ -446,7 +447,7 @@ export default function AppShell({ children }) {
                       Account
                     </Link>
           <Link
-            href={"/profile/" + (user?.id || "")}
+            href={"/profile/" + (currentUserId || "")}
             className="rounded-[16px] px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#fff5f0]"
           >
             My Hints Profile
