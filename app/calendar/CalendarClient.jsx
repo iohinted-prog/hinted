@@ -83,6 +83,7 @@ export default function CalendarClient() {
         supabase.from("contact_public_state").select("*").eq("owner_user_id", user.id),
       ]);
       const birthdayEvents = buildContactBirthdayEvents(contacts || []);
+      console.log("calEvents:", calEvents, "birthdayEvents:", birthdayEvents);
       setEvents([...(calEvents || []), ...birthdayEvents]);
       setLoading(false);
     }
