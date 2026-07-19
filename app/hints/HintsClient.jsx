@@ -899,11 +899,6 @@ function MobileHintCard({ hint, onEdit, onToggleStarred, onTogglePrivate, format
             {hint.rawPrice && <span className="inline-block text-[12px] font-bold text-white rounded-full px-2.5 py-0.5" style={{ background: "#ff875d" }}>{hint.rawPrice}</span>}
           </div>
         </div>
-      {hint.rawPrice && (
-        <div className="px-1 pt-1.5 pb-0.5">
-          <p className="text-[12px] font-bold text-[#df7b59]">{hint.rawPrice}</p>
-        </div>
-      )}
       </article>
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm" style={{ animation: "fadeIn 0.15s ease" }} onClick={() => setShowModal(false)}>
