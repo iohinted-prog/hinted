@@ -37,9 +37,10 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
       setLoading(true);
       const [{ data: profileData }, { data: hintsData }] = await Promise.all([
         supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
-        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions, size, size_type")
-          .eq("user_id", userId).eq("is_private", false)
-          .order("starred", { ascending: false }).order("position", { ascending: true }).limit(6),
+        Promise.all([
+          supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions, size, size_type").eq("user_id", userId).eq("is_private", false).eq("starred", true).limit(3),
+          supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions, size, size_type").eq("user_id", userId).eq("is_private", false).eq("starred", false).order("created_at", { ascending: false }).limit(3),
+        ]).then(([s, n]) => ({ data: [...(s.data || []), ...(n.data || [])], error: s.error || n.error })),
       ]);
       setProfile(profileData);
       const hintsList = hintsData || [];
