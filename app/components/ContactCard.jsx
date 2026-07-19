@@ -1,7 +1,7 @@
 "use client";
 export function getStarSign(birthday) {
   if (!birthday) return null;
-  const d = new Date(birthday);
+  const d = new Date(birthday + "T00:00:00");
   const m = d.getMonth() + 1;
   const day = d.getDate();
   if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return "♈ Aries";
@@ -51,7 +51,7 @@ export default function ContactCard({ contact, onOpenProfile, onDeleteClick, onE
           <p className="text-xs text-slate-500 truncate">{contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}</p>
           {contact.birthday && (
             <p className="text-[11px] text-[#df7b59] mt-0.5 truncate">
-              🎂 {new Date(contact.birthday).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {getStarSign(contact.birthday)}
+              🎂 {new Date(contact.birthday + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {getStarSign(contact.birthday)}
             </p>
           )}
           {isClickable && <p className="text-[11px] text-[#df7b59] mt-0.5">👁 See hints</p>}

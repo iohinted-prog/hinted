@@ -3,7 +3,7 @@ import { useState } from "react";
 
 function getStarSign(birthday) {
   if (!birthday) return null;
-  const d = new Date(birthday);
+  const d = new Date(birthday + "T00:00:00");
   const m = d.getMonth() + 1;
   const day = d.getDate();
   if ((m === 3 && day >= 21) || (m === 4 && day <= 19)) return "♈ Aries";
@@ -71,7 +71,7 @@ export default function ContactsManagerModal({ open, onClose, contacts, onAdd, o
                   <p className="text-sm font-semibold text-slate-900 truncate">{contact.name}</p>
                   <p className="text-xs text-slate-500 truncate">{contact.role || "Friend"}{contact.note ? ` · ${contact.note}` : ""}</p>
                   {contact.birthday && (
-                    <p className="text-[11px] text-[#df7b59] mt-0.5 truncate">🎂 {new Date(contact.birthday).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {getStarSign(contact.birthday)}</p>
+                    <p className="text-[11px] text-[#df7b59] mt-0.5 truncate">🎂 {new Date(contact.birthday + "T00:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" })} · {getStarSign(contact.birthday)}</p>
                   )}
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
