@@ -740,6 +740,7 @@ function FeedItem({
                     {metadata.preview_hints?.length > 0 && (
                       <button type="button" onClick={e => { e.stopPropagation(); setSessionHintsModal({ hints: metadata.preview_hints || [], actorUserId, actorName: metadata.actor_name, actorAvatar: actorAvatarUrl }); }} className="ml-auto text-sm font-semibold text-[#df7b59]">See new hints →</button>
                     )}
+                    )}
                   </div>
                 </button>
               </div>
