@@ -219,14 +219,6 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
             </div>
             </>
           )}
-        <div className="px-4 pb-4 shrink-0">
-            <a href={`/profile/${userId}`}
-              className="w-full h-10 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
-              See full profile →
-            </a>
-          </div>
-        <div className="px-4 pb-5 pt-2 shrink-0">
-          <Link href={`/profile/${userId}`} onClick={onClose}
             className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
             See full profile →
           </Link>
