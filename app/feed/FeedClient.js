@@ -715,7 +715,7 @@ function FeedItem({
           {bucket === "hint" && metadata.preview_hints?.length > 0 && (
             <div className="mt-4">
               <button
-                type="button"
+                role="button"
                 onClick={() => actorUserId && onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
                 className="w-full text-left"
               >
@@ -741,7 +741,7 @@ function FeedItem({
                   <button type="button" onClick={e => { e.stopPropagation(); setSessionHintsModal({ hints: metadata.preview_hints || [], actorUserId, actorName: metadata.actor_name, actorAvatar: actorAvatarUrl }); }} className="ml-auto text-sm font-semibold text-[#df7b59]">See new hints →</button>
             )}
                 </div>
-              </button>
+              </div>
             </div>
           )}
           {(bucket !== "hint") && item.cta_label && item.cta_href ? (
