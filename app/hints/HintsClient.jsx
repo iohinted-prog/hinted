@@ -1727,25 +1727,57 @@ export default function HintsClient() {
       const allHints = [newHint, ...hints];
       const publicHints = allHints.filter(h => !h.private);
       const previewHints = sessionHints;
-      supabase.from("feed_items").insert({
-        owner_user_id: currentUser.id,
-        actor_user_id: currentUser.id,
-        family: "hint",
-        item_type: "hint_save_session",
-        headline: "dropped a hint" + (newHint.title && newHint.title !== "Hint" ? ": " + newHint.title : ""),
-        body: newHint.retailer || "",
-        cta_label: "See new hints",
-        cta_href: "/hints",
-        visibility: "contacts",
-        occurred_at: new Date().toISOString(),
-        metadata: {
-          actor_name: currentUser.user_metadata?.full_name || currentUser.email || "You",
-          actor_avatar_url: currentUser.user_metadata?.avatar_url || null,
-          hint_count: sessionHints.length,
-          preview_hints: previewHints,
-          social_enabled: true,
-        },
-      }).then(r => { if (r.error) console.error("feed insert error:", r.error.message); else console.log("feed insert OK"); });
+      // Check for existing feed item in last hour to update instead of inserting
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      supabase.from("feed_items")
+        .select("id, metadata")
+        .eq("owner_user_id", currentUser.id)
+        .eq("item_type", "hint_save_session")
+        .gte("occurred_at", oneHourAgo)
+        .order("occurred_at", { ascending: false })
+        .limit(1)
+        .then(({ data: existing }) => {
+          if (existing && existing[0]) {
+            // Update existing session feed item
+            const existingMeta = existing[0].metadata || {};
+            const existingPreviews = existingMeta.preview_hints || [];
+            const newPreview = sessionHints[0];
+            const mergedPreviews = newPreview && !existingPreviews.find(p => p.id === newPreview.id)
+              ? [newPreview, ...existingPreviews].slice(0, 2)
+              : existingPreviews;
+            const newCount = (existingMeta.hint_count || 0) + sessionHints.length;
+            supabase.from("feed_items").update({
+              occurred_at: new Date().toISOString(),
+              headline: "Dropped a Hint",
+              metadata: {
+                ...existingMeta,
+                hint_count: newCount,
+                preview_hints: mergedPreviews,
+              }
+            }).eq("id", existing[0].id).then(r => { if (r.error) console.error("feed update error:", r.error.message); });
+          } else {
+            // Insert new feed item
+            supabase.from("feed_items").insert({
+              owner_user_id: currentUser.id,
+              actor_user_id: currentUser.id,
+              family: "hint",
+              item_type: "hint_save_session",
+              headline: "Dropped a Hint",
+              body: newHint.retailer || "",
+              cta_label: "See new hints",
+              cta_href: "/hints",
+              visibility: "contacts",
+              occurred_at: new Date().toISOString(),
+              metadata: {
+                actor_name: currentUser.user_metadata?.full_name || currentUser.email || "You",
+                actor_avatar_url: currentUser.user_metadata?.avatar_url || null,
+                hint_count: sessionHints.length,
+                preview_hints: previewHints,
+                social_enabled: true,
+              },
+            }).then(r => { if (r.error) console.error("feed insert error:", r.error.message); });
+          }
+        });
       } // end currentUser guard
 
       if (image) {
