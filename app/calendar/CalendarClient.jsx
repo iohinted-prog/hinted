@@ -85,7 +85,7 @@ export default function CalendarClient() {
       ]);
       const birthdayEvents = buildContactBirthdayEvents(contacts || []);
       console.log("calEvents:", calEvents, "birthdayEvents:", birthdayEvents);
-      setDebugInfo("calEvents: " + (calEvents?.length || 0) + " birthdayEvents: " + birthdayEvents.length);
+      setDebugInfo("dates: " + (calEvents||[]).map(e => e.event_date).join(" | "));
       setEvents([...(calEvents || []), ...birthdayEvents]);
       setLoading(false);
     }
