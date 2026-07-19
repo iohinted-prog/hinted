@@ -226,6 +226,12 @@ export default function ProfileClient({ userId }) {
                     Open →
                   </a>
                 )}
+                {!isViewingOther && (
+                  <a href="/hints"
+                    className="flex-1 h-11 flex items-center justify-center rounded-full border border-[#ead8ce] text-[13px] font-semibold text-slate-600">
+                    Edit in hints →
+                  </a>
+                )}
                 {isViewingOther && (() => {
                   const myClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by === currentUser?.id);
                   const otherClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by !== currentUser?.id);
