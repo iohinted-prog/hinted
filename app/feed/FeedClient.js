@@ -716,11 +716,11 @@ function FeedItem({
               <div className="mt-4">
                 <div
                   onClick={() => actorUserId && onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}
-                  className="w-full text-left "
+                  className="w-full text-left cursor-pointer"
                 >
                   <div className="grid grid-cols-2 gap-2">
                     {metadata.preview_hints.slice(0, 2).map((hint, i) => (
-                      <div key={i} className="relative aspect-square overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7] cursor-pointer" onClick={() => actorUserId && onOpenProfile && onOpenProfile({ userId: actorUserId, name: metadata.actor_name, avatarUrl: actorAvatarUrl, initials: actorInitials })}>
+                      <div key={i} className="relative aspect-square overflow-hidden rounded-[18px] border border-[#f0dfd6] bg-[#fffaf7]">
                         {hint.image_url
                           ? <img src={hint.image_url} alt={hint.title} className="h-full w-full object-cover" />
                           : <div className="w-full flex items-center justify-center text-4xl bg-gradient-to-br from-[#ead8ca] to-[#c4a17f]" style={{ minHeight: "120px" }}>🎁</div>
