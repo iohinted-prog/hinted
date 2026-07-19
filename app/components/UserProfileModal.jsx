@@ -27,8 +27,6 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
   const [claims, setClaims] = useState([]);
   const [claimingId, setClaimingId] = useState(null);
   const [imageRatios, setImageRatios] = useState({});
-  const [filter, setFilter] = useState("default");
-  const [occasionFilter, setOccasionFilter] = useState("");
 
   useEffect(() => {
     if (!userId) return;
@@ -36,13 +34,17 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
       setLoading(true);
       const [{ data: profileData }, { data: hintsData }] = await Promise.all([
         supabase.from("profiles").select("full_name, avatar_url, interests").eq("id", userId).maybeSingle(),
-        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions").eq("user_id", userId).eq("is_private", false).order("starred", { ascending: false }).order("position", { ascending: true }).limit(6),
+        supabase.from("hints").select("id, title, image_url, numeric_price, currency, retailer, url, starred, occasions")
+          .eq("user_id", userId).eq("is_private", false)
+          .order("starred", { ascending: false }).order("position", { ascending: true }).limit(6),
       ]);
       setProfile(profileData);
       const hintsList = hintsData || [];
       setHints(hintsList);
       if (hintsList.length && currentUserId && currentUserId !== userId) {
-        const { data: claimsData } = await supabase.from("hint_claims").select("id, hint_id, claimed_by, claim_type").in("hint_id", hintsList.map(h => h.id));
+        const { data: claimsData } = await supabase.from("hint_claims")
+          .select("id, hint_id, claimed_by, claim_type")
+          .in("hint_id", hintsList.map(h => h.id));
         setClaims(claimsData || []);
       }
       setLoading(false);
@@ -66,24 +68,7 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
       const tempId = crypto.randomUUID();
       setClaims(prev => [...prev, { id: tempId, hint_id: hint.id, claimed_by: currentUserId, claim_type: "solo" }]);
       const { error } = await supabase.from("hint_claims").insert({ hint_id: hint.id, claimed_by: currentUserId, claim_type: "solo" });
-      if (error) {
-        setClaims(prev => prev.filter(c => c.id !== tempId));
-      } else {
-        Promise.resolve(supabase.from("feed_items").insert({
-          owner_user_id: currentUserId, actor_user_id: currentUserId,
-          family: "hint", item_type: "hint_save_session",
-          headline: "is getting " + (hint.title || "a hint"),
-          body: hint.retailer || "", cta_label: "See Hints", cta_href: "/hints",
-          visibility: "contacts", occurred_at: new Date().toISOString(),
-          metadata: {
-            actor_name: "", hint_title: hint.title, hint_image: hint.image_url || "",
-            hint_retailer: hint.retailer || "", hide_from_user_id: userId,
-            social_enabled: true,
-            preview_hints: [{ id: hint.id, title: hint.title, image_url: hint.image_url || "", retailer: hint.retailer || "" }],
-            hint_count: 1,
-          },
-        })).catch(() => {});
-      }
+      if (error) setClaims(prev => prev.filter(c => c.id !== tempId));
     }
   }
 
@@ -93,66 +78,31 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
   const interests = Array.isArray(profile?.interests) ? profile.interests : [];
   const isViewingOther = currentUserId && currentUserId !== userId;
 
-  const allOccasions = [...new Set(hints.flatMap(h => h.occasions || []))].filter(Boolean);
-  const filteredHints = hints
-    .filter(h => {
-      if (filter === "starred") return h.starred;
-      if (occasionFilter) return (h.occasions || []).includes(occasionFilter);
-      return true;
-    })
-    .sort((a, b) => {
-      const aPrice = a.numeric_price || 0;
-      const bPrice = b.numeric_price || 0;
-      const aHasPrice = aPrice > 0;
-      const bHasPrice = bPrice > 0;
-      if (filter === "price_low") {
-        if (aHasPrice && !bHasPrice) return -1;
-        if (!aHasPrice && bHasPrice) return 1;
-        return aPrice - bPrice;
-      }
-      if (filter === "price_high") {
-        if (aHasPrice && !bHasPrice) return -1;
-        if (!aHasPrice && bHasPrice) return 1;
-        return bPrice - aPrice;
-      }
-      if (b.starred !== a.starred) return (b.starred ? 1 : 0) - (a.starred ? 1 : 0);
-      if (aHasPrice && !bHasPrice) return -1;
-      if (!aHasPrice && bHasPrice) return 1;
-      return bPrice - aPrice;
-    });
-
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-[rgba(33,24,20,0.42)] backdrop-blur-sm sm:items-center sm:px-4" onClick={onClose}>
       <div className="flex w-full max-w-[640px] flex-col overflow-hidden rounded-t-[32px] border border-[#efdcd2] bg-white shadow-[0_28px_80px_rgba(75,45,30,0.18)] sm:rounded-[32px]"
         style={{ maxHeight: "90dvh" }} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className="shrink-0 border-b border-[#f2e5de] px-6 py-5">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              {displayAvatar ? (
-                <img src={displayAvatar} alt={displayName} className="h-14 w-14 rounded-full object-cover" />
-              ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[14px] font-bold text-white">
-                  {displayInitials}
-                </div>
-              )}
+              {displayAvatar
+                ? <img src={displayAvatar} alt={displayName} className="h-14 w-14 rounded-full object-cover" />
+                : <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[14px] font-bold text-white">{displayInitials}</div>
+              }
               <div>
                 <p className="text-[18px] font-semibold text-slate-900">{displayName}</p>
                 {interests.length > 0 && (
                   <div className="mt-1 flex flex-wrap gap-1">
-                    {interests.slice(0, 5).map((interest) => (
+                    {interests.slice(0, 5).map(interest => (
                       <span key={interest} className="rounded-full bg-[#fff4ee] px-2.5 py-0.5 text-[11px] font-semibold text-[#df7b59]">{interest}</span>
                     ))}
                   </div>
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <button type="button" onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]">✕</button>
-            </div>
+            <button type="button" onClick={onClose} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#efe0d7] text-slate-500 hover:bg-[#faf6f3]">✕</button>
           </div>
         </div>
-        {/* Hints */}
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
           {loading ? (
             <div className="py-8 text-center text-sm text-slate-400">Loading hints...</div>
@@ -169,10 +119,8 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
           ) : hints.length === 0 ? (
             <div className="py-8 text-center text-sm text-slate-400">No public hints yet.</div>
           ) : (
-            <>
-  
             <div className="columns-2 gap-3">
-              {filteredHints.map((hint) => {
+              {hints.map((hint) => {
                 const myClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by === currentUserId);
                 const otherClaim = claims.find(c => c.hint_id === hint.id && c.claimed_by !== currentUserId);
                 return (
@@ -180,8 +128,8 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
                     <div className="overflow-hidden rounded-[20px] border border-[#f0dfd6] bg-[#fffaf7] hover:border-[#e8c9bc] transition-colors">
                       {hint.image_url ? (
                         <a href={hint.url || "#"} target="_blank" rel="noopener noreferrer" className="block">
-                        <img src={hint.image_url} alt={hint.title} className="w-full object-cover"
-                          style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }} />
+                          <img src={hint.image_url} alt={hint.title} className="w-full object-cover"
+                            style={imageRatios[hint.id] ? { aspectRatio: String(imageRatios[hint.id]) } : { aspectRatio: "3/4" }} />
                         </a>
                       ) : (
                         <div className="w-full bg-gradient-to-br from-[#f3d5cc] to-[#d98c76] flex items-center justify-center text-2xl" style={{ aspectRatio: "3/4" }}>🎁</div>
@@ -197,9 +145,7 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
                         )}
                         {isViewingOther && (
                           <div className="mt-2 flex items-center justify-between gap-2">
-                            {otherClaim && !myClaim ? (
-                              <span className="text-[11px] text-slate-400">Someone is on it</span>
-                            ) : <span />}
+                            {otherClaim && !myClaim ? <span className="text-[11px] text-slate-400">Someone is on it</span> : <span />}
                             <button type="button" disabled={claimingId === hint.id}
                               onClick={() => { setClaimingId(hint.id); handleToggleClaim(hint).finally(() => setClaimingId(null)); }}
                               className={`ml-auto text-[11px] font-semibold rounded-full px-3 py-1 border transition ${
@@ -217,9 +163,11 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
                 );
               })}
             </div>
-            </>
-        <div className="px-4 pb-5 pt-2 shrink-0">
-          <Link href={`/profile/${userId}`} onClick={onClose} className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
+          )}
+        </div>
+        <div className="px-4 pb-5 pt-2 shrink-0 border-t border-[#f2e5de]">
+          <Link href={`/profile/${userId}`} onClick={onClose}
+            className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
             See full profile →
           </Link>
         </div>
