@@ -137,8 +137,8 @@ Deno.serve(async (req) => {
             item_type: 'event_reminder',
             headline: `${ownerName}'s birthday is ${daysUntil === 10 ? 'in 10 days' : 'in 3 days'} 🎂`,
             body: `${new Date(profile.birthday + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}`,
-            cta_label: 'See their hints',
-            cta_href: '/feed',
+            cta_label: 'See hints',
+            cta_href: `/profile/${profile.id}`,
             visibility: 'private',
             occurred_at: new Date().toISOString(),
             metadata: {
