@@ -751,46 +751,6 @@ function HintFormFields({
               </select>
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Size (optional)</label>
-              <input type="text" value={form.size || ""} onChange={e => setForm(f => ({ ...f, size: e.target.value }))}
-                placeholder="e.g. M, 10, EU 42"
-                className="h-11 w-full rounded-[14px] border border-[#eadcd3] bg-[#fcfaf8] px-4 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50" />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Size type</label>
-              <select value={form.size_type || ""} onChange={e => setForm(f => ({ ...f, size_type: e.target.value }))}
-                className="h-11 w-full rounded-[14px] border border-[#eadcd3] bg-[#fcfaf8] px-4 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50">
-                <option value="">Select type</option>
-                <option value="Clothing">Clothing</option>
-                <option value="Shoes">Shoes</option>
-                <option value="Dress">Dress</option>
-                <option value="Ring">Ring</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Size (optional)</label>
-              <input type="text" value={form.size || ""} onChange={e => setForm(f => ({ ...f, size: e.target.value }))}
-                placeholder="e.g. M, 10, EU 42"
-                className="h-11 w-full rounded-[14px] border border-[#eadcd3] bg-[#fcfaf8] px-4 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50" />
-            </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Size type</label>
-              <select value={form.size_type || ""} onChange={e => setForm(f => ({ ...f, size_type: e.target.value }))}
-                className="h-11 w-full rounded-[14px] border border-[#eadcd3] bg-[#fcfaf8] px-4 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#f19a78]/50">
-                <option value="">Select type</option>
-                <option value="Clothing">Clothing</option>
-                <option value="Shoes">Shoes</option>
-                <option value="Dress">Dress</option>
-                <option value="Ring">Ring</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
     </div>
   );
 }
