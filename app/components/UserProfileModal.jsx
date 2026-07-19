@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../lib/supabase/client";
 import Link from "next/link";
+import GroupHintModal from "./GroupHintModal";
 
 function getInitials(name) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
@@ -28,6 +29,7 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
   const [claimingId, setClaimingId] = useState(null);
   const [imageRatios, setImageRatios] = useState({});
   const [selectedHint, setSelectedHint] = useState(null);
+  const [groupHint, setGroupHint] = useState(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -200,6 +202,12 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
                     Open
                   </a>
                 )}
+                {isViewingOther && (
+                  <button type="button" onClick={() => setGroupHint(selectedHint)}
+                    className="flex-1 h-11 rounded-full border border-[#ead8ce] text-[13px] font-semibold text-slate-600">
+                    Get group together
+                  </button>
+                )}
                 {isViewingOther && (() => {
                   const myClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by === currentUserId);
                   const otherClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by !== currentUserId);
@@ -215,6 +223,15 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
             </div>
           </div>
         </div>
+      )}
+    {groupHint && (
+        <GroupHintModal
+          hint={groupHint}
+          recipientUserId={userId}
+          recipientName={displayName}
+          currentUserId={currentUserId}
+          onClose={() => setGroupHint(null)}
+        />
       )}
     </div>
   );
