@@ -234,6 +234,12 @@ export default function ProfileClient({ userId }) {
                     Edit in hints →
                   </a>
                 )}
+                {isViewingOther && (
+                  <button type="button" onClick={() => setGroupHint(selectedHint)}
+                    className="flex-1 h-11 rounded-full border border-[#ead8ce] text-[13px] font-semibold text-slate-600 hover:bg-[#fff5f0]">
+                    Get group together
+                  </button>
+                )}
                 {isViewingOther && (() => {
                   const myClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by === currentUser?.id);
                   const otherClaim = claims.find(c => c.hint_id === selectedHint.id && c.claimed_by !== currentUser?.id);
