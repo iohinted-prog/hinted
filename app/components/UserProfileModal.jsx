@@ -219,7 +219,7 @@ export default function UserProfileModal({ userId, name, avatarUrl, initials, on
             </div>
             </>
           )}
-            className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
+          <Link href={`/profile/${userId}`} onClick={onClose} className="w-full h-11 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[13px] font-semibold text-white shadow-lg">
             See full profile →
           </Link>
         </div>
