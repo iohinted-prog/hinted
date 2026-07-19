@@ -446,7 +446,7 @@ export default function AppShell({ children }) {
                       Account
                     </Link>
           <Link
-            href={user ? `/profile/${user.id}` : "/feed"}
+            href={"/profile/" + (user?.id || "")}
             className="rounded-[16px] px-3 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-[#fff5f0]"
           >
             My Hints Profile
