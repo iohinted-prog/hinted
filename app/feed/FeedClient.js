@@ -2329,16 +2329,6 @@ export default function FeedClient() {
         ) : null}
 
         {/* Mobile Activity/Calendar toggle */}
-        <div className="flex xl:hidden mb-4 rounded-full border border-[#ead8ce] bg-white p-1">
-          <button type="button" onClick={() => setMobileTab("home")}
-            className={`flex-1 h-9 rounded-full text-sm font-semibold transition ${mobileTab === "home" || mobileTab === "contacts" ? "bg-[#2f3b2d] text-white" : "text-slate-500"}`}>
-            Activity
-          </button>
-          <button type="button" onClick={() => setMobileTab("calendar")}
-            className={`flex-1 h-9 rounded-full text-sm font-semibold transition ${mobileTab === "calendar" ? "bg-[#2f3b2d] text-white" : "text-slate-500"}`}>
-            Calendar
-          </button>
-        </div>
         <div className="grid gap-6 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           <aside className="hidden xl:block space-y-5">
             <section className="rounded-[28px] border border-[#f0dfd6] bg-white p-5 shadow-sm">
@@ -2493,7 +2483,7 @@ export default function FeedClient() {
             </div>
           </section>
 
-          <aside className={`space-y-5 ${mobileTab !== "calendar" ? "hidden xl:block" : ""}`}>
+          <aside className={`space-y-5 ${true !== "never" ? "hidden xl:block" : ""}`}>
             <MiniCalendar
               eventsByDate={eventsByDate}
               calendarLoading={calendarLoading}
