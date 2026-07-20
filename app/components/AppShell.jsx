@@ -287,6 +287,7 @@ export default function AppShell({ children }) {
         data: {},
         created_at: new Date().toISOString(),
       });
+    alert("[notif insert done]");
     }
     setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
       if (accepted) setGroupHintToast("You're in! The organiser will be in touch to sort out contributions.");
