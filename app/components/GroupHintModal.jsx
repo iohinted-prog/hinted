@@ -139,6 +139,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
           <div>
             <p className="text-[16px] font-semibold text-slate-900">Get a group together</p>
             <p className="text-[12px] text-slate-400 mt-0.5 truncate">{hint.title} → {recipientName}</p>
+            {members.length > 0 && <p className="text-[11px] text-[#df7b59] mt-0.5">{members.length} person{members.length > 1 ? "s" : ""} invited</p>}
           </div>
           <button type="button" onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400">✕</button>
         </div>
