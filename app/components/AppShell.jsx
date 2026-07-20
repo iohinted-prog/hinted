@@ -333,7 +333,7 @@ export default function AppShell({ children }) {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/shop": "🛍️" };
+                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/people": "⭕", "/shop": "🛍️" };
                 return (
                   <Link
                     key={item.href}
@@ -692,7 +692,7 @@ export default function AppShell({ children }) {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/shop": "🛍️" };
+                const icons = { "/feed": "🏠", "/hints": "🎁", "/circles": "⭕", "/people": "⭕", "/shop": "🛍️" };
                 return (
                   <Link
                     key={item.href}
