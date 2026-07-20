@@ -258,6 +258,7 @@ export default function AppShell({ children }) {
       const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
       const responderName = responderProfile?.full_name || "Someone";
       const accepted = action === "accept";
+    alert("[before inserts]");
       // Notify organiser via feed item
       await supabase.from("feed_items").insert({
         owner_user_id: gh.organiser_id,
