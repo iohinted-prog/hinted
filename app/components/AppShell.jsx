@@ -249,6 +249,7 @@ export default function AppShell({ children }) {
   }
 
   async function handleGroupHintResponse(member, action) {
+    alert("[handleGroupHintResponse] action:" + action + " memberId:" + member?.id);
     const status = action === "accept" ? "in" : "declined";
     await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
     const gh = member.group_hints;
