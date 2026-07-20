@@ -273,7 +273,7 @@ export default function AppShell({ children }) {
         type: "group_hint_response",
         title: accepted ? responderName + " is in!" : responderName + " declined",
         body: gh.hints?.title || "a hint",
-        data: { actor_name: responderName, response: status, hint_title: gh.hints?.title },
+        data: { actor_name: responderName, response: status, hint_title: gh.hints?.title, hint_image: gh.hints?.image_url, recipient_user_id: gh.recipient_user_id },
         created_at: new Date().toISOString(),
       });
       fetch("/api/group-hint-notify", {
@@ -372,7 +372,10 @@ export default function AppShell({ children }) {
                     <h3 className="mt-0.5 text-[17px] font-semibold text-slate-900">Pending invites</h3>
                   </div>
                   <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
-      {activityNotifs.filter(n => n.type === "group_hint_response").map(notif => (
+      {activityNotifs.filter(n => n.type === "group_hint_response").map(notif => {
+        const hintImage = notif.data?.hint_image;
+        const recipientId = notif.data?.recipient_user_id;
+        return (
         <div key={notif.id} className="rounded-[18px] border border-[#e6ddd7] bg-white p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white overflow-hidden">
@@ -386,6 +389,14 @@ export default function AppShell({ children }) {
               {notif.data?.response === "in" ? "Accepted" : "Declined"}
             </span>
           </div>
+          {hintImage && (
+            <img
+              src={hintImage}
+              alt={notif.body}
+              className="w-full h-24 object-cover rounded-[12px] mb-2 cursor-pointer"
+              onClick={() => { if (recipientId) { window.location.href = `/profile/${recipientId}`; } setNotifOpen(false); }}
+            />
+          )}
           {notif.data?.response === "in" && (
             <p className="text-[12px] text-slate-500 mb-2">Get in touch with them to sort out contributions.</p>
           )}
@@ -395,11 +406,12 @@ export default function AppShell({ children }) {
               setActivityNotifs(prev => prev.filter(n => n.id !== notif.id));
               setInviteCount(prev => Math.max(0, prev - 1));
             }}
-            className="mt-1 text-[11px] text-slate-400 hover:text-slate-600">
+            className="text-[11px] font-semibold px-3 py-1 rounded-full border border-[#e6ddd7] text-slate-500 hover:bg-slate-50">
             Dismiss
           </button>
         </div>
-      ))}
+        );
+      })}
       {activityNotifs.filter(n => n.type !== "group_hint_response").map(notif => (
         <div key={notif.id} className="rounded-[18px] border border-[#e6ddd7] bg-white p-4">
           <div className="flex items-center gap-3">
