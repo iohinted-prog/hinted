@@ -257,7 +257,7 @@ export default function AppShell({ children }) {
       // Notify organiser via feed item
       await supabase.from("feed_items").insert({
         owner_user_id: gh.organiser_id,
-        actor_user_id: user?.id,
+        actor_user_id: currentUserId,
         family: "group",
         item_type: "group_hint_response",
         headline: accepted ? responderName + " is in!" : responderName + " declined",
