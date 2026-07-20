@@ -75,12 +75,14 @@ Deno.serve(async (req) => {
     for (const profile of profiles) {
       if (!profile.birthday) continue
 
-      // Calculate days until next birthday
+      // Calculate days until next birthday (date-only, no timezone drift)
       const bday = new Date(profile.birthday + 'T00:00:00')
-      const nextBday = new Date(today.getFullYear(), bday.getMonth(), bday.getDate())
-      if (nextBday < today) nextBday.setFullYear(today.getFullYear() + 1)
-      const daysUntil = Math.round((nextBday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      const todayDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()))
+      const nextBday = new Date(Date.UTC(todayDate.getUTCFullYear(), bday.getMonth(), bday.getDate()))
+      if (nextBday <= todayDate) nextBday.setUTCFullYear(todayDate.getUTCFullYear() + 1)
+      const daysUntil = Math.round((nextBday.getTime() - todayDate.getTime()) / (1000 * 60 * 60 * 24))
 
+      console.log(`${profile.full_name}: daysUntil=${daysUntil}`);
       if (daysUntil !== 10 && daysUntil !== 3) continue
 
       // Get all contacts who have this person in their contacts
