@@ -280,9 +280,11 @@ export default function AppShell({ children }) {
       // Also insert bell notification
       await supabase.from("notifications").insert({
         user_id: gh.organiser_id,
+        actor_user_id: currentUserId,
         type: "group_hint_response",
         title: accepted ? responderName + " is in!" : responderName + " declined",
         body: gh.hints?.title || "a hint",
+        data: {},
         created_at: new Date().toISOString(),
       });
     }
