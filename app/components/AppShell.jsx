@@ -254,7 +254,7 @@ export default function AppShell({ children }) {
     await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
     const gh = member.group_hints;
     if (gh?.organiser_id) {
-      const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
+      const { data: responderProfile } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", currentUserId).maybeSingle();
       const responderName = responderProfile?.full_name || "Someone";
       await supabase.from("feed_items").insert({
         owner_user_id: gh.organiser_id,
@@ -273,7 +273,7 @@ export default function AppShell({ children }) {
         type: "group_hint_response",
         title: accepted ? responderName + " is in!" : responderName + " declined",
         body: gh.hints?.title || "a hint",
-        data: { actor_name: responderName, response: status, hint_title: gh.hints?.title, hint_image: gh.hints?.image_url, recipient_user_id: gh.recipient_user_id },
+        data: { actor_name: responderName, actor_avatar_url: responderProfile?.avatar_url || null, response: status, hint_title: gh.hints?.title, hint_image: gh.hints?.image_url, recipient_user_id: gh.recipient_user_id },
         created_at: new Date().toISOString(),
       });
       fetch("/api/group-hint-notify", {
