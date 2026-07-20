@@ -122,6 +122,12 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
       setMembers(newMembers || []);
       setSelected([]);
       setDone(true);
+      // Send invite emails
+      fetch("/api/group-hint-notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "invite", groupHintId: gh.id }),
+      }).catch(console.error);
     } catch (e) {
       console.error("handleSend error:", e);
     } finally {
