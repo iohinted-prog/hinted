@@ -23,6 +23,13 @@ function getInitials(name) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+const GRADIENTS = [
+  "from-[#d9dfcf] via-[#b9c7aa] to-[#90a27e]",
+  "from-[#ead8ca] via-[#dbc0a8] to-[#c4a17f]",
+  "from-[#efe5de] via-[#e5d2c8] to-[#d1b2a4]",
+  "from-[#d5dbee] via-[#b3c0df] to-[#8f9fc9]",
+  "from-[#eadce8] via-[#d8bfd1] to-[#bb9ab6]",
+];
 export default function ContactCard({ contact, onOpenProfile, onDeleteClick, onEditClick, previewHints = [] }) {
   const profileId = contact.profileId || contact.matchedProfileId || null;
   const isClickable = Boolean(profileId && !contact.isDemo && onOpenProfile);
@@ -56,7 +63,7 @@ export default function ContactCard({ contact, onOpenProfile, onDeleteClick, onE
           )}
           {isClickable && <p className="text-[11px] text-[#df7b59] mt-0.5">👁 See hints</p>}
         {previewHints.length > 0 && (
-          <div className="mt-2 flex items-center gap-1.5">
+          <div className="mt-2 flex items-center gap-1.5 md:hidden">
             {previewHints.slice(0, 2).map(h => (
               <div key={h.id} className="h-9 w-9 rounded-[8px] overflow-hidden border border-[#f0dfd6] shrink-0 bg-[#fffaf7]">
                 {h.image_url
@@ -82,6 +89,29 @@ export default function ContactCard({ contact, onOpenProfile, onDeleteClick, onE
           )}
         </div>
       </div>
+      {/* Desktop: larger square hint previews */}
+      {previewHints.length > 0 && (
+        <div className="hidden md:grid grid-cols-3 gap-2 mt-3 cursor-pointer" onClick={isClickable ? handleClick : undefined}>
+          {previewHints.slice(0, 3).map((h, i) => (
+            <div key={h.id} className="relative overflow-hidden rounded-[14px] bg-[#fffaf7] border border-[#f0dfd6]" style={{ aspectRatio: "1/1" }}>
+              {h.image_url
+                ? <img src={h.image_url} alt={h.title} className="absolute inset-0 h-full w-full object-cover" />
+                : <div className={`absolute inset-0 bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} flex items-center justify-center text-2xl opacity-80`}>🎁</div>
+              }
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.7)_0%,rgba(255,255,255,0)_50%)]" />
+              <p className="absolute inset-x-0 bottom-0 p-2 text-[10px] font-semibold text-white leading-tight line-clamp-2">{h.title}</p>
+            </div>
+          ))}
+          {previewHints.slice(0, 3).length < 3 && Array.from({ length: 3 - previewHints.slice(0, 3).length }).map((_, i) => (
+            <div key={`empty-${i}`} className="rounded-[14px] bg-[#fdf5f0] border border-[#f0dfd6]" style={{ aspectRatio: "1/1" }} />
+          ))}
+        </div>
+      )}
+      {isClickable && previewHints.length === 0 && (
+        <div className="hidden md:flex mt-3 rounded-[14px] bg-[#fdf5f0] border border-[#f0dfd6] items-center justify-center py-6 text-[11px] text-slate-400 cursor-pointer" onClick={handleClick}>
+          No hints yet
+        </div>
+      )}
     </article>
   );
 }
