@@ -43,6 +43,7 @@ export async function POST(req) {
 
     const { data: recipientProfile } = await supabase.from("profiles").select("full_name").eq("id", gh.recipient_user_id).maybeSingle();
     const recipientName = recipientProfile?.full_name || "someone";
+    const memberCount = (members || []).length;
 
     for (const member of members || []) {
       const { data: userAuth } = await supabase.auth.admin.getUserById(member.user_id);
@@ -54,9 +55,11 @@ export async function POST(req) {
         html: `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
           <h2 style="color:#df7b59">Get a group together 🎁</h2>
           <p><strong>${organiserName}</strong> is organising a group gift for <strong>${recipientName}</strong> and wants you to chip in.</p>
+              <p style="color:#888;font-size:14px">${memberCount} ${memberCount === 1 ? "person" : "people"} invited</p>
           ${hint?.image_url ? `<img src="${hint.image_url}" style="width:100%;border-radius:12px;margin:16px 0;max-height:300px;object-fit:cover" />` : ""}
           <p style="font-size:18px;font-weight:bold;color:#333">${hint?.title || "A gift"}</p>
           ${price ? `<p style="font-size:16px;font-weight:bold;color:#df7b59">${price}</p>` : ""}
+              ${memberCount > 0 ? `<p style="color:#888;font-size:14px">${memberCount} ${memberCount === 1 ? "person" : "people"} invited</p>` : ""}
           ${hint?.retailer ? `<p style="color:#888">${hint.retailer}</p>` : ""}
           <a href="https://hintdrop.app/feed" style="display:inline-block;margin-top:20px;background:linear-gradient(to bottom,#ff966f,#ff7e54);color:white;padding:12px 28px;border-radius:50px;text-decoration:none;font-weight:bold">View in HintDrop</a>
           <p style="color:#aaa;font-size:12px;margin-top:24px">Accept or decline in the HintDrop app.</p>
