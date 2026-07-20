@@ -57,15 +57,15 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
     const organiserId = user?.id;
     if (!organiserId) { setSending(false); return; }
 
-    let ghId = groupHint?.id;
+    let ghId = null; // always do fresh insert
     if (!ghId) {
       const { data: gh, error: ghError } = await supabase.from("group_hints").insert({
         hint_id: hint.id,
         organiser_id: organiserId,
         recipient_user_id: recipientUserId,
       }).select().maybeSingle();
-      alert("insert result: " + JSON.stringify({id: gh?.id, err: ghError?.message}));
       ghId = gh?.id;
+      if (!ghId) { console.error("group_hints insert failed silently"); setSending(false); return; }
       setGroupHint(gh);
     }
 
