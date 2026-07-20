@@ -23,7 +23,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
     async function load() {
       const { data: contactsData } = await supabase
         .from("contact_public_state")
-        .select("id, name, avatar_url, profile_id, owner_user_id")
+        .select("*")
         .eq("owner_user_id", currentUserId);
       setContacts((contactsData || []).filter(c => c.profile_id && c.profile_id !== recipientUserId));
 
