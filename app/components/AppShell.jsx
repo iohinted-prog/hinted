@@ -250,16 +250,33 @@ export default function AppShell({ children }) {
   async function handleGroupHintResponse(member, action) {
     const status = action === "accept" ? "in" : "declined";
     await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
-    // Notify organiser
     const gh = member.group_hints;
     if (gh?.organiser_id) {
       const responderName = fullName || "Someone";
+      const accepted = action === "accept";
+      // Notify organiser via feed item
+      await supabase.from("feed_items").insert({
+        owner_user_id: gh.organiser_id,
+        actor_user_id: user?.id,
+        family: "group",
+        item_type: "group_hint_response",
+        headline: accepted ? responderName + " is in!" : responderName + " declined",
+        body: gh.hints?.title || "a hint",
+        visibility: "private",
+        occurred_at: new Date().toISOString(),
+        metadata: {
+          actor_name: responderName,
+          hint_title: gh.hints?.title || "",
+          response: status,
+          social_enabled: false,
+        },
+      });
+      // Also insert bell notification
       await supabase.from("notifications").insert({
         user_id: gh.organiser_id,
         type: "group_hint_response",
-        title: action === "accept" ? responderName + " is in!" : responderName + " declined",
-        body: "For: " + (gh.hints?.title || "a hint"),
-        read_at: null,
+        title: accepted ? responderName + " is in!" : responderName + " declined",
+        body: gh.hints?.title || "a hint",
         created_at: new Date().toISOString(),
       });
     }
@@ -394,8 +411,16 @@ export default function AppShell({ children }) {
                         <p className="text-[11px] text-slate-400 mt-0.5 truncate">{hint?.title}</p>
                       </div>
                     </div>
-                    {hint?.image_url && <img src={hint.image_url} alt={hint.title} className="w-full h-28 object-cover rounded-[12px] mb-3" />}
-                    {hint?.numeric_price > 0 && <p className="text-[12px] font-bold text-[#df7b59] mb-3">{new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}</p>}
+                    {hint?.image_url && (
+                      <div className="flex gap-3 mb-3 items-center">
+                        <img src={hint.image_url} alt={hint.title} className="h-16 w-16 object-cover rounded-[12px] shrink-0" />
+                        <div>
+                          <p className="text-[13px] font-semibold text-slate-900 leading-tight">{hint?.title}</p>
+                          {hint?.numeric_price > 0 && <p className="text-[13px] font-bold text-[#df7b59] mt-0.5">{new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}</p>}
+                          {hint?.retailer && <p className="text-[11px] text-slate-400 mt-0.5">{hint.retailer}</p>}
+                        </div>
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button type="button" onClick={() => handleGroupHintResponse(member, "accept")}
                         className="flex-1 h-8 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[11px] font-semibold text-white">
