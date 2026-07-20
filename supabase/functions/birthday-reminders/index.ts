@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       // Get all contacts who have this person in their contacts
       const { data: contacts } = await supabase
         .from('contacts')
-        .select('owner_user_id, name')
+        .select('user_id, name')
         .eq('profile_id', profile.id)
 
       if (!contacts?.length) continue
@@ -105,14 +105,14 @@ Deno.serve(async (req) => {
       for (const contact of contacts) {
         try {
           // Get recipient email
-          const { data: recipientAuth } = await supabase.auth.admin.getUserById(contact.owner_user_id)
+          const { data: recipientAuth } = await supabase.auth.admin.getUserById(contact.user_id)
           const recipientEmail = recipientAuth?.user?.email
           if (!recipientEmail) continue
 
           const { data: recipientProfile } = await supabase
             .from('profiles')
             .select('full_name')
-            .eq('id', contact.owner_user_id)
+            .eq('id', contact.user_id)
             .maybeSingle()
           const recipientName = recipientProfile?.full_name || 'there'
 
@@ -131,7 +131,7 @@ Deno.serve(async (req) => {
 
           // Insert feed item (hidden from birthday person)
           await supabase.from('feed_items').insert({
-            owner_user_id: contact.owner_user_id,
+            owner_user_id: contact.user_id,
             actor_user_id: profile.id,
             family: 'reminder',
             item_type: 'event_reminder',
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
 
           // Bell notification
           await supabase.from('notifications').insert({
-            user_id: contact.owner_user_id,
+            user_id: contact.user_id,
             actor_user_id: profile.id,
             type: 'birthday_reminder',
             entity_id: profile.id,
@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
 
           results.sent++
         } catch (e) {
-          results.errors.push(`Error for contact ${contact.owner_user_id}: ${e}`)
+          results.errors.push(`Error for contact ${contact.user_id}: ${e}`)
         }
       }
     }
