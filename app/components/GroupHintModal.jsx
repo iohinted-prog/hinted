@@ -127,11 +127,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "invite", groupHintId: gh?.id }),
-      }).then(async r => {
-        const txt = await r.text();
-        if (!r.ok) alert("[email error] " + r.status + ": " + txt);
-        else alert("[email ok] " + txt);
-      }).catch(e => alert("[email fetch failed] " + e.message));
+      }).catch(console.error);
     } catch (e) {
       console.error("handleSend error:", e);
     } finally {
