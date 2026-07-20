@@ -52,68 +52,78 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
   async function handleSend() {
     if (!selected.length) return;
     setSending(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setSending(false); return; }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    const organiserId = user?.id;
-    if (!organiserId) { setSending(false); return; }
+      // Insert group hint
+      const { data: gh, error: ghErr } = await supabase
+        .from("group_hints")
+        .insert({ hint_id: hint.id, organiser_id: user.id, recipient_user_id: recipientUserId })
+        .select()
+        .maybeSingle();
 
-    let ghId = null; // always do fresh insert
-    if (!ghId) {
-      const { data: gh, error: ghError } = await supabase.from("group_hints").insert({
-        hint_id: hint.id,
-        organiser_id: organiserId,
-        recipient_user_id: recipientUserId,
-      }).select().maybeSingle();
-      ghId = gh?.id;
-      if (!ghId) { console.error("group_hints insert failed silently"); setSending(false); return; }
+      if (ghErr || !gh) {
+        console.error("group_hints error:", ghErr?.message);
+        setSending(false);
+        return;
+      }
+
+      // Insert members
+      const { error: memErr } = await supabase
+        .from("group_hint_members")
+        .insert(selected.map(uid => ({ group_hint_id: gh.id, user_id: uid, status: "invited" })));
+
+      if (memErr) console.error("members error:", memErr?.message);
+
+      // Get organiser name
+      const { data: profile } = await supabase
+        .from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+      const organiserName = profile?.full_name || "Someone";
+
+      // Feed notification to each invitee
+      for (const uid of selected) {
+        await supabase.from("feed_items").insert({
+          owner_user_id: uid,
+          actor_user_id: user.id,
+          family: "group",
+          item_type: "group_hint_invite",
+          headline: "wants to get a group gift together",
+          body: hint.title || "a hint",
+          cta_label: "I am in",
+          cta_href: "/feed",
+          visibility: "private",
+          occurred_at: new Date().toISOString(),
+          metadata: {
+            actor_name: organiserName,
+            actor_avatar_url: null,
+            hint_id: hint.id,
+            hint_title: hint.title,
+            hint_image: hint.image_url || "",
+            hint_retailer: hint.retailer || "",
+            recipient_name: recipientName,
+            group_hint_id: gh.id,
+            hide_from_user_id: recipientUserId,
+            social_enabled: false,
+          },
+        });
+      }
+
+      // Reload members
+      const { data: newMembers } = await supabase
+        .from("group_hint_members")
+        .select("id, user_id, status, profiles(full_name, avatar_url)")
+        .eq("group_hint_id", gh.id);
+
       setGroupHint(gh);
+      setMembers(newMembers || []);
+      setSelected([]);
+      setDone(true);
+    } catch (e) {
+      console.error("handleSend error:", e);
+    } finally {
+      setSending(false);
     }
-
-    // Get organiser name for notification
-    const { data: organiserProfile } = await supabase
-      .from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
-    const organiserName = organiserProfile?.full_name || "Someone";
-
-    await supabase.from("group_hint_members").insert(
-      selected.map(userId => ({ group_hint_id: ghId, user_id: userId, status: "invited" }))
-    );
-
-    // Send feed notification to each invited contact
-    for (const userId of selected) {
-      await supabase.from("feed_items").insert({
-        owner_user_id: userId,
-        actor_user_id: currentUserId,
-        family: "group",
-        item_type: "group_hint_invite",
-        headline: "wants to get a group gift together",
-        body: hint.title || "a hint",
-        cta_label: "I'm in",
-        cta_href: "/feed",
-        visibility: "private",
-        occurred_at: new Date().toISOString(),
-        metadata: {
-          actor_name: organiserName,
-          actor_avatar_url: null,
-          hint_id: hint.id,
-          hint_title: hint.title,
-          hint_image: hint.image_url || "",
-          hint_retailer: hint.retailer || "",
-          recipient_name: recipientName,
-          group_hint_id: ghId,
-          hide_from_user_id: recipientUserId,
-          social_enabled: false,
-        },
-      });
-    }
-
-    const { data: newMembers } = await supabase
-      .from("group_hint_members")
-      .select("id, user_id, status, profiles(full_name, avatar_url)")
-      .eq("group_hint_id", ghId);
-    setMembers(newMembers || []);
-    setSelected([]);
-    setSending(false);
-    setDone(true);
   }
 
   const existingMemberIds = members.map(m => m.user_id);
