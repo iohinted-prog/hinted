@@ -278,7 +278,7 @@ export default function AppShell({ children }) {
       });
     alert("[feed insert done]");
       // Also insert bell notification
-      await supabase.from("notifications").insert({
+      const { error: notifErr } = await supabase.from("notifications").insert({
         user_id: gh.organiser_id,
         actor_user_id: currentUserId,
         type: "group_hint_response",
@@ -287,6 +287,7 @@ export default function AppShell({ children }) {
         data: {},
         created_at: new Date().toISOString(),
       });
+      alert("[notif] " + (notifErr ? JSON.stringify(notifErr) : "ok"));
     alert("[notif insert done]");
     }
     setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
