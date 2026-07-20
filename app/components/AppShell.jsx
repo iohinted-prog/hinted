@@ -252,7 +252,8 @@ export default function AppShell({ children }) {
     await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
     const gh = member.group_hints;
     if (gh?.organiser_id) {
-      const responderName = fullName || "Someone";
+      const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
+      const responderName = responderProfile?.full_name || "Someone";
       const accepted = action === "accept";
       // Notify organiser via feed item
       await supabase.from("feed_items").insert({
