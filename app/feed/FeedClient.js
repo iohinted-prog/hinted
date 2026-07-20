@@ -2207,8 +2207,8 @@ export default function FeedClient() {
             eventDate: event.event_date,
           }),
           body: "A reminder so you have time to sort the gift.",
-          cta_label: "See hints",
-          cta_href: `/shop`,
+          cta_label: event.type === "Birthday" && event.contact_profile_id ? "See hints" : "Shop",
+          cta_href: event.type === "Birthday" && event.contact_profile_id ? `/profile/${event.contact_profile_id}` : "/shop",
           occurred_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           metadata: {
