@@ -76,7 +76,8 @@ export async function POST(req) {
       .eq("id", memberId)
       .maybeSingle();
 
-    if (!member) return Response.json({ error: "Not found" }, { status: 404 });
+    console.log("[response] member:", JSON.stringify(member), "memberId:", memberId, "responderId:", responderId);
+  if (!member) return Response.json({ error: "Not found" }, { status: 404 });
 
     const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", responderId).maybeSingle();
     const responderName = responderProfile?.full_name || "Someone";
