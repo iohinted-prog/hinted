@@ -253,6 +253,7 @@ export default function AppShell({ children }) {
     const status = action === "accept" ? "in" : "declined";
     await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
     const gh = member.group_hints;
+    alert("[gh] " + JSON.stringify({id: gh?.id, organiser_id: gh?.organiser_id, hints: gh?.hints?.title}));
     if (gh?.organiser_id) {
       const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
       const responderName = responderProfile?.full_name || "Someone";
