@@ -379,7 +379,9 @@ export default function AppShell({ children }) {
         <div key={notif.id} className="rounded-[18px] border border-[#e6ddd7] bg-white p-4">
           <div className="flex items-center gap-3 mb-2">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white overflow-hidden">
-              {(notif.data?.actor_name || "?")[0]?.toUpperCase()}
+              {notif.data?.actor_avatar_url
+                ? <img src={notif.data.actor_avatar_url} className="h-full w-full object-cover" alt="" />
+                : (notif.data?.actor_name || "?")[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-slate-900 leading-tight">{notif.title}</p>
