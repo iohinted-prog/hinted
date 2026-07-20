@@ -1,4 +1,4 @@
-import { sendEmail } from "../../lib/sendEmail";
+import { sendEmail } from "../../../lib/sendEmail";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
