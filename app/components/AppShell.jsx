@@ -619,44 +619,7 @@ export default function AppShell({ children }) {
       <div className="h-20 md:hidden" />
     </div>
   );
-}async handleGroupHintResponse(member, action) {
-    const status = action === "accept" ? "in" : "declined";
-    const accepted = action === "accept";
-    await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
-    const gh = member.group_hints;
-    if (gh?.organiser_id) {
-      const { data: responderProfile } = await supabase.from("profiles").select("full_name").eq("id", currentUserId).maybeSingle();
-      const responderName = responderProfile?.full_name || "Someone";
-      await supabase.from("feed_items").insert({
-        owner_user_id: gh.organiser_id,
-        actor_user_id: currentUserId,
-        family: "group",
-        item_type: "group_hint_response",
-        headline: accepted ? responderName + " is in!" : responderName + " declined",
-        body: gh.hints?.title || "a hint",
-        visibility: "private",
-        occurred_at: new Date().toISOString(),
-        metadata: { actor_name: responderName, hint_title: gh.hints?.title, response: status, social_enabled: false },
-      });
-      await supabase.from("notifications").insert({
-        user_id: gh.organiser_id,
-        actor_user_id: currentUserId,
-        type: "group_hint_response",
-        title: accepted ? responderName + " is in!" : responderName + " declined",
-        body: gh.hints?.title || "a hint",
-        data: {},
-        created_at: new Date().toISOString(),
-      });
-      fetch("/api/group-hint-notify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "response", memberId: member.id, responderId: currentUserId, response: status }),
-      }).catch(console.error);
-    }
-    setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
-    if (accepted) setGroupHintToast("You're in! The organiser will be in touch to sort out contributions.");
-    await loadInviteCount();
-  }
+
 
   async function handleCircleNotifAction(notif, action) {
     setNotifActionId(notif.id);
