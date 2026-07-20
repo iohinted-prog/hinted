@@ -276,6 +276,7 @@ export default function AppShell({ children }) {
           social_enabled: false,
         },
       });
+    alert("[feed insert done]");
       // Also insert bell notification
       await supabase.from("notifications").insert({
         user_id: gh.organiser_id,
