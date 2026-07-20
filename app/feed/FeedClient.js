@@ -468,6 +468,7 @@ function buildContactBirthdayEvents(contacts) {
           event_date: date.toISOString().slice(0, 10),
           type: "Birthday",
           source: "contact",
+          contact_profile_id: contact.profileId || null,
         });
         break;
       }
@@ -2206,8 +2207,8 @@ export default function FeedClient() {
             eventDate: event.event_date,
           }),
           body: "A reminder so you have time to sort the gift.",
-          cta_label: "Shop",
-          cta_href: "/shop",
+          cta_label: "See hints",
+          cta_href: `/shop`,
           occurred_at: new Date().toISOString(),
           created_at: new Date().toISOString(),
           metadata: {
