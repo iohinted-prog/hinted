@@ -291,6 +291,7 @@ export default function AppShell({ children }) {
     alert("[notif insert done]");
     }
     setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
+    alert("[after filter]");
       if (accepted) setGroupHintToast("You're in! The organiser will be in touch to sort out contributions.");
     alert("[pre-fetch] gh?.organiser_id:" + gh?.organiser_id + " currentUserId:" + currentUserId);
     alert("[pre-fetch] gh?.organiser_id:" + gh?.organiser_id + " currentUserId:" + currentUserId);
