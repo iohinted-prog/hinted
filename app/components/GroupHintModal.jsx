@@ -138,7 +138,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#f2e5de] shrink-0">
           <div>
             <p className="text-[16px] font-semibold text-slate-900">Get a group together</p>
-            <p className="text-[12px] text-slate-400 mt-0.5 truncate">{hint.title} → {recipientName}</p>
+            <p className="text-[12px] text-slate-400 mt-0.5 truncate">For {recipientName}</p>
             {members.length > 0 && <p className="text-[11px] text-[#df7b59] mt-0.5">{members.length} person{members.length > 1 ? "s" : ""} invited</p>}
           </div>
           <button type="button" onClick={onClose} className="h-9 w-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400">✕</button>
