@@ -18,6 +18,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [done, setDone] = useState(false);
+  const [sendError, setSendError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -64,7 +65,7 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
         .maybeSingle();
 
       if (ghErr || !gh) {
-        console.error("group_hints error:", ghErr?.message);
+        setSendError("Failed to create group: " + (ghErr?.message || "unknown error"));
         setSending(false);
         return;
       }
@@ -189,6 +190,9 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
                 <div className="text-center text-sm text-slate-400 py-8">No contacts to invite yet.</div>
               )}
 
+              {sendError && (
+                <div className="rounded-[14px] bg-[#fde8e8] px-4 py-3 text-[13px] font-semibold text-[#b14f43]">{sendError}</div>
+              )}
               {done && (
                 <div className="rounded-[14px] bg-[#edf6eb] px-4 py-3 text-[13px] font-semibold text-[#4a7a3a]">
                   ✓ Invites sent — they'll see it in their feed
