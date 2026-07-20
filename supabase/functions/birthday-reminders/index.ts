@@ -130,7 +130,16 @@ Deno.serve(async (req) => {
           })
           if (!emailRes.ok) results.errors.push(`Email failed for ${recipientEmail}`)
 
-          // Insert feed item (hidden from birthday person)
+          // Insert feed item only if not already sent in last 8 days
+          const { data: existing } = await supabase.from('feed_items')
+            .select('id')
+            .eq('owner_user_id', contact.user_id)
+            .eq('actor_user_id', profile.id)
+            .eq('item_type', 'event_reminder')
+            .gte('occurred_at', new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString())
+            .maybeSingle()
+          if (existing) continue
+
           await supabase.from('feed_items').insert({
             owner_user_id: contact.user_id,
             actor_user_id: profile.id,
