@@ -159,6 +159,7 @@ export default function AppShell({ children }) {
   const [activityNotifs, setActivityNotifs] = useState([]);
   const [invites, setInvites] = useState([]);
   const [circleNotifs, setCircleNotifs] = useState([]);
+  const [groupHintInvites, setGroupHintInvites] = useState([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const [inviteActionId, setInviteActionId] = useState(null);
   const [notifActionId, setNotifActionId] = useState(null);
@@ -196,6 +197,14 @@ export default function AppShell({ children }) {
         .limit(20);
       setActivityNotifs(notifData || []);
 
+    // Load group hint invites
+    const { data: ghiData } = await supabase
+      .from("group_hint_members")
+      .select("id, status, group_hints(id, hint_id, organiser_id, recipient_user_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name, avatar_url))")
+      .eq("user_id", user.id)
+      .eq("status", "invited");
+    setGroupHintInvites(ghiData || []);
+
     // Load circle notifications for organiser
     const { data: cnData } = await supabase
       .from("circle_notifications")
@@ -206,7 +215,7 @@ export default function AppShell({ children }) {
     const cn = cnData || [];
     setCircleNotifs(cn);
     setInvites(merged);
-    setInviteCount(merged.length + cn.length + (notifData?.length || 0));
+    setInviteCount(merged.length + cn.length + (notifData?.length || 0) + (ghiData?.length || 0));
   }, [supabase]);
 
   useEffect(() => {
@@ -236,6 +245,26 @@ export default function AppShell({ children }) {
     } finally {
       setInviteActionId(null);
     }
+  }
+
+  async function handleGroupHintResponse(member, action) {
+    const status = action === "accept" ? "in" : "declined";
+    await supabase.from("group_hint_members").update({ status }).eq("id", member.id);
+    // Notify organiser
+    const gh = member.group_hints;
+    if (gh?.organiser_id) {
+      const responderName = fullName || "Someone";
+      await supabase.from("notifications").insert({
+        user_id: gh.organiser_id,
+        type: "group_hint_response",
+        title: action === "accept" ? responderName + " is in!" : responderName + " declined",
+        body: "For: " + (gh.hints?.title || "a hint"),
+        read_at: null,
+        created_at: new Date().toISOString(),
+      });
+    }
+    setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
+    await loadInviteCount();
   }
 
   async function handleCircleNotifAction(notif, action) {
@@ -349,7 +378,38 @@ export default function AppShell({ children }) {
                         </button>
                       </div>
                     ))}
-                    {circleNotifs.map(notif => (
+                    {groupHintInvites.map(member => {
+                const gh = member.group_hints;
+                const hint = gh?.hints;
+                const organiser = gh?.profiles;
+                return (
+                  <div key={member.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      {organiser?.avatar_url
+                        ? <img src={organiser.avatar_url} className="h-9 w-9 rounded-full object-cover shrink-0" alt="" />
+                        : <div className="h-9 w-9 rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] flex items-center justify-center text-[11px] font-bold text-white shrink-0">{organiser?.full_name?.[0] || "?"}</div>
+                      }
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-slate-900 leading-tight">{organiser?.full_name || "Someone"} wants to chip in on a gift</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">{hint?.title}</p>
+                      </div>
+                    </div>
+                    {hint?.image_url && <img src={hint.image_url} alt={hint.title} className="w-full h-28 object-cover rounded-[12px] mb-3" />}
+                    {hint?.numeric_price > 0 && <p className="text-[12px] font-bold text-[#df7b59] mb-3">{new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}</p>}
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => handleGroupHintResponse(member, "accept")}
+                        className="flex-1 h-8 rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[11px] font-semibold text-white">
+                        I am in!
+                      </button>
+                      <button type="button" onClick={() => handleGroupHintResponse(member, "decline")}
+                        className="flex-1 h-8 rounded-full border border-[#efc0ba] bg-white text-[11px] font-semibold text-[#b14f43]">
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {circleNotifs.map(notif => (
                       <div key={notif.id} className="rounded-[18px] border border-[#fde0d0] bg-[#fff4f2] p-4">
                         <p className="text-sm font-semibold text-slate-900 mb-1">Circle update</p>
                         <p className="text-xs text-slate-500 mb-3">{notif.message}</p>
