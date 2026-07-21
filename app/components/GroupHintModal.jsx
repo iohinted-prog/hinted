@@ -59,17 +59,20 @@ export default function GroupHintModal({ hint, recipientUserId, recipientName, c
       if (!user) { setSendError("Not logged in"); setSending(false); return; }
       setSendError("");
 
-      // Insert group hint
-      const { data: gh, error: ghErr } = await supabase
-        .from("group_hints")
-        .insert({ hint_id: hint.id, organiser_id: user.id, recipient_user_id: recipientUserId })
-        .select()
-        .maybeSingle();
-
-      if (ghErr || !gh) {
-        setSendError("Failed to create group: " + (ghErr?.message || "unknown error"));
-        setSending(false);
-        return;
+      // Reuse existing group hint or create new one
+      let gh = groupHint;
+      if (!gh) {
+        const { data: newGh, error: ghErr } = await supabase
+          .from("group_hints")
+          .insert({ hint_id: hint.id, organiser_id: user.id, recipient_user_id: recipientUserId })
+          .select()
+          .maybeSingle();
+        if (ghErr || !newGh) {
+          setSendError("Failed to create group: " + (ghErr?.message || "unknown error"));
+          setSending(false);
+          return;
+        }
+        gh = newGh;
       }
 
       // Insert members
