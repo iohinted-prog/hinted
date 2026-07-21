@@ -323,7 +323,7 @@ export default function AppShell({ children }) {
             convId = newId;
             // Add organiser as member
             const { error: orgMemErr } = await supabase.from("conversation_members").insert({ conversation_id: convId, user_id: gh.organiser_id });
-            if (orgMemErr) alert("org member err: " + JSON.stringify(orgMemErr));
+            alert("org member: " + (orgMemErr ? JSON.stringify(orgMemErr) : "ok, id=" + gh.organiser_id));
           }
         }
         // Add accepter as member
