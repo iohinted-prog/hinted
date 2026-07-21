@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "../../lib/supabase/client";
-import GroupChatWindow from "./GroupChatWindow";
 
 function LogoMark() {
   return (
@@ -166,7 +165,6 @@ export default function AppShell({ children }) {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [groupMessages, setGroupMessages] = useState([]);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
-  const [activeThread, setActiveThread] = useState(null);
   const [inviteActionId, setInviteActionId] = useState(null);
   const [notifActionId, setNotifActionId] = useState(null);
   const notifRef = useRef(null);
@@ -210,17 +208,6 @@ export default function AppShell({ children }) {
       .eq("user_id", user.id)
       .eq("status", "invited");
     setGroupHintInvites(ghiData || []);
-
-    // Load group hint threads (as organiser or member)
-    const [{ data: organisedThreads }, { data: memberThreads }] = await Promise.all([
-      supabase.from("group_hints").select("id, hints(title, image_url), group_hint_members(user_id, status), last_message:group_hint_messages(body, created_at, sender_id)").eq("organiser_id", user.id).order("created_at", { ascending: false }),
-      supabase.from("group_hint_members").select("group_hint_id, group_hints(id, hints(title, image_url), organiser_id, group_hint_members(user_id, status), last_message:group_hint_messages(body, created_at, sender_id))").eq("user_id", user.id).eq("status", "in"),
-    ]);
-    const allThreads = [
-      ...(organisedThreads || []),
-      ...(memberThreads || []).map(m => m.group_hints).filter(Boolean),
-    ].filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i);
-    setGroupMessages(allThreads);
 
     // Load circle notifications for organiser
     const { data: cnData } = await supabase
@@ -333,7 +320,6 @@ export default function AppShell({ children }) {
   }
 
   return (
-    <>
     <div className="min-h-screen bg-[#fffaf7] text-slate-800">
       <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur relative z-[100]">
         <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
@@ -392,7 +378,7 @@ export default function AppShell({ children }) {
                       <p className="text-sm text-slate-400 text-center py-4">No group gift chats yet</p>
                     ) : groupMessages.map(thread => (
                       <div key={thread.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
-                        onClick={() => { setMessagesOpen(false); setActiveThread(thread); }}>
+                        onClick={() => { setMessagesOpen(false); }}>
                         <div className="flex items-center gap-3">
                           {thread.hints?.image_url
                             ? <img src={thread.hints.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
@@ -730,14 +716,16 @@ export default function AppShell({ children }) {
         </a>
       </nav>
       <div className="h-20 md:hidden" />
-      {activeThread && (
-        <GroupChatWindow
-          thread={activeThread}
-          currentUserId={currentUserId}
-          onClose={() => setActiveThread(null)}
-        />
-      )}
     </div>
+  );
+
+
+  async function handleCircleNotifAction(notif, action) {
+    setNotifActionId(notif.id);
+    try {
+      if (action === "cancel") {
+        await supabase.from("circles").update({ status: "cancelled" }).eq("id", notif.circle_id);
+      }
       await supabase.from("circle_notifications").update({ acted_on: true }).eq("id", notif.id);
       await loadInviteCount();
     } finally {
@@ -819,7 +807,7 @@ export default function AppShell({ children }) {
                       <p className="text-sm text-slate-400 text-center py-4">No group gift chats yet</p>
                     ) : groupMessages.map(thread => (
                       <div key={thread.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
-                        onClick={() => { setMessagesOpen(false); setActiveThread(thread); }}>
+                        onClick={() => { setMessagesOpen(false); }}>
                         <div className="flex items-center gap-3">
                           {thread.hints?.image_url
                             ? <img src={thread.hints.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
@@ -1090,13 +1078,6 @@ export default function AppShell({ children }) {
         </a>
       </nav>
       <div className="h-20 md:hidden" />
-      {activeThread && (
-        <GroupChatWindow
-          thread={activeThread}
-          currentUserId={currentUserId}
-          onClose={() => setActiveThread(null)}
-        />
-      )}
     </div>
   );
 }
