@@ -318,12 +318,13 @@ export default function AppShell({ children }) {
             .insert({ type: "group", group_hint_id: gh.id })
             .select("id")
             .maybeSingle();
-          if (convErr) alert("conv err: " + JSON.stringify(convErr));
-          else if (!convId) alert("conv created but no id returned");
+          if (convErr) alert("conv insert err: " + JSON.stringify(convErr));
+          else if (!convId) alert("conv created but no id");
           convId = newConv?.id;
           // Add organiser as member
           if (convId) {
-            await supabase.from("conversation_members").insert({ conversation_id: convId, user_id: gh.organiser_id });
+            const { error: orgMemErr } = await supabase.from("conversation_members").insert({ conversation_id: convId, user_id: gh.organiser_id });
+            if (orgMemErr) alert("org member err: " + JSON.stringify(orgMemErr));
           }
         }
         // Add accepter as member
