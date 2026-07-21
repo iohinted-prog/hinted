@@ -342,6 +342,12 @@ export default function AppShell({ children }) {
         if (convId) {
           await supabase.from("conversation_members").upsert({ conversation_id: convId, user_id: currentUserId }, { onConflict: "conversation_id,user_id" });
           // Insert system message
+          const isNewConv = !existingConv?.id;
+          const hintTitle = gh.hints?.title || "a gift";
+          const organiserFirstName = gh.profiles?.full_name?.split(" ")[0] || "Someone";
+          if (isNewConv) {
+            await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, body: `${organiserFirstName} started a group gift for ${hintTitle} 🎁`, type: "system" });
+          }
           await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, body: `${responderName} joined the group 🎉`, type: "system" });
         }
       }
