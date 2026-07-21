@@ -414,7 +414,32 @@ export default function AppShell({ children }) {
         </div>
         );
       })}
-      {activityNotifs.filter(n => n.type !== "group_hint_response").map(notif => (
+      {activityNotifs.filter(n => n.type === "birthday_reminder").map(notif => (
+        <div key={notif.id} className="rounded-[18px] border border-[#e6ddd7] bg-white p-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white overflow-hidden">
+              {notif.data?.actor_avatar_url
+                ? <img src={notif.data.actor_avatar_url} className="h-full w-full object-cover" alt="" />
+                : (notif.data?.actor_name || "?")[0]?.toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-slate-900 leading-tight">{notif.title}</p>
+              {notif.body && <p className="text-[11px] text-slate-400 mt-0.5">{notif.body}</p>}
+            </div>
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-[#fff4ee] text-[#df7b59]">🎂</span>
+          </div>
+          <button type="button"
+            onClick={async () => {
+              await supabase.from("notifications").update({ read_at: new Date().toISOString() }).eq("id", notif.id);
+              setActivityNotifs(prev => prev.filter(n => n.id !== notif.id));
+              setInviteCount(prev => Math.max(0, prev - 1));
+            }}
+            className="text-[11px] font-semibold px-3 py-1 rounded-full border border-[#e6ddd7] text-slate-500 hover:bg-slate-50">
+            Dismiss
+          </button>
+        </div>
+      ))}
+      {activityNotifs.filter(n => n.type !== "group_hint_response" && n.type !== "birthday_reminder").map(notif => (
         <div key={notif.id} className="rounded-[18px] border border-[#e6ddd7] bg-white p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] text-[11px] font-bold text-white overflow-hidden">
