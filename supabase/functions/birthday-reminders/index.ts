@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     // Get all profiles with birthdays
     const { data: profiles } = await supabase
       .from('profiles')
-      .select('id, full_name, birthday')
+      .select('id, full_name, birthday, avatar_url')
       .not('birthday', 'is', null)
 
     if (!profiles?.length) return new Response(JSON.stringify({ ok: true, ...results }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
             entity_id: profile.id,
             title: `🎂 ${ownerName}'s birthday is ${daysUntil === 10 ? 'in 10 days' : 'in 3 days'}`,
             body: new Date(profile.birthday + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long' }),
-            data: { profile_id: profile.id, days_until: daysUntil, owner_name: ownerName },
+            data: { profile_id: profile.id, days_until: daysUntil, owner_name: ownerName, actor_avatar_url: profile.avatar_url || null, actor_name: ownerName },
           })
 
           results.sent++
