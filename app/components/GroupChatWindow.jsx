@@ -9,28 +9,64 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
-export default function GroupChatWindow({ thread, currentUserId, onClose }) {
+function Avatar({ profile, size = "h-7 w-7" }) {
+  return (
+    <div className={`${size} rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden`}>
+      {profile?.avatar_url
+        ? <img src={profile.avatar_url} className="h-full w-full object-cover" alt="" />
+        : getInitials(profile?.full_name)}
+    </div>
+  );
+}
+
+export default function GroupChatWindow({ conversation, currentUserId, onClose }) {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [myProfile, setMyProfile] = useState(null);
   const bottomRef = useRef(null);
 
+  const members = conversation?.conversation_members || [];
+  const otherMembers = members.filter(m => m.user_id !== currentUserId);
+  const gh = conversation?.group_hints;
+  const hint = gh?.hints;
+
+  // Thread title: other people's names
+  const title = otherMembers.length === 0
+    ? "Just you"
+    : otherMembers.length === 1
+      ? otherMembers[0].profiles?.full_name || "Someone"
+      : otherMembers.map(m => m.profiles?.full_name?.split(" ")[0] || "?").join(", ");
+
   useEffect(() => {
-    if (!thread?.id) return;
-    supabase.from("group_hint_messages")
-      .select("id, body, created_at, sender_id, profiles(full_name, avatar_url)")
-      .eq("group_hint_id", thread.id)
+    if (!conversation?.id) return;
+
+    supabase.from("profiles").select("full_name, avatar_url").eq("id", currentUserId).maybeSingle()
+      .then(({ data }) => setMyProfile(data));
+
+    supabase.from("messages")
+      .select("id, body, type, created_at, sender_id, profiles(full_name, avatar_url)")
+      .eq("conversation_id", conversation.id)
       .order("created_at", { ascending: true })
       .then(({ data }) => setMessages(data || []));
 
-    const channel = supabase.channel("group-chat-" + thread.id)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "group_hint_messages", filter: "group_hint_id=eq." + thread.id },
-        payload => setMessages(prev => [...prev, payload.new])
-      ).subscribe();
+    const channel = supabase.channel("conv-" + conversation.id)
+      .on("postgres_changes", {
+        event: "INSERT", schema: "public", table: "messages",
+        filter: "conversation_id=eq." + conversation.id
+      }, payload => setMessages(prev => [...prev, payload.new]))
+      .subscribe();
+
+    // Mark as read
+    supabase.from("conversation_members")
+      .update({ last_read_at: new Date().toISOString() })
+      .eq("conversation_id", conversation.id)
+      .eq("user_id", currentUserId)
+      .then(() => {});
 
     return () => supabase.removeChannel(channel);
-  }, [thread?.id]);
+  }, [conversation?.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,47 +75,64 @@ export default function GroupChatWindow({ thread, currentUserId, onClose }) {
   async function handleSend() {
     if (!body.trim() || sending) return;
     setSending(true);
-    const { data, error } = await supabase.from("group_hint_messages")
-      .insert({ group_hint_id: thread.id, sender_id: currentUserId, body: body.trim() })
-      .select("id, body, created_at, sender_id, profiles(full_name, avatar_url)")
+    const { data } = await supabase.from("messages")
+      .insert({ conversation_id: conversation.id, sender_id: currentUserId, body: body.trim(), type: "text" })
+      .select("id, body, type, created_at, sender_id, profiles(full_name, avatar_url)")
       .maybeSingle();
-    if (!error && data) {
-      setMessages(prev => [...prev, data]);
-      setBody("");
-    }
+    if (data) { setMessages(prev => [...prev, data]); setBody(""); }
     setSending(false);
   }
 
   return (
-    <div className="fixed inset-0 z-[70] md:inset-auto md:bottom-4 md:right-4 md:w-[380px] md:h-[520px] flex flex-col bg-[#fffaf7] md:rounded-[22px] border border-[#efdcd2] shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[70] md:inset-auto md:bottom-4 md:right-4 md:w-[380px] md:h-[560px] flex flex-col bg-[#fffaf7] md:rounded-[22px] border border-[#efdcd2] shadow-2xl overflow-hidden">
+      {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f0e4dd] shrink-0">
-        {thread.hints?.image_url
-          ? <img src={thread.hints.image_url} className="h-9 w-9 rounded-[10px] object-cover shrink-0" alt="" />
-          : <div className="h-9 w-9 rounded-[10px] bg-[#fdf0ea] shrink-0 flex items-center justify-center">{"\U0001F381"}</div>
-        }
-        <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-slate-900 truncate">{thread.hints?.title || "Group gift"}</p>
-          <p className="text-[11px] text-slate-400">{(thread.group_hint_members || []).length} people</p>
+        <div className="flex -space-x-2 shrink-0">
+          {otherMembers.slice(0, 3).map(m => (
+            <Avatar key={m.user_id} profile={m.profiles} size="h-9 w-9" />
+          ))}
         </div>
-        <button type="button" onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400 shrink-0">{"\u2715"}</button>
+        <div className="min-w-0 flex-1">
+          <p className="text-[13px] font-semibold text-slate-900 truncate">{title}</p>
+          {hint && <p className="text-[11px] text-slate-400 truncate">re: {hint.title}</p>}
+        </div>
+        <button type="button" onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400 shrink-0 hover:bg-[#fff0f0]">&#x2715;</button>
       </div>
 
+      {/* Hint banner */}
+      {hint?.image_url && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-[#fff5f0] border-b border-[#f0e4dd]">
+          <img src={hint.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-slate-700 truncate">{hint.title}</p>
+            <p className="text-[10px] text-slate-400">Group gift</p>
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <p className="text-center text-sm text-slate-400 py-8">No messages yet</p>
         )}
         {messages.map(msg => {
+          if (msg.type === "system") {
+            return (
+              <div key={msg.id} className="flex justify-center">
+                <span className="text-[11px] text-slate-400 bg-[#f5f0ee] rounded-full px-3 py-1">{msg.body}</span>
+              </div>
+            );
+          }
           const isOwn = msg.sender_id === currentUserId;
-          const sp = msg.profiles;
+          const sp = isOwn ? myProfile : msg.profiles;
           return (
             <div key={msg.id} className={"flex items-end gap-2 " + (isOwn ? "flex-row-reverse" : "")}>
-              {!isOwn && (
-                <div className="h-7 w-7 rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] flex items-center justify-center text-[10px] font-bold text-white shrink-0 overflow-hidden">
-                  {sp?.avatar_url ? <img src={sp.avatar_url} className="h-full w-full object-cover" alt="" /> : getInitials(sp?.full_name)}
+              <Avatar profile={sp} size="h-7 w-7" />
+              <div className="flex flex-col gap-0.5 max-w-[70%]" style={{ alignItems: isOwn ? "flex-end" : "flex-start" }}>
+                {!isOwn && <span className="text-[10px] text-slate-400 px-1">{sp?.full_name?.split(" ")[0]}</span>}
+                <div className={"px-3 py-2 rounded-[16px] text-[13px] " + (isOwn ? "bg-[#ff875d] text-white rounded-br-[4px]" : "bg-white border border-[#f0dfd6] text-slate-800 rounded-bl-[4px]")}>
+                  {msg.body}
                 </div>
-              )}
-              <div className={"max-w-[70%] px-3 py-2 rounded-[16px] text-[13px] " + (isOwn ? "bg-[#ff875d] text-white rounded-br-[4px]" : "bg-white border border-[#f0dfd6] text-slate-800 rounded-bl-[4px]")}>
-                {msg.body}
               </div>
             </div>
           );
@@ -87,13 +140,14 @@ export default function GroupChatWindow({ thread, currentUserId, onClose }) {
         <div ref={bottomRef} />
       </div>
 
-      <div className="px-4 pb-4 pt-2 border-t border-[#f0e4dd] shrink-0 flex gap-2 items-center">
+      {/* Input */}
+      <div className="px-4 pb-safe pb-4 pt-2 border-t border-[#f0e4dd] shrink-0 flex gap-2 items-center">
         <input
           type="text"
           value={body}
           onChange={e => setBody(e.target.value)}
           onKeyDown={e => e.key === "Enter" && handleSend()}
-          placeholder="Message the group..."
+          placeholder="Message..."
           className="flex-1 h-10 rounded-full border border-[#ead8ce] px-4 text-[13px] bg-white outline-none focus:border-[#ff875d]"
         />
         <button type="button" onClick={handleSend} disabled={!body.trim() || sending}

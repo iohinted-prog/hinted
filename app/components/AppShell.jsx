@@ -414,25 +414,30 @@ export default function AppShell({ children }) {
                   </div>
                   <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
                     {groupMessages.length === 0 ? (
-                      <p className="text-sm text-slate-400 text-center py-4">No group gift chats yet</p>
-                    ) : groupMessages.map(thread => (
-                      <div key={thread.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
-                        onClick={() => { setMessagesOpen(false); setActiveThread(thread); }}>
-                        <div className="flex items-center gap-3">
-                          {thread.hints?.image_url
-                            ? <img src={thread.hints.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
-                            : <div className="h-10 w-10 rounded-[10px] bg-[#fdf0ea] shrink-0 flex items-center justify-center text-lg">🎁</div>
-                          }
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[13px] font-semibold text-slate-900 truncate">{thread.hints?.title || "Group gift"}</p>
-                            <p className="text-[11px] text-slate-400 truncate mt-0.5">{thread.last_message || "No messages yet — say hi!"}</p>
+                      <p className="text-sm text-slate-400 text-center py-4">No messages yet</p>
+                    ) : groupMessages.map(conv => {
+                      const others = (conv.conversation_members || []).filter(m => m.user_id !== currentUserId);
+                      const hint = conv.group_hints?.hints;
+                      const title = others.length === 0 ? "Just you" : others.length === 1 ? others[0].profiles?.full_name || "Someone" : others.map(m => m.profiles?.full_name?.split(" ")[0] || "?").join(", ");
+                      return (
+                        <div key={conv.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
+                          onClick={() => { setMessagesOpen(false); setActiveThread(conv); }}>
+                          <div className="flex items-center gap-3">
+                            <div className="flex -space-x-2 shrink-0">
+                              {others.slice(0, 2).map(m => (
+                                <div key={m.user_id} className="h-9 w-9 rounded-full bg-gradient-to-b from-[#efcdbf] to-[#bb8168] flex items-center justify-center text-[10px] font-bold text-white overflow-hidden border-2 border-white">
+                                  {m.profiles?.avatar_url ? <img src={m.profiles.avatar_url} className="h-full w-full object-cover" alt="" /> : (m.profiles?.full_name?.[0] || "?")}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[13px] font-semibold text-slate-900 truncate">{title}</p>
+                              {hint && <p className="text-[11px] text-slate-400 truncate mt-0.5">re: {hint.title}</p>}
+                            </div>
                           </div>
-                          {thread.unread > 0 && (
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white shrink-0">{thread.unread}</span>
-                          )}
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -757,7 +762,7 @@ export default function AppShell({ children }) {
       <div className="h-20 md:hidden" />
       {activeThread && (
         <GroupChatWindow
-          thread={activeThread}
+          conversation={activeThread}
           currentUserId={currentUserId}
           onClose={() => setActiveThread(null)}
         />
