@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "../../lib/supabase/client";
+import Link from "next/link";
 
 function getInitials(name) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
@@ -22,6 +23,7 @@ function Avatar({ profile, size = "h-7 w-7" }) {
 export default function GroupChatWindow({ conversation, currentUserId, onClose }) {
   const supabase = createClient();
   const [messages, setMessages] = useState([]);
+  const [pinnedHints, setPinnedHints] = useState([]);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [myProfile, setMyProfile] = useState(null);
@@ -29,10 +31,6 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
 
   const members = conversation?.conversation_members || [];
   const otherMembers = members.filter(m => m.user_id !== currentUserId);
-  const gh = conversation?.group_hints;
-  const hint = gh?.hints;
-
-  // Thread title: first names, truncated after 2
   const firstName = n => n?.split(" ")[0] || "?";
   const title = otherMembers.length === 0
     ? "Just you"
@@ -52,14 +50,26 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
       .order("created_at", { ascending: true })
       .then(({ data }) => setMessages(data || []));
 
+    // Load pinned hints
+    supabase.from("conversation_hints")
+      .select("id, group_hint_id, dismissed, group_hints(id, hint_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
+      .eq("conversation_id", conversation.id)
+      .eq("dismissed", false)
+      .then(({ data }) => setPinnedHints(data || []));
+
     const channel = supabase.channel("conv-" + conversation.id)
-      .on("postgres_changes", {
-        event: "INSERT", schema: "public", table: "messages",
-        filter: "conversation_id=eq." + conversation.id
-      }, payload => setMessages(prev => [...prev, payload.new]))
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: "conversation_id=eq." + conversation.id },
+        payload => setMessages(prev => [...prev, payload.new]))
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversation_hints", filter: "conversation_id=eq." + conversation.id },
+        () => {
+          supabase.from("conversation_hints")
+            .select("id, group_hint_id, dismissed, group_hints(id, hint_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
+            .eq("conversation_id", conversation.id)
+            .eq("dismissed", false)
+            .then(({ data }) => setPinnedHints(data || []));
+        })
       .subscribe();
 
-    // Mark as read
     supabase.from("conversation_members")
       .update({ last_read_at: new Date().toISOString() })
       .eq("conversation_id", conversation.id)
@@ -84,8 +94,13 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
     setSending(false);
   }
 
+  async function dismissHint(pinnedHintId) {
+    await supabase.from("conversation_hints").update({ dismissed: true }).eq("id", pinnedHintId);
+    setPinnedHints(prev => prev.filter(h => h.id !== pinnedHintId));
+  }
+
   return (
-    <div className="fixed inset-0 z-[70] md:inset-auto md:bottom-4 md:right-4 md:w-[380px] md:h-[560px] flex flex-col bg-[#fffaf7] md:rounded-[22px] border border-[#efdcd2] shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[70] md:inset-auto md:bottom-4 md:right-4 md:w-[380px] md:h-[580px] flex flex-col bg-[#fffaf7] md:rounded-[22px] border border-[#efdcd2] shadow-2xl overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-[#f0e4dd] shrink-0">
         <div className="flex -space-x-2 shrink-0">
@@ -95,19 +110,40 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-[13px] font-semibold text-slate-900 truncate">{title}</p>
-          {hint && <p className="text-[11px] text-slate-400 truncate">re: {hint.title}</p>}
+          <p className="text-[11px] text-slate-400">{members.length} people</p>
         </div>
         <button type="button" onClick={onClose} className="h-8 w-8 flex items-center justify-center rounded-full border border-[#ead8ce] text-slate-400 shrink-0 hover:bg-[#fff0f0]">&#x2715;</button>
       </div>
 
-      {/* Hint banner */}
-      {hint?.image_url && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-[#fff5f0] border-b border-[#f0e4dd]">
-          <img src={hint.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-slate-700 truncate">{hint.title}</p>
-            <p className="text-[10px] text-slate-400">Group gift</p>
-          </div>
+      {/* Pinned gifts */}
+      {pinnedHints.length > 0 && (
+        <div className="border-b border-[#f0e4dd] bg-[#fff8f5] px-3 py-2 space-y-2 shrink-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">📌 Group gifts</p>
+          {pinnedHints.map(ph => {
+            const hint = ph.group_hints?.hints;
+            const organiser = ph.group_hints?.profiles;
+            const price = hint?.numeric_price > 0
+              ? new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)
+              : null;
+            return (
+              <div key={ph.id} className="flex items-center gap-2 bg-white rounded-[14px] border border-[#f0dfd6] p-2">
+                {hint?.image_url && (
+                  <img src={hint.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-semibold text-slate-900 truncate">{hint?.title || "Group gift"}</p>
+                  {price && <p className="text-[11px] text-[#df7b59] font-semibold">{price}</p>}
+                  {organiser && <p className="text-[10px] text-slate-400">by {organiser.full_name?.split(" ")[0]}</p>}
+                </div>
+                <div className="flex flex-col gap-1 shrink-0 items-end">
+                  {ph.group_hints?.hint_id && (
+                    <Link href={`/profile/${ph.group_hints?.organiser_id || ""}`} className="text-[10px] font-semibold text-[#df7b59]" onClick={onClose}>See hints</Link>
+                  )}
+                  <button type="button" onClick={() => dismissHint(ph.id)} className="text-[10px] text-slate-400 hover:text-slate-600">Dismiss</button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -142,7 +178,7 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
       </div>
 
       {/* Input */}
-      <div className="px-4 pb-safe pb-4 pt-2 border-t border-[#f0e4dd] shrink-0 flex gap-2 items-center">
+      <div className="px-4 pb-4 pt-2 border-t border-[#f0e4dd] shrink-0 flex gap-2 items-center">
         <input
           type="text"
           value={body}
