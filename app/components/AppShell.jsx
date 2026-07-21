@@ -318,7 +318,8 @@ export default function AppShell({ children }) {
             .insert({ type: "group", group_hint_id: gh.id })
             .select("id")
             .maybeSingle();
-          if (convErr) console.error("conv insert error:", convErr);
+          if (convErr) alert("conv err: " + JSON.stringify(convErr));
+          else if (!convId) alert("conv created but no id returned");
           convId = newConv?.id;
           // Add organiser as member
           if (convId) {
