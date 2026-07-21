@@ -313,11 +313,12 @@ export default function AppShell({ children }) {
 
         let convId = existingConv?.id;
         if (!convId) {
-          const { data: newConv } = await supabase
+          const { data: newConv, error: convErr } = await supabase
             .from("conversations")
             .insert({ type: "group", group_hint_id: gh.id })
             .select("id")
             .maybeSingle();
+          if (convErr) console.error("conv insert error:", convErr);
           convId = newConv?.id;
           // Add organiser as member
           if (convId) {
