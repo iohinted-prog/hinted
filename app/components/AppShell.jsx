@@ -730,18 +730,16 @@ export default function AppShell({ children }) {
         </a>
       </nav>
       <div className="h-20 md:hidden" />
+      {activeThread && (
+        <GroupChatWindow
+          thread={activeThread}
+          currentUserId={currentUserId}
+          onClose={() => setActiveThread(null)}
+        />
+      )}
     </div>
-    {activeThread && (
-      <GroupChatWindow
-        thread={activeThread}
-        currentUserId={currentUserId}
-        onClose={() => setActiveThread(null)}
-      />
-    )}
-    </>
   );
 }
-      }
       await supabase.from("circle_notifications").update({ acted_on: true }).eq("id", notif.id);
       await loadInviteCount();
     } finally {
@@ -1094,13 +1092,13 @@ export default function AppShell({ children }) {
         </a>
       </nav>
       <div className="h-20 md:hidden" />
+      {activeThread && (
+        <GroupChatWindow
+          thread={activeThread}
+          currentUserId={currentUserId}
+          onClose={() => setActiveThread(null)}
+        />
+      )}
     </div>
-    {activeThread && (
-      <GroupChatWindow
-        thread={activeThread}
-        currentUserId={currentUserId}
-        onClose={() => setActiveThread(null)}
-      />
-    )}
   );
 }
