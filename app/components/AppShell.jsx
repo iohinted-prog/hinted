@@ -489,7 +489,7 @@ export default function AppShell({ children }) {
                           <p className="text-[13px] font-semibold text-slate-900 leading-tight">{hint?.title}</p>
                           {hint?.numeric_price > 0 && <p className="text-[13px] font-bold text-[#df7b59] mt-0.5">{new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}</p>}
                           {hint?.retailer && <p className="text-[11px] text-slate-400 mt-0.5">{hint.retailer}</p>}
-                {(() => { const c = member.group_hints?.group_hint_members?.length || 0; return c > 0 ? <p className="text-[11px] text-slate-400 mt-0.5">{c} {c === 1 ? "person" : "people"} invited</p> : null; })()}
+                {(() => { const c = member.group_hints?.group_hint_members?.length || 0; if (c === 0) return null; const label = c === 1 ? "Only you so far" : `You and ${c - 1} other${c - 1 === 1 ? "" : "s"}`; return <p className="text-[11px] text-slate-400 mt-0.5">{label}</p>; })()}
                         </div>
                       </div>
                     )}
@@ -806,7 +806,7 @@ export default function AppShell({ children }) {
                           <p className="text-[13px] font-semibold text-slate-900 leading-tight">{hint?.title}</p>
                           {hint?.numeric_price > 0 && <p className="text-[13px] font-bold text-[#df7b59] mt-0.5">{new Intl.NumberFormat("en-GB", { style: "currency", currency: hint.currency || "GBP" }).format(hint.numeric_price)}</p>}
                           {hint?.retailer && <p className="text-[11px] text-slate-400 mt-0.5">{hint.retailer}</p>}
-                {(() => { const c = member.group_hints?.group_hint_members?.length || 0; return c > 0 ? <p className="text-[11px] text-slate-400 mt-0.5">{c} {c === 1 ? "person" : "people"} invited</p> : null; })()}
+                {(() => { const c = member.group_hints?.group_hint_members?.length || 0; if (c === 0) return null; const label = c === 1 ? "Only you so far" : `You and ${c - 1} other${c - 1 === 1 ? "" : "s"}`; return <p className="text-[11px] text-slate-400 mt-0.5">{label}</p>; })()}
                         </div>
                       </div>
                     )}
