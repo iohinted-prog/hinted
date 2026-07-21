@@ -297,6 +297,35 @@ export default function AppShell({ children }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "response", memberId: member.id, responderId: currentUserId, response: status }),
       }).catch(console.error);
+
+      if (accepted) {
+        // Find or create a conversation for this group hint
+        const { data: existingConv } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("group_hint_id", gh.id)
+          .maybeSingle();
+
+        let convId = existingConv?.id;
+        if (!convId) {
+          const { data: newConv } = await supabase
+            .from("conversations")
+            .insert({ type: "group", group_hint_id: gh.id })
+            .select("id")
+            .maybeSingle();
+          convId = newConv?.id;
+          // Add organiser as member
+          if (convId) {
+            await supabase.from("conversation_members").insert({ conversation_id: convId, user_id: gh.organiser_id });
+          }
+        }
+        // Add accepter as member
+        if (convId) {
+          await supabase.from("conversation_members").upsert({ conversation_id: convId, user_id: currentUserId }, { onConflict: "conversation_id,user_id" });
+          // Insert system message
+          await supabase.from("messages").insert({ conversation_id: convId, sender_id: currentUserId, body: `${responderName} joined the group 🎉`, type: "system" });
+        }
+      }
     }
     setGroupHintInvites(prev => prev.filter(m => m.id !== member.id));
     if (accepted) setGroupHintToast("You're in! The organiser will be in touch to sort out contributions.");
