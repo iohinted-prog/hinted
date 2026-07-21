@@ -230,12 +230,17 @@ function startOfDay(date) {
   return value;
 }
 
+function startOfDayUTC(date) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
 function diffInDaysFromToday(dateString) {
   const target = parseDateOnly(dateString);
   if (!target) return null;
 
-  const today = startOfDay(new Date());
-  const targetDay = startOfDay(target);
+  const now = new Date();
+  const today = startOfDayUTC(now);
+  const targetDay = startOfDayUTC(target);
   const diffMs = targetDay.getTime() - today.getTime();
 
   return Math.round(diffMs / (1000 * 60 * 60 * 24));
