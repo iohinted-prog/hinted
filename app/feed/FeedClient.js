@@ -469,6 +469,8 @@ function buildContactBirthdayEvents(contacts) {
           type: "Birthday",
           source: "contact",
           contact_profile_id: contact.profileId || null,
+          contact_avatar_url: contact.avatarUrl || null,
+          contact_name: contact.name || null,
         });
         break;
       }
@@ -2214,6 +2216,9 @@ export default function FeedClient() {
           metadata: {
             social_enabled: false,
             event_date: event.event_date,
+            actor_name: event.contact_name || null,
+            actor_avatar_url: event.contact_avatar_url || null,
+            actor_profile_href: event.contact_profile_id ? `/profile/${event.contact_profile_id}` : null,
           },
           isDemo: false,
         };
