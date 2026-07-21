@@ -313,16 +313,15 @@ export default function AppShell({ children }) {
 
         let convId = existingConv?.id;
         if (!convId) {
-          const { data: newConv, error: convErr } = await supabase
+          // Generate id client-side to avoid RLS select-after-insert issue
+          const newId = crypto.randomUUID();
+          const { error: convErr } = await supabase
             .from("conversations")
-            .insert({ type: "group", group_hint_id: gh.id })
-            .select("id")
-            .maybeSingle();
+            .insert({ id: newId, type: "group", group_hint_id: gh.id });
           if (convErr) alert("conv insert err: " + JSON.stringify(convErr));
-          else if (!convId) alert("conv created but no id");
-          convId = newConv?.id;
-          // Add organiser as member
-          if (convId) {
+          else {
+            convId = newId;
+            // Add organiser as member
             const { error: orgMemErr } = await supabase.from("conversation_members").insert({ conversation_id: convId, user_id: gh.organiser_id });
             if (orgMemErr) alert("org member err: " + JSON.stringify(orgMemErr));
           }
