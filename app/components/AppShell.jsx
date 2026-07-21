@@ -162,6 +162,9 @@ export default function AppShell({ children }) {
   const [groupHintInvites, setGroupHintInvites] = useState([]);
   const [groupHintToast, setGroupHintToast] = useState(null);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
+  const [groupMessages, setGroupMessages] = useState([]);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const [inviteActionId, setInviteActionId] = useState(null);
   const [notifActionId, setNotifActionId] = useState(null);
   const notifRef = useRef(null);
@@ -351,8 +354,53 @@ export default function AppShell({ children }) {
               })}
             </nav>
 
+            <div className="relative">
+              <button type="button" onClick={() => { setMessagesOpen(prev => !prev); setNotifOpen(false); }}
+                className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0] mr-2"
+                aria-label="Messages">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white">
+                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                  </span>
+                )}
+              </button>
+              {messagesOpen && (
+                <div className="absolute right-0 top-14 z-50 w-80 rounded-[22px] border border-[#efdcd2] bg-[#fffaf7] shadow-[0_20px_60px_rgba(88,46,31,0.15)] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#f0e4dd]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Messages</p>
+                    <h3 className="mt-0.5 text-[17px] font-semibold text-slate-900">Group gift chats</h3>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
+                    {groupMessages.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">No group gift chats yet</p>
+                    ) : groupMessages.map(thread => (
+                      <div key={thread.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
+                        onClick={() => { setMessagesOpen(false); }}>
+                        <div className="flex items-center gap-3">
+                          {thread.hints?.image_url
+                            ? <img src={thread.hints.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
+                            : <div className="h-10 w-10 rounded-[10px] bg-[#fdf0ea] shrink-0 flex items-center justify-center text-lg">🎁</div>
+                          }
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-semibold text-slate-900 truncate">{thread.hints?.title || "Group gift"}</p>
+                            <p className="text-[11px] text-slate-400 truncate mt-0.5">{thread.last_message || "No messages yet — say hi!"}</p>
+                          </div>
+                          {thread.unread > 0 && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white shrink-0">{thread.unread}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="relative" ref={notifRef}>
-              <button type="button" onClick={() => setNotifOpen(prev => !prev)}
+              <button type="button" onClick={() => { setNotifOpen(prev => !prev); setMessagesOpen(false); }}
                 className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
                 aria-label="Notifications">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
@@ -735,8 +783,53 @@ export default function AppShell({ children }) {
               })}
             </nav>
 
+            <div className="relative">
+              <button type="button" onClick={() => { setMessagesOpen(prev => !prev); setNotifOpen(false); }}
+                className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0] mr-2"
+                aria-label="Messages">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {unreadMessageCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white">
+                    {unreadMessageCount > 9 ? "9+" : unreadMessageCount}
+                  </span>
+                )}
+              </button>
+              {messagesOpen && (
+                <div className="absolute right-0 top-14 z-50 w-80 rounded-[22px] border border-[#efdcd2] bg-[#fffaf7] shadow-[0_20px_60px_rgba(88,46,31,0.15)] overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#f0e4dd]">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Messages</p>
+                    <h3 className="mt-0.5 text-[17px] font-semibold text-slate-900">Group gift chats</h3>
+                  </div>
+                  <div className="max-h-[400px] overflow-y-auto p-4 space-y-3">
+                    {groupMessages.length === 0 ? (
+                      <p className="text-sm text-slate-400 text-center py-4">No group gift chats yet</p>
+                    ) : groupMessages.map(thread => (
+                      <div key={thread.id} className="rounded-[18px] border border-[#f0dfd6] bg-white p-4 cursor-pointer hover:bg-[#fff5f0]"
+                        onClick={() => { setMessagesOpen(false); }}>
+                        <div className="flex items-center gap-3">
+                          {thread.hints?.image_url
+                            ? <img src={thread.hints.image_url} className="h-10 w-10 rounded-[10px] object-cover shrink-0" alt="" />
+                            : <div className="h-10 w-10 rounded-[10px] bg-[#fdf0ea] shrink-0 flex items-center justify-center text-lg">🎁</div>
+                          }
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-semibold text-slate-900 truncate">{thread.hints?.title || "Group gift"}</p>
+                            <p className="text-[11px] text-slate-400 truncate mt-0.5">{thread.last_message || "No messages yet — say hi!"}</p>
+                          </div>
+                          {thread.unread > 0 && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white shrink-0">{thread.unread}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="relative" ref={notifRef}>
-              <button type="button" onClick={() => setNotifOpen(prev => !prev)}
+              <button type="button" onClick={() => { setNotifOpen(prev => !prev); setMessagesOpen(false); }}
                 className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
                 aria-label="Notifications">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-600">
