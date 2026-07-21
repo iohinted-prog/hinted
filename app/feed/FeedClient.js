@@ -2234,7 +2234,7 @@ export default function FeedClient() {
   const combinedFeedItems = useMemo(() => {
     const hasRealActivity = feedItems.length > 0;
     const base = hasRealActivity ? feedItems : [firstLookCard];
-    const merged = [...shortReminderFeedItems, ...base];
+    const merged = [...base];
 
     return merged.sort((a, b) => {
       const aDate = new Date(a.occurred_at || a.created_at).getTime();
