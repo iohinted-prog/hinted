@@ -459,7 +459,7 @@ export default function AppShell({ children }) {
                 )}
               </button>
 
-            </div>
+            </div>}
 
             <div className="relative" ref={notifRef}>
               <button type="button" onClick={() => { setNotifOpen(prev => !prev); setMessagesOpen(false); }}
