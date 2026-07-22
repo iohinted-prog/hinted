@@ -1,19 +1,18 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 
 function LogoMark() {
   return (
     <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <rect width="40" height="40" rx="10" fill="#ff875d"/>
-      <text x="20" y="27" textAnchor="middle" fontSize="20" fill="white">🎁</text>
+      <text x="20" y="27" textAnchor="middle" fontSize="20" fill="white">\U0001F381</text>
     </svg>
   );
 }
 
 export default function PublicShell({ children }) {
   return (
-    <div className="min-h-screen bg-[#fffaf7] text-slate-800">
+    <div className="min-h-screen bg-[#fffaf7] text-slate-800 flex flex-col">
       <header className="border-b border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur sticky top-0 z-50">
         <div className="mx-auto flex max-w-[1380px] items-center justify-between px-5 py-4 md:px-8">
           <Link href="/" className="flex items-center gap-3">
@@ -24,7 +23,7 @@ export default function PublicShell({ children }) {
           </Link>
           <div className="flex items-center gap-3">
             <Link href="/shop" className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-600 border border-[#ead8ce] hover:bg-[#fff5f0] transition">
-              🛍️ Gift Shop
+              \U0001F6CD\uFE0F Gift Shop
             </Link>
             <Link href="/login" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-sm hover:opacity-90 transition">
               Sign in
@@ -32,7 +31,16 @@ export default function PublicShell({ children }) {
           </div>
         </div>
       </header>
-      <main>{children}</main>
+      <main className="flex-1">{children}</main>
+      <footer className="border-t border-[#efe0d7] py-8 px-5 text-center">
+        <div className="flex items-center justify-center gap-6 text-[12px] text-slate-400 flex-wrap">
+          <Link href="/terms" className="hover:text-slate-600 transition">Terms</Link>
+          <Link href="/privacy" className="hover:text-slate-600 transition">Privacy</Link>
+          <Link href="/contact" className="hover:text-slate-600 transition">Contact</Link>
+          <Link href="/for-brands" className="hover:text-slate-600 transition">For Brands</Link>
+          <span>\u00A9 {new Date().getFullYear()} HintDrop</span>
+        </div>
+      </footer>
     </div>
   );
 }
