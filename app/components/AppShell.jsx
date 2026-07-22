@@ -163,6 +163,7 @@ export default function AppShell({ children }) {
   const [groupHintInvites, setGroupHintInvites] = useState([]);
   const [groupHintToast, setGroupHintToast] = useState(null);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [groupMessages, setGroupMessages] = useState([]);
   const [unreadMessageCount, setUnreadMessageCount] = useState(0);
@@ -173,6 +174,7 @@ export default function AppShell({ children }) {
 
   const loadInviteCount = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    setIsLoggedIn(!!session);
     if (!session) return;
     const user = session.user;
     if (!user) return;
@@ -401,7 +403,13 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <nav className="hidden md:flex items-center justify-center gap-1">
+            {!isLoggedIn && (
+              <div className="flex items-center gap-2">
+                <Link href="/shop" className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-600 border border-[#ead8ce] hover:bg-[#fff5f0]">🛍️ Shop</Link>
+                <Link href="/login" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-sm">Sign in</Link>
+              </div>
+            )}
+            {isLoggedIn && <nav className="hidden md:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -422,9 +430,9 @@ export default function AppShell({ children }) {
                   </Link>
                 );
               })}
-            </nav>
+            </nav>}
 
-            <div className="relative">
+            {isLoggedIn && <div className="relative">
               <button type="button" onClick={() => { setMessagesOpen(prev => !prev); setNotifOpen(false); }}
                 className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
                 aria-label="Messages">
@@ -724,7 +732,7 @@ export default function AppShell({ children }) {
           </div>
                 </div>
               ) : null}
-            </div>
+            </div>}
           </div>
         </div>
       </header>
@@ -843,7 +851,13 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center gap-3 sm:gap-4">
-            <nav className="hidden md:flex items-center justify-center gap-1">
+            {!isLoggedIn && (
+              <div className="flex items-center gap-2">
+                <Link href="/shop" className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-600 border border-[#ead8ce] hover:bg-[#fff5f0]">🛍️ Shop</Link>
+                <Link href="/login" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-sm">Sign in</Link>
+              </div>
+            )}
+            {isLoggedIn && <nav className="hidden md:flex items-center justify-center gap-1">
               {navItems.map((item) => {
                 const isActive =
                   pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -864,9 +878,9 @@ export default function AppShell({ children }) {
                   </Link>
                 );
               })}
-            </nav>
+            </nav>}
 
-            <div className="relative">
+            {isLoggedIn && <div className="relative">
               <button type="button" onClick={() => { setMessagesOpen(prev => !prev); setNotifOpen(false); }}
                 className="relative flex h-11 w-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white shadow-sm transition hover:bg-[#fff5f0]"
                 aria-label="Messages">
