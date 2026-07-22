@@ -52,7 +52,7 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
 
     // Load pinned hints
     supabase.from("conversation_hints")
-      .select("id, group_hint_id, dismissed, group_hints(id, hint_id, organiser_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
+      .select("id, group_hint_id, dismissed, group_hints(id, hint_id, organiser_id, recipient_user_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
       .eq("conversation_id", conversation.id)
       .eq("dismissed", false)
       .then(({ data }) => setPinnedHints(data || []));
@@ -63,7 +63,7 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "conversation_hints", filter: "conversation_id=eq." + conversation.id },
         () => {
           supabase.from("conversation_hints")
-            .select("id, group_hint_id, dismissed, group_hints(id, hint_id, organiser_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
+            .select("id, group_hint_id, dismissed, group_hints(id, hint_id, organiser_id, recipient_user_id, hints(title, image_url, numeric_price, currency, retailer), profiles!group_hints_organiser_id_fkey(full_name))")
             .eq("conversation_id", conversation.id)
             .eq("dismissed", false)
             .then(({ data }) => setPinnedHints(data || []));
@@ -132,7 +132,7 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
                     src={hint.image_url}
                     className="h-10 w-10 rounded-[10px] object-cover shrink-0 cursor-pointer"
                     alt=""
-                    onClick={() => { if (ph.group_hints?.organiser_id) { window.location.href = `/profile/${ph.group_hints.organiser_id}`; onClose(); } }}
+                    onClick={() => { if (ph.group_hints?.organiser_id) { window.location.href = `/profile/${ph.group_hints.recipient_user_id || ph.group_hints.organiser_id}`; onClose(); } }}
                   />
                 )}
                 <div className="min-w-0 flex-1">
@@ -142,7 +142,7 @@ export default function GroupChatWindow({ conversation, currentUserId, onClose }
                 </div>
                 <div className="flex gap-1 shrink-0">
                   <button type="button"
-                    onClick={() => { if (ph.group_hints?.organiser_id) { window.location.href = `/profile/${ph.group_hints.organiser_id}`; onClose(); } }}
+                    onClick={() => { if (ph.group_hints?.organiser_id) { window.location.href = `/profile/${ph.group_hints.recipient_user_id || ph.group_hints.organiser_id}`; onClose(); } }}
                     className="text-[10px] font-semibold px-2 py-1 rounded-full border border-[#f0dfd6] text-[#df7b59] hover:bg-[#fff5f0]">
                     See hints
                   </button>
