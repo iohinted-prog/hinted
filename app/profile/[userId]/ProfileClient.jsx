@@ -128,18 +128,6 @@ export default function ProfileClient({ userId }) {
 
   const isOwnProfile = currentUser?.id === userId;
 
-  async function handleAddToCircle() {
-    if (!currentUser) return;
-    setAddingContact(true);
-    await supabase.from("contacts").insert({
-      user_id: currentUser.id,
-      name: profile?.full_name || "Contact",
-      profile_id: userId,
-      status: "active",
-    });
-    setIsContact(true);
-    setAddingContact(false);
-  }
 
   const displayName = profile?.full_name || "User";
   const interests = Array.isArray(profile?.interests) ? profile.interests : [];
