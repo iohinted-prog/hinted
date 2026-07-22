@@ -216,7 +216,7 @@ export default function AppShell({ children }) {
     // Load conversations - step by step to avoid recursive joins
     const { data: myMemberships } = await supabase
       .from("conversation_members")
-      .select("conversation_id")
+      .select("conversation_id, last_read_at")
       .eq("user_id", user.id);
     const convIds = (myMemberships || []).map(m => m.conversation_id);
     if (convIds.length) {
@@ -239,12 +239,26 @@ export default function AppShell({ children }) {
       const lastMsgMap = {};
       (lastMsgs || []).forEach(m => { if (!lastMsgMap[m.conversation_id]) lastMsgMap[m.conversation_id] = m; });
 
-      const convsWithData = (convsData || []).map(c => ({
-        ...c,
-        group_hints: ghMap[c.group_hint_id] || null,
-        conversation_members: (allMembers || []).filter(m => m.conversation_id === c.id),
-        last_message: lastMsgMap[c.id] || null,
-      }));
+      // Calculate unread counts
+      const myMembershipMap = {};
+      (myMemberships || []).forEach(m => { myMembershipMap[m.conversation_id] = m.last_read_at; });
+
+      const convsWithData = (convsData || []).map(c => {
+        const lastRead = myMembershipMap[c.id];
+        const lastMsg = lastMsgMap[c.id];
+        const unread = lastMsg && lastRead
+          ? new Date(lastMsg.created_at) > new Date(lastRead) ? 1 : 0
+          : lastMsg ? 1 : 0;
+        return {
+          ...c,
+          group_hints: ghMap[c.group_hint_id] || null,
+          conversation_members: (allMembers || []).filter(m => m.conversation_id === c.id),
+          last_message: lastMsg || null,
+          unread,
+        };
+      });
+      const totalUnread = convsWithData.reduce((sum, c) => sum + (c.unread || 0), 0);
+      setUnreadMessageCount(totalUnread);
       setGroupMessages(convsWithData);
     } else {
       setGroupMessages([]);
@@ -491,15 +505,18 @@ export default function AppShell({ children }) {
                               ))}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-[13px] font-semibold text-slate-900 truncate">{title}</p>
+                              <p className={`text-[13px] truncate ${conv.unread ? "font-bold text-slate-900" : "font-semibold text-slate-900"}`}>{title}</p>
                               {conv.last_message && (
-                                <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                                <p className={`text-[11px] truncate mt-0.5 ${conv.unread ? "font-semibold text-slate-700" : "text-slate-400"}`}>
                                   {conv.last_message.type === "system"
                                     ? conv.last_message.body
                                     : `${conv.last_message.profiles?.full_name?.split(" ")[0] || "?"}: ${conv.last_message.body}`}
                                 </p>
                               )}
                             </div>
+                            {conv.unread > 0 && (
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#f36f64] text-[10px] font-bold text-white shrink-0">{conv.unread}</span>
+                            )}
                           </div>
                         </div>
                       );
