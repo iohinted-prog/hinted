@@ -1,4 +1,5 @@
 "use client";
+import PublicShell from "../../components/PublicShell";
 import { useState, useEffect } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import Link from "next/link";
@@ -145,7 +146,7 @@ export default function ProfileClient({ userId }) {
   const displayName = profile?.full_name || "User";
   const interests = Array.isArray(profile?.interests) ? profile.interests : [];
 
-  return (
+  const inner = (
     <main className="min-h-screen bg-[#fffaf7]">
       <div className="border-b border-[#f0dfd6] bg-white px-4 py-4 sm:px-8">
         <div className="mx-auto max-w-[1200px] flex items-center gap-4">
@@ -310,4 +311,6 @@ export default function ProfileClient({ userId }) {
       )}
     </main>
   );
+  if (!currentUser) return <PublicShell>{inner}</PublicShell>;
+  return inner;
 }
