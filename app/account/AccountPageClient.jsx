@@ -453,8 +453,7 @@ export default function AccountPageClient() {
       }
 
       await supabase.auth.signOut({ scope: "local" });
-      router.push("/");
-      router.refresh();
+      window.location.href = "/";
     } catch (error) {
       console.error("Delete account error:", error);
       setMessageType("error");
