@@ -172,6 +172,7 @@ export default function AppShell({ children }) {
   const [notifActionId, setNotifActionId] = useState(null);
   const notifRef = useRef(null);
 
+  const loadInviteCountRef = useRef(null);
   const loadInviteCount = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     setIsLoggedIn(!!session);
@@ -278,6 +279,8 @@ export default function AppShell({ children }) {
     setInviteCount(merged.length + cn.length + (notifData?.length || 0) + (ghiData?.length || 0));
   }, [supabase]);
 
+  useEffect(() => { loadInviteCountRef.current = loadInviteCount; }, [loadInviteCount]);
+
   useEffect(() => {
     loadInviteCount();
     // Poll every 10 seconds for new notifications
@@ -288,10 +291,10 @@ export default function AppShell({ children }) {
     try {
       msgChannel = supabase.channel("new-messages-global")
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" },
-          () => loadInviteCount()
+          () => loadInviteCountRef.current?.()
         )
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "conversation_members" },
-          () => loadInviteCount()
+          () => loadInviteCountRef.current?.()
         )
         .subscribe();
     } catch (e) {
@@ -302,7 +305,7 @@ export default function AppShell({ children }) {
       clearInterval(interval);
       if (msgChannel) supabase.removeChannel(msgChannel);
     };
-  }, [loadInviteCount]);
+  }, []);
 
   useEffect(() => {
     function handleClick(e) {
