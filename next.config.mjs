@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  deploymentId: process.env.VERCEL_DEPLOYMENT_ID || process.env.GIT_SHA || undefined,
 };
 
 export default nextConfig;
