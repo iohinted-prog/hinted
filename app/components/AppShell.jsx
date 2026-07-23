@@ -792,6 +792,7 @@ export default function AppShell({ children }) {
 
       <main>{children}</main>
 
+      {!isLoggedIn && ["/terms", "/privacy", "/about", "/for-brands", "/contact"].includes(pathname) ? null : (
       <footer className="border-t border-[#eaded6] bg-[#fffaf7]">
         <div className="mx-auto flex max-w-[1380px] flex-col gap-4 px-5 py-6 text-sm text-slate-500 md:px-8 lg:flex-row lg:items-center lg:justify-between">
           <p className="max-w-[720px] text-xs leading-5 text-slate-500 lg:text-sm">
@@ -825,8 +826,9 @@ export default function AppShell({ children }) {
           </div>
         </div>
       </footer>
+      )}}
 
-      {/* Mobile bottom tab bar */}
+      {!isLoggedIn && ["/terms", "/privacy", "/about", "/for-brands", "/contact"].includes(pathname) ? null : (
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur-sm px-2 pb-2">
         <a href="/feed" className={`flex flex-col items-center gap-0.5 px-3 py-2 ${pathname === "/feed" ? "text-[#ff875d]" : "text-slate-400"}`}>
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
