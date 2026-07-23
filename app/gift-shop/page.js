@@ -1,288 +1,49 @@
 "use client";
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import GoogleAuthButtons from "../components/GoogleAuthButtons";
+import PublicShell from "../components/PublicShell";
 
-const PRODUCTS = [
-  {
-    id: "1",
-    title: "Le Creuset Signature casserole",
-    retailer: "johnlewis.com",
-    price: "£245",
-    image:
-      "https://images.unsplash.com/photo-1514986888952-8cd320577b68?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A lasting kitchen gift for weddings, anniversaries, and serious home cooks.",
-    interestTags: ["Home", "Food"],
-    occasionTags: ["Wedding", "Anniversary"],
-    category: "Home · Cooking",
-  },
-  {
-    id: "2",
-    title: "Weekend treehouse stay",
-    retailer: "airbnb.co.uk",
-    price: "From £180",
-    image:
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "An experience-led gift that feels generous without becoming generic.",
-    interestTags: ["Travel", "Experiences"],
-    occasionTags: ["Anniversary", "Just because"],
-    category: "Experiences · Travel",
-  },
-  {
-    id: "3",
-    title: "Silk pillowcase gift set",
-    retailer: "etsy.com",
-    price: "£42",
-    image:
-      "https://images.unsplash.com/photo-1616628182509-6f0c7ab0d15f?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "Easy to post, easy to love, and still personal enough to feel considered.",
-    interestTags: ["Beauty", "Home"],
-    occasionTags: ["Birthday", "Thank you"],
-    category: "Beauty · Home",
-  },
-  {
-    id: "4",
-    title: "Noise-cancelling headphones",
-    retailer: "amazon.co.uk",
-    price: "£119",
-    image:
-      "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A dependable higher-value gift for commuters, students, and work-from-home setups.",
-    interestTags: ["Tech", "Music"],
-    occasionTags: ["Graduation", "Birthday"],
-    category: "Tech · Everyday",
-  },
-  {
-    id: "5",
-    title: "Ceramics workshop for two",
-    retailer: "classbento.co.uk",
-    price: "£95",
-    image:
-      "https://images.unsplash.com/photo-1513475382585-d06e58bcb0e0?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A thoughtful pick for people who prefer memories and time together over objects.",
-    interestTags: ["Experiences", "Hobbies"],
-    occasionTags: ["Just because", "Birthday"],
-    category: "Experiences · Creative",
-  },
-  {
-    id: "6",
-    title: "Coffee brewing set",
-    retailer: "hasbean.co.uk",
-    price: "£58",
-    image:
-      "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A strong option for everyday rituals, first homes, and low-risk gifting.",
-    interestTags: ["Food", "Home"],
-    occasionTags: ["Housewarming", "Thank you"],
-    category: "Home · Coffee",
-  },
-  {
-    id: "7",
-    title: "Luxury bath and unwind box",
-    retailer: "notonthehighstreet.com",
-    price: "£36",
-    image:
-      "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "Soft, easy gifting for thank-yous, birthdays, and people who never buy this sort of thing for themselves.",
-    interestTags: ["Wellness", "Beauty"],
-    occasionTags: ["Thank you", "Birthday"],
-    category: "Wellness · Beauty",
-  },
-  {
-    id: "8",
-    title: "Hardback collector’s edition",
-    retailer: "waterstones.com",
-    price: "£28",
-    image:
-      "https://images.unsplash.com/photo-1524578271613-d550eacf6090?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A safe but still thoughtful pick for readers, graduates, and quiet celebrators.",
-    interestTags: ["Books"],
-    occasionTags: ["Graduation", "Birthday"],
-    category: "Books · Keepsake",
-  },
-  {
-    id: "9",
-    title: "Cashmere scarf",
-    retailer: "johnlewis.com",
-    price: "£69",
-    image:
-      "https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "Classic, useful, and elevated enough to feel special without being hard to get right.",
-    interestTags: ["Fashion"],
-    occasionTags: ["Birthday", "Thank you"],
-    category: "Fashion · Accessories",
-  },
-  {
-    id: "10",
-    title: "Fresh flower subscription",
-    retailer: "bloomandwild.com",
-    price: "From £30",
-    image:
-      "https://images.unsplash.com/photo-1468327768560-75b778cbb551?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A lovely way to stretch the moment beyond the day itself with something beautiful arriving later.",
-    interestTags: ["Home", "Wellness"],
-    occasionTags: ["Anniversary", "Thank you"],
-    category: "Home · Flowers",
-  },
-  {
-    id: "11",
-    title: "Leather travel wallet",
-    retailer: "etsy.com",
-    price: "£34",
-    image:
-      "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "Practical, polished, and easy to personalise for frequent travellers and honeymoon plans.",
-    interestTags: ["Travel", "Fashion"],
-    occasionTags: ["Wedding", "Just because"],
-    category: "Travel · Accessories",
-  },
-  {
-    id: "12",
-    title: "Portable projector",
-    retailer: "amazon.co.uk",
-    price: "£89",
-    image:
-      "https://images.unsplash.com/photo-1520342868574-5fa3804e551c?auto=format&fit=crop&w=1200&q=80",
-    shortNote:
-      "A fun home gift for film nights, cosy hosting, and low-effort evenings that still feel memorable.",
-    interestTags: ["Tech", "Home"],
-    occasionTags: ["Housewarming", "Birthday"],
-    category: "Tech · Home",
-  },
+const CATEGORIES = [
+  "Home", "Food", "Beauty", "Tech", "Travel", "Wellness",
+  "Books", "Fashion", "Experiences", "Music", "Gaming", "Kids", "Hobbies",
 ];
 
-const INTEREST_OPTIONS = [
-  "Home",
-  "Food",
-  "Beauty",
-  "Tech",
-  "Travel",
-  "Wellness",
-  "Books",
-  "Fashion",
-  "Experiences",
-  "Music",
-  "Gaming",
-  "Kids",
-  "Hobbies",
-];
-
-const OCCASION_OPTIONS = [
-  "Birthday",
-  "Anniversary",
-  "Thank you",
-  "New baby",
-  "Housewarming",
-  "Wedding",
-  "Graduation",
-  "Just because",
-];
-
-function LandingLogo() {
-  return (
-    <Link href="/" className="flex items-center gap-3.5">
-      <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-[18px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-2xl text-white shadow-lg">
-        🎁
-      </div>
-      <div className="text-[22px] font-extrabold tracking-[-0.04em] text-slate-900">
-        Hint<span className="text-[#f36f64]">Drop</span>
-      </div>
-    </Link>
-  );
+function getTagArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string" && value.trim()) return value.split(",").map(s => s.trim()).filter(Boolean);
+  return [];
 }
 
-function ShopCard({ product }) {
-  const tags = [...product.interestTags.slice(0, 1), ...product.occasionTags.slice(0, 1)];
+function GiftCard({ product }) {
+  const tags = [...getTagArray(product.interest_tags).slice(0,1), ...getTagArray(product.occasion_tags).slice(0,1)].slice(0,2);
+  const url = product.affiliate_url || product.product_url || "#";
 
   return (
-    <article
-      className="group relative w-full overflow-hidden rounded-[30px] border border-[rgba(255,255,255,0.14)] bg-[rgba(255,255,255,0.60)] transition-all duration-300 hover:-translate-y-1"
-      style={{
-        aspectRatio: 0.9,
-        maxHeight: "min(540px, 68vh)",
-        boxShadow:
-          "0 10px 30px rgba(176,118,86,0.10), inset 0 1px 0 rgba(255,255,255,0.24)",
-      }}
-    >
-      <div className="absolute inset-0">
-        <img
-          src={product.image}
-          alt={product.title}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_top,rgba(16,12,10,0.84)_0%,rgba(16,12,10,0.40)_30%,rgba(16,12,10,0.10)_55%,rgba(255,255,255,0)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(22,18,16,0.72)] via-[rgba(22,18,16,0.18)] to-transparent" />
-      </div>
-
-      <div className="absolute left-4 right-4 top-4 z-30 flex items-start justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {tags.map((tag) => (
-            <span
-              key={`${product.id}-${tag}`}
-              className="rounded-full border border-white/45 bg-white/76 px-3 py-1 text-[11px] font-semibold text-slate-700 backdrop-blur-md"
-            >
-              {tag}
-            </span>
-          ))}
+    <article className="rounded-[22px] bg-white border border-[#f0dfd6] overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+      {product.image_url && (
+        <div className="w-full aspect-[4/3] overflow-hidden bg-[#fdf5f0]">
+          <img src={product.image_url} alt={product.title} className="w-full h-full object-cover" />
         </div>
-
-        <div className="rounded-full border border-[#ffd8c9] bg-[#fff2ea] px-3 py-1 text-[11px] font-semibold text-[#e27956]">
-          {product.price}
-        </div>
-      </div>
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 p-4 sm:p-5">
-        <div className="min-w-0">
-          <h3
-            className="overflow-hidden text-[22px] font-semibold tracking-[-0.05em] text-white"
-            style={{
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 2,
-              lineClamp: 2,
-              textShadow: "0 1px 2px rgba(0,0,0,0.24)",
-            }}
-          >
-            {product.title}
-          </h3>
-
-          <p className="mt-1 truncate text-[13px] text-white/80">{product.retailer}</p>
-
-          <p
-            className="mt-3 overflow-hidden text-[13px] leading-6 text-white/84"
-            style={{
-              display: "-webkit-box",
-              WebkitBoxOrient: "vertical",
-              WebkitLineClamp: 3,
-              lineClamp: 3,
-            }}
-          >
-            {product.shortNote}
-          </p>
-
-          <p className="mt-3 text-[12px] text-white/72">{product.category}</p>
-        </div>
-
-        <div className="pointer-events-auto mt-4 flex flex-wrap items-center gap-2">
-          <Link
-            href="/#signup"
-            className="rounded-full border border-[#ffb38f] bg-[#ff875d] px-3 py-1.5 text-[12px] font-medium text-white backdrop-blur-md hover:bg-[#f47145]"
-          >
-            Sign in to save
+      )}
+      <div className="p-4">
+        <p className="text-[13px] font-semibold text-slate-900 leading-tight line-clamp-2 mb-1">{product.title}</p>
+        <p className="text-[12px] font-bold text-[#df7b59] mb-1">{product.price_text}</p>
+        {product.retailer && <p className="text-[11px] text-slate-400 mb-2">{product.retailer}</p>}
+        {tags.length > 0 && (
+          <div className="flex gap-1 flex-wrap mb-3">
+            {tags.map(t => (
+              <span key={t} className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#fff4ee] text-[#df7b59]">{t}</span>
+            ))}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex-1 h-9 flex items-center justify-center rounded-full bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-[12px] font-semibold text-white">
+            View item
+          </a>
+          <Link href="/login"
+            className="flex-1 h-9 flex items-center justify-center rounded-full border border-[#ead8ce] text-[12px] font-semibold text-slate-600 hover:bg-[#fff5f0]">
+            Save to hints
           </Link>
         </div>
       </div>
@@ -290,312 +51,107 @@ function ShopCard({ product }) {
   );
 }
 
-function EmptyState({ onClear }) {
-  return (
-    <div className="rounded-[30px] border border-dashed border-[#e6d7cd] bg-white px-6 py-12 text-center">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#fff1e9] text-xl text-[#df7c59]">
-        ✦
-      </div>
-      <h3 className="mt-4 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-        Nothing matched just yet
-      </h3>
-      <p className="mx-auto mt-3 max-w-[40ch] text-[14px] leading-7 text-slate-500">
-        Try clearing a filter or broadening your search to see more public picks.
-      </p>
-      <button
-        type="button"
-        onClick={onClear}
-        className="mt-5 inline-flex h-11 items-center justify-center rounded-full border border-[#ead8ce] bg-white px-5 text-sm font-semibold text-slate-700 hover:bg-[#fff5f0]"
-      >
-        Clear filters
-      </button>
-    </div>
-  );
-}
-
 export default function GiftShopPage() {
-  const [selectedOccasion, setSelectedOccasion] = useState("");
-  const [selectedInterests, setSelectedInterests] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [search, setSearch] = useState("");
 
-  function toggleInterest(interest) {
-    setSelectedInterests((current) =>
-      current.includes(interest)
-        ? current.filter((item) => item !== interest)
-        : [...current, interest].slice(0, 5)
-    );
-  }
+  useEffect(() => {
+    fetch("/api/products", { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => { setProducts(Array.isArray(data?.products) ? data.products : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
 
-  function clearFilters() {
-    setSelectedOccasion("");
-    setSelectedInterests([]);
-    setSearchQuery("");
-  }
+  const filtered = useMemo(() => {
+    let list = products;
+    if (activeCategory) {
+      list = list.filter(p => getTagArray(p.interest_tags).includes(activeCategory) || getTagArray(p.occasion_tags).includes(activeCategory));
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(p => p.title?.toLowerCase().includes(q) || p.retailer?.toLowerCase().includes(q));
+    }
+    return list;
+  }, [products, activeCategory, search]);
 
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-
-    return PRODUCTS.filter((product) => {
-      const matchesOccasion =
-        !selectedOccasion || product.occasionTags.includes(selectedOccasion);
-
-      const matchesInterest =
-        selectedInterests.length === 0 ||
-        selectedInterests.some((interest) => product.interestTags.includes(interest));
-
-      const searchable = [
-        product.title,
-        product.retailer,
-        product.shortNote,
-        product.category,
-        ...product.interestTags,
-        ...product.occasionTags,
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      const matchesQuery = !query || searchable.includes(query);
-
-      return matchesOccasion && matchesInterest && matchesQuery;
-    });
-  }, [searchQuery, selectedInterests, selectedOccasion]);
-
-  const visibleProducts = filteredProducts.slice(0, 6);
-  const hiddenCount = Math.max(filteredProducts.length - visibleProducts.length, 0);
+  const featured = useMemo(() => products.slice(0, 4), [products]);
 
   return (
-    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
-      <div className="mx-auto max-w-[1320px] px-5 pb-16 pt-6 md:px-8">
-        <header className="grid items-center gap-5 pb-8 lg:grid-cols-[auto_1fr_auto] lg:gap-8">
-          <LandingLogo />
+    <PublicShell>
+      <div className="max-w-[1200px] mx-auto px-4 py-8 md:px-8">
+        {/* Hero */}
+        <div className="text-center mb-10">
+          <h1 className="text-[32px] md:text-[44px] font-extrabold tracking-[-0.04em] text-slate-900 mb-3">
+            The Gift Shop
+          </h1>
+          <p className="text-[15px] text-slate-500 max-w-[480px] mx-auto">
+            Curated gifts for everyone. Save your favourites to your HintDrop wishlist.
+          </p>
+        </div>
 
-          <nav className="hidden items-center justify-center gap-9 text-[15px] text-slate-600 lg:flex" />
-
-          <div className="flex items-center justify-start gap-4 whitespace-nowrap sm:justify-end">
-            <GoogleAuthButtons variant="header-login" />
-            <GoogleAuthButtons variant="header-get-started" />
-          </div>
-        </header>
-
-        <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.10)] sm:p-5">
-          <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-5 sm:p-6">
-            <div className="grid gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-              <div className="min-w-0">
-                <div className="inline-flex rounded-full bg-[#fff4ee] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#e37b57]">
-                  Curated gifting
-                </div>
-
-                <h1 className="mt-3 text-[34px] font-semibold tracking-[-0.06em] text-slate-900 sm:text-[40px]">
-                  Find a gift that feels thoughtful, not last-minute.
-                </h1>
-
-                <p className="mt-3 max-w-[760px] text-[15px] leading-7 text-slate-600">
-                  Explore a handpicked edit of gift ideas for birthdays, weddings,
-                  housewarmings, thank-yous, and more. Search by interest, browse by
-                  occasion, and discover presents that feel personal before you even sign in.
-                </p>
-
-                <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search gifts, retailers, interests, or occasions"
-                    className="h-12 w-full rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                  />
-
-                  <select
-                    value={selectedOccasion}
-                    onChange={(event) => setSelectedOccasion(event.target.value)}
-                    className="h-12 min-w-[190px] rounded-[18px] border border-[#ead8ce] bg-white px-4 text-sm text-slate-700 outline-none focus:border-[#f19b7e]"
-                  >
-                    <option value="">All occasions</option>
-                    {OCCASION_OPTIONS.map((occasion) => (
-                      <option key={occasion} value={occasion}>
-                        {occasion}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {INTEREST_OPTIONS.map((interest) => {
-                    const selected = selectedInterests.includes(interest);
-
-                    return (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleInterest(interest)}
-                        className={`inline-flex h-11 items-center justify-center rounded-full border px-4 text-sm font-semibold transition ${
-                          selected
-                            ? "border-[#3c4d39] bg-[#2f3b2d] text-white"
-                            : "border-[#ead8ce] bg-white text-slate-700 hover:bg-[#fff5f0]"
-                        }`}
-                      >
-                        {interest}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {(selectedOccasion || selectedInterests.length > 0 || searchQuery) && (
-                  <div className="mt-4 flex items-center gap-3">
-                    <p className="text-sm text-slate-500">
-                      Showing {filteredProducts.length} matching public picks.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="text-sm font-semibold text-[#cf6f4d] hover:text-[#b85d3d]"
-                    >
-                      Clear filters
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              <aside className="rounded-[26px] border border-[#f0dfd6] bg-[#fffdfa] p-5 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">
-                  Why HintDrop
-                </p>
-
-                <h2 className="mt-1 text-[22px] font-semibold tracking-[-0.04em] text-slate-900">
-                  Better gifting starts with better ideas
-                </h2>
-
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-[20px] bg-[#faf7f4] p-4">
-                    <span className="inline-flex rounded-full bg-[#fff4ee] px-2.5 py-1 text-[11px] font-semibold text-[#df7b59]">
-                      Curated
-                    </span>
-                    <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Skip endless tabs and start with gift ideas chosen to feel useful, tasteful, and genuinely giftable.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[20px] bg-[#faf7f4] p-4">
-                    <span className="inline-flex rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-semibold text-[#5676b3]">
-                      Personal
-                    </span>
-                    <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Browse by occasion and interest to get closer to something that actually suits the person you are buying for.
-                    </p>
-                  </div>
-
-                  <div className="rounded-[20px] bg-[#faf7f4] p-4">
-                    <span className="inline-flex rounded-full bg-[#edf6eb] px-2.5 py-1 text-[11px] font-semibold text-[#4a7a3a]">
-                      Ready when you are
-                    </span>
-                    <p className="mt-3 text-[13px] leading-6 text-slate-600">
-                      Create an account to save standout finds, revisit them later, and turn good ideas into well-timed gifts.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-5 rounded-[20px] bg-[#fffaf7] p-4">
-                  <p className="text-sm font-semibold text-slate-900">
-                    Want the full experience?
-                  </p>
-                  <p className="mt-2 text-[13px] leading-6 text-slate-500">
-                    Sign in to unlock more products, save ideas, and build your own thoughtful gifting shortlist.
-                  </p>
-
-                  <div className="mt-4">
-                    <GoogleAuthButtons variant="hero-primary" />
-                  </div>
-                </div>
-              </aside>
+        {/* Bestsellers */}
+        {!activeCategory && !search && featured.length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-[18px] font-semibold text-slate-900 mb-4">🏆 Bestsellers</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {featured.map(p => <GiftCard key={p.id} product={p} />)}
             </div>
           </div>
-        </section>
+        )}
 
-        <section className="mt-12">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-slate-900">
-                Public gift preview
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Showing up to 6 items before sign-in.
-              </p>
-            </div>
+        {/* Search */}
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search gifts..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full h-11 rounded-full border border-[#ead8ce] px-5 text-[14px] bg-white outline-none focus:border-[#ff875d]"
+          />
+        </div>
+
+        {/* Category pills */}
+        <div className="flex gap-2 flex-wrap mb-6">
+          <button type="button"
+            onClick={() => setActiveCategory(null)}
+            className={`h-9 px-4 rounded-full text-[13px] font-semibold transition ${!activeCategory ? "bg-[#ff875d] text-white" : "border border-[#ead8ce] text-slate-600 hover:bg-[#fff5f0]"}`}>
+            All
+          </button>
+          {CATEGORIES.map(cat => (
+            <button key={cat} type="button"
+              onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+              className={`h-9 px-4 rounded-full text-[13px] font-semibold transition ${activeCategory === cat ? "bg-[#ff875d] text-white" : "border border-[#ead8ce] text-slate-600 hover:bg-[#fff5f0]"}`}>
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {Array.from({length: 8}).map((_, i) => (
+              <div key={i} className="rounded-[22px] bg-[#f5f0ee] animate-pulse" style={{aspectRatio:"4/3"}} />
+            ))}
           </div>
-
-          <div className="relative rounded-[36px] border border-[#efe0d7] bg-[#fffdfb] p-3 shadow-[0_12px_32px_rgba(176,118,86,0.08)] sm:p-5">
-            <div
-              className="pointer-events-none absolute inset-0 rounded-[36px] opacity-70"
-              style={{
-                backgroundImage:
-                  "linear-gradient(to right, rgba(214, 195, 184, 0.28) 1px, transparent 1px), linear-gradient(to bottom, rgba(214, 195, 184, 0.28) 1px, transparent 1px)",
-                backgroundSize: "76px 76px",
-                backgroundPosition: "center center",
-              }}
-            />
-
-            <div className="relative">
-              {visibleProducts.length ? (
-                <>
-                  <div className="columns-1 gap-6 md:columns-2 xl:columns-3">
-                    {visibleProducts.map((product) => (
-                      <div key={product.id} className="mb-6 break-inside-avoid">
-                        <ShopCard product={product} />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-4 rounded-[24px] border border-[#eaded6] bg-[#fff8f4] px-5 py-4 text-center">
-                    <p className="text-sm text-slate-600">
-                      {hiddenCount > 0
-                        ? `Sign in to see ${hiddenCount} more matching item${hiddenCount === 1 ? "" : "s"} and unlock saving.`
-                        : "Sign in to unlock saving, personalised results, and the full shop experience."}
-                    </p>
-                    <Link
-                      href="/#signup"
-                      className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-[#ff875d] px-5 text-sm font-semibold text-white"
-                    >
-                      Sign in to see more
-                    </Link>
-                  </div>
-                </>
-              ) : (
-                <EmptyState onClear={clearFilters} />
-              )}
-            </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-slate-400 py-16">No gifts found</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {filtered.map(p => <GiftCard key={p.id} product={p} />)}
           </div>
-        </section>
+        )}
 
-        <footer className="mt-16 border-t border-[#eaded6] bg-[#fffaf7]">
-          <div className="flex flex-col gap-4 px-0 py-6 text-sm text-slate-500 lg:flex-row lg:items-center lg:justify-between">
-            <p className="max-w-[720px] text-xs leading-5 text-slate-500 lg:text-sm">
-              By continuing, you agree to{" "}
-              <Link
-                href="/terms"
-                className="font-medium text-slate-700 underline underline-offset-2 transition hover:text-slate-900"
-              >
-                Terms
-              </Link>{" "}
-              and{" "}
-              <Link
-                href="/privacy"
-                className="font-medium text-slate-700 underline underline-offset-2 transition hover:text-slate-900"
-              >
-                Privacy Policy
-              </Link>
-              .
-            </p>
-
-            <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-              <Link href="/for-brands" className="transition hover:text-slate-900">
-                For Brands
-              </Link>
-              <Link href="/contact" className="transition hover:text-slate-900">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </footer>
+        {/* Sign in CTA */}
+        <div className="mt-16 text-center py-10 rounded-[28px] bg-[#fff5f0] border border-[#f0dfd6]">
+          <p className="text-[18px] font-semibold text-slate-900 mb-2">Save gifts to your wishlist</p>
+          <p className="text-[14px] text-slate-500 mb-5">Create a free HintDrop account to save hints and share with the people who buy for you.</p>
+          <Link href="/login" className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-[14px] font-semibold bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-sm">
+            Get started free
+          </Link>
+        </div>
       </div>
-    </main>
+    </PublicShell>
   );
 }
