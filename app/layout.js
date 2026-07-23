@@ -8,7 +8,6 @@ const nunito = Nunito({
 import "./globals.css";
 import { PreferencesProvider } from "./providers/PreferencesProvider";
 import AppShell from "./components/AppShell";
-import VConsoleScript from "./components/VConsoleScript";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,7 +40,6 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} ${nunito.variable} antialiased`}>
-        <VConsoleScript />
         <PreferencesProvider>
           <AppShell>{children}</AppShell>
         </PreferencesProvider>
