@@ -1,10 +1,29 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import PublicShell from "../components/PublicShell";
+
+async function getUser() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => cookieStore.getAll() } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export const metadata = {
   title: "Privacy Policy | HintDrop",
   description:
     "Read HintDrop's Privacy Policy, including what information we collect, how we use it, and your choices.",
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const user = await getUser();
+  const inner = (
+
+
   return (
     <PublicShell><main className="min-h-screen bg-[#f7f4ef] text-slate-800">
       <section className="px-6 py-12 sm:py-16">
@@ -27,8 +46,7 @@ export default function PrivacyPage() {
             <p className="text-[17px] leading-8 text-slate-700">
               HintDrop (&quot;HintDrop&quot;, &quot;we&quot;, &quot;our&quot;, or
               &quot;us&quot;) helps people organise gift ideas, reminders,
-              contacts, circles, import PublicShell from "../components/PublicShell";
-important dates, and related planning. This
+              contacts, circles, important dates, and related planning. This
               Privacy Policy explains what information we collect, how we use
               it, when we share it, how we protect it, and the choices you have
               in relation to your information.

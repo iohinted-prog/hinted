@@ -1,4 +1,18 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import PublicShell from "../components/PublicShell";
+
+async function getUser() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => cookieStore.getAll() } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 import Link from "next/link";
 
 export const metadata = {
@@ -7,7 +21,11 @@ export const metadata = {
   alternates: { canonical: "https://hintdrop.app/about" },
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const user = await getUser();
+  const inner = (
+
+
   return (
     <PublicShell><main className="min-h-screen bg-[#f7f4ef] text-slate-800">
         <section className="px-6 py-12 sm:py-16">

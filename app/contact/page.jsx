@@ -11,6 +11,9 @@ const initialForm = {
 };
 
 export default function ContactPage() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  useEffect(() => { createClient().auth.getSession().then(({data:{session}}) => setIsLoggedIn(!!session)); }, []);
+
   const [form, setForm] = useState(initialForm);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");

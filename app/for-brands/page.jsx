@@ -1,4 +1,18 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import PublicShell from "../components/PublicShell";
+
+async function getUser() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => cookieStore.getAll() } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 import Link from "next/link";
 
 export const metadata = {
@@ -7,7 +21,11 @@ export const metadata = {
     "Partner with HintDrop to place thoughtful products into gifting, reminder, and shared planning moments.",
 };
 
-export default function ForBrandsPage() {
+export default async function ForBrandsPage() {
+  const user = await getUser();
+  const inner = (
+
+
   return (
     <PublicShell><main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1180px] px-5 py-8 md:px-8 md:py-10">
