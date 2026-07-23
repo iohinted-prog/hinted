@@ -1,28 +1,12 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import PublicShell from "../components/PublicShell";
-
-async function getUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookies: { getAll: () => cookieStore.getAll() } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
-
 export const metadata = {
   title: "Privacy Policy | HintDrop",
   description:
     "Read HintDrop's Privacy Policy, including what information we collect, how we use it, and your choices.",
 };
 
-export default async function PrivacyPage() {
-  const user = await getUser();
-  const inner = (
-    <PublicShell><main className="min-h-screen bg-[#f7f4ef] text-slate-800">
+export default function PrivacyPage() {
+  return (
+    <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
       <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 rounded-[28px] border border-[#eadfd4] bg-white/80 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-10">
@@ -150,9 +134,10 @@ export default async function PrivacyPage() {
                 We do not sell Google user data. We do not use Google user data
                 for advertising, profiling, data brokering, or any unrelated
                 purpose. We do not use raw or derived Google user data obtained
-                through Google APIs to develop, improve, or train generalised AI
-                or machine learning models, and we do not transfer Google user
-                data to third-party AI services for model training.
+                through Google Workspace APIs to develop, improve, or train
+                generalised AI or machine learning models, and we do not
+                transfer Google user data to third-party AI services for model
+                training.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
                 We do not store your full Google Contacts address book on our
@@ -212,21 +197,24 @@ export default async function PrivacyPage() {
 
             <section className="space-y-3">
               <h2 className="text-2xl font-semibold tracking-[-0.02em] text-slate-900">
-                5. Circles and group gifting
+                5. Circles and payments
               </h2>
               <p className="text-[17px] leading-8 text-slate-700">
                 HintDrop offers a group gifting feature called Circles, which
-                helps users coordinate around a shared gift or occasion. At this
-                time, HintDrop does not process, hold, receive, or transfer
-                payments for circles.
+                allows users to coordinate around a shared gift. When you
+                participate in a circle as an organiser or contributor, certain
+                information may be visible to other circle members, including
+                your name, profile, and contribution status. Contribution
+                amounts may be visible to the circle organiser where relevant to
+                the feature.
               </p>
               <p className="text-[17px] leading-8 text-slate-700">
-                If you participate in a circle, certain information may be
-                visible to other participants depending on how the feature
-                works, such as your name, profile, participation status, or
-                contribution intent. Any money collection, reimbursement, or
-                purchase arrangement happens directly between users outside the
-                platform.
+                HintDrop does not process or store payment card information for
+                circles in the version of the service described here.
+                Contributions are arranged directly between members outside of
+                the platform. We may retain circle-related records, pledge
+                amounts, and contribution data for operational, support, and
+                record-keeping purposes.
               </p>
             </section>
 
@@ -382,6 +370,4 @@ export default async function PrivacyPage() {
       </section>
     </main>
   );
-  if (!user) return <PublicShell>{inner}</PublicShell>;
-  return inner;
 }

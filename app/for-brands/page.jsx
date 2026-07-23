@@ -1,18 +1,3 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import PublicShell from "../components/PublicShell";
-
-async function getUser() {
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    { cookies: { getAll: () => cookieStore.getAll() } }
-  );
-  const { data: { user } } = await supabase.auth.getUser();
-  return user;
-}
-
 import Link from "next/link";
 
 export const metadata = {
@@ -21,10 +6,9 @@ export const metadata = {
     "Partner with HintDrop to place thoughtful products into gifting, reminder, and shared planning moments.",
 };
 
-export default async function ForBrandsPage() {
-  const user = await getUser();
-  const inner = (
-    <PublicShell><main className="min-h-screen bg-[#fffaf7] text-slate-800">
+export default function ForBrandsPage() {
+  return (
+    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[1180px] px-5 py-8 md:px-8 md:py-10">
         <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.10)] sm:p-5">
           <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-6 sm:p-8 md:p-10">
@@ -238,6 +222,4 @@ export default async function ForBrandsPage() {
       </div>
     </main>
   );
-  if (!user) return <PublicShell>{inner}</PublicShell>;
-  return inner;
 }
