@@ -826,7 +826,7 @@ export default function AppShell({ children }) {
           </div>
         </div>
       </footer>
-      )}}
+      )}
 
       {!isLoggedIn && ["/terms", "/privacy", "/about", "/for-brands", "/contact"].includes(pathname) ? null : (
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex md:hidden items-center justify-around border-t border-[#efe0d7] bg-[#fffaf7]/95 backdrop-blur-sm px-2 pb-2">
@@ -853,6 +853,7 @@ export default function AppShell({ children }) {
           <span className="text-[10px] font-semibold">Shop</span>
         </a>
       </nav>
+      )}
       <div className="h-20 md:hidden" />
       {activeThread && (
         <GroupChatWindow
