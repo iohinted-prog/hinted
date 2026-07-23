@@ -61,11 +61,6 @@ export default function AppShell({ children }) {
     pathname === "/home" ||
     pathname === "/gift-shop" ||
     pathname === "/onboarding" ||
-    pathname === "/terms" ||
-    pathname === "/privacy" ||
-    pathname === "/about" ||
-    pathname === "/for-brands" ||
-    pathname === "/contact" ||
     pathname.startsWith("/gift-shop/");
 
   const showShell = !hideChrome;
