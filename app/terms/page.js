@@ -1,11 +1,27 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import PublicShell from "../components/PublicShell";
+
+async function getUser() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => cookieStore.getAll() } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export const metadata = {
   title: "Terms of Service | HintDrop",
   description:
     "Read HintDrop's Terms of Service, including account rules, acceptable use, content rights, and limitations.",
 };
 
-export default function TermsPage() {
-  return (
+export default async function TermsPage() {
+  const user = await getUser();
+  const inner = (
     <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
       <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
@@ -292,4 +308,6 @@ export default function TermsPage() {
       </section>
     </main>
   );
+  if (!user) return <PublicShell>{inner}</PublicShell>;
+  return inner;
 }

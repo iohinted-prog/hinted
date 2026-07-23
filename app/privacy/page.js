@@ -1,11 +1,27 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import PublicShell from "../components/PublicShell";
+
+async function getUser() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    { cookies: { getAll: () => cookieStore.getAll() } }
+  );
+  const { data: { user } } = await supabase.auth.getUser();
+  return user;
+}
+
 export const metadata = {
   title: "Privacy Policy | HintDrop",
   description:
     "Read HintDrop's Privacy Policy, including what information we collect, how we use it, and your choices.",
 };
 
-export default function PrivacyPage() {
-  return (
+export default async function PrivacyPage() {
+  const user = await getUser();
+  const inner = (
     <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
       <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
@@ -370,4 +386,6 @@ export default function PrivacyPage() {
       </section>
     </main>
   );
+  if (!user) return <PublicShell>{inner}</PublicShell>;
+  return inner;
 }
