@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import PublicShell from "../components/PublicShell";
+import { createClient } from "../../lib/supabase/client";
 
 const initialForm = {
   name: "",
@@ -11,6 +13,11 @@ const initialForm = {
 
 export default function ContactPage() {
   const [form, setForm] = useState(initialForm);
+  const [isLoggedIn, setIsLoggedIn] = useState(null);
+
+  useEffect(() => {
+    createClient().auth.getSession().then(({ data: { session } }) => setIsLoggedIn(!!session));
+  }, []);
   const [status, setStatus] = useState("idle");
   const [error, setError] = useState("");
 
@@ -50,7 +57,7 @@ export default function ContactPage() {
     }
   }
 
-  return (
+  const inner = (
     <main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[980px] px-5 py-8 md:px-8 md:py-10">
         <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.10)] sm:p-5">
@@ -220,4 +227,6 @@ export default function ContactPage() {
       </div>
     </main>
   );
+  if (isLoggedIn === false) return <PublicShell>{inner}</PublicShell>;
+  return inner;
 }
