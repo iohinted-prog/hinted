@@ -8,6 +8,7 @@ const nunito = Nunito({
 import "./globals.css";
 import { PreferencesProvider } from "./providers/PreferencesProvider";
 import AppShell from "./components/AppShell";
+import VConsoleScript from "./components/VConsoleScript";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,13 +36,6 @@ export const metadata = {
   description: "Save what you actually want. Remember who matters. Plan gifts together. HintDrop is the thoughtful gifting app for hints, reminders, and group gifting.",
   metadataBase: new URL("https://hintdrop.app"),
 };
-
-const VConsoleScript = () => (
-  <>
-    <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js" />
-    <script dangerouslySetInnerHTML={{ __html: "new window.VConsole();" }} />
-  </>
-);
 
 export default function RootLayout({ children }) {
   return (
