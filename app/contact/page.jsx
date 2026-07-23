@@ -1,4 +1,5 @@
 "use client";
+import PublicShell from "../components/PublicShell";
 
 import { useState } from "react";
 
@@ -51,7 +52,7 @@ export default function ContactPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#fffaf7] text-slate-800">
+    <PublicShell><main className="min-h-screen bg-[#fffaf7] text-slate-800">
       <div className="mx-auto max-w-[980px] px-5 py-8 md:px-8 md:py-10">
         <section className="rounded-[34px] border border-[#eeddd3] bg-[#fff7f2] p-4 shadow-[0_18px_60px_rgba(173,101,72,0.10)] sm:p-5">
           <div className="rounded-[28px] border border-[#f1dfd6] bg-white p-6 sm:p-8">
@@ -218,6 +219,6 @@ export default function ContactPage() {
           </div>
         </section>
       </div>
-    </main>
+    </main></PublicShell>
   );
 }

@@ -1,3 +1,4 @@
+import PublicShell from "../components/PublicShell";
 import Link from "next/link";
 
 export const metadata = {
@@ -8,7 +9,7 @@ export const metadata = {
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen bg-[#f7f4ef] text-slate-800">
+    <PublicShell><main className="min-h-screen bg-[#f7f4ef] text-slate-800">
         <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <div className="mb-8 rounded-[28px] border border-[#eadfd4] bg-white/80 p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] sm:p-10">
@@ -100,6 +101,6 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
-    </main>
+    </main></PublicShell>
   );
 }
