@@ -825,6 +825,7 @@ export default function AppShell({ children }) {
           </div>
         </div>
       </footer>
+      )}
 
       {/* Mobile bottom tab bar */}
       {/* Mobile bottom tab bar */}
@@ -1196,6 +1197,7 @@ export default function AppShell({ children }) {
           </div>
         </div>
       </footer>
+      )}
 
       {/* Mobile bottom tab bar */}
       {/* Mobile bottom tab bar */}
