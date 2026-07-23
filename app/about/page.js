@@ -24,9 +24,7 @@ export const metadata = {
 export default async function AboutPage() {
   const user = await getUser();
   const inner = (
-
-
-  return (
+return (
     <PublicShell><main className="min-h-screen bg-[#f7f4ef] text-slate-800">
         <section className="px-6 py-12 sm:py-16">
         <div className="mx-auto max-w-3xl">
@@ -119,6 +117,8 @@ export default async function AboutPage() {
           </div>
         </div>
       </section>
-    </main></PublicShell>
+    </main>
   );
+  if (!user) return <PublicShell>{inner}</PublicShell>;
+  return inner;
 }
