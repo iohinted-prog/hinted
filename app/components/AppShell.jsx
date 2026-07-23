@@ -145,10 +145,6 @@ export default function AppShell({ children }) {
     setMenuOpen(false);
   }, [pathname]);
 
-  if (!showShell) {
-    return <>{children}</>;
-  }
-
   const navItems = [
     { href: "/feed", label: "Feed" },
     { href: "/hints", label: "Hints" },
@@ -314,6 +310,11 @@ export default function AppShell({ children }) {
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  if (!showShell) {
+    return <>{children}</>;
+  }
+
 
   async function handleAcceptInvite(invite) {
     setInviteActionId(invite.id);
