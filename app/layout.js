@@ -36,6 +36,21 @@ export const metadata = {
   metadataBase: new URL("https://hintdrop.app"),
 };
 
+// Handle chunk loading errors from stale deployments
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (e) => {
+    if (e?.message?.includes("Loading chunk") || e?.message?.includes("dynamically imported module") || e?.message?.includes("Failed to fetch")) {
+      window.location.reload();
+    }
+  });
+  window.addEventListener("unhandledrejection", (e) => {
+    const msg = e?.reason?.message || "";
+    if (msg.includes("Loading chunk") || msg.includes("dynamically imported module") || msg.includes("Failed to fetch")) {
+      window.location.reload();
+    }
+  });
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
