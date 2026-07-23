@@ -3,10 +3,9 @@ import Link from "next/link";
 
 function LogoMark() {
   return (
-    <svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="40" height="40" rx="10" fill="#ff875d"/>
-      <text x="20" y="27" textAnchor="middle" fontSize="20" fill="white">\U0001F381</text>
-    </svg>
+    <div className="relative flex h-9 w-9 items-center justify-center rounded-[12px] bg-gradient-to-b from-[#ffa47f] to-[#ff875d] text-white shadow-md">
+      <span className="text-[18px]">🎁</span>
+    </div>
   );
 }
 
@@ -22,8 +21,8 @@ export default function PublicShell({ children }) {
             </div>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/shop" className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-600 border border-[#ead8ce] hover:bg-[#fff5f0] transition">
-              \U0001F6CD\uFE0F Gift Shop
+            <Link href="/gift-shop" className="hidden md:flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-600 border border-[#ead8ce] hover:bg-[#fff5f0] transition">
+              🛍️ Gift Shop
             </Link>
             <Link href="/login" className="flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold bg-gradient-to-b from-[#ff966f] to-[#ff7e54] text-white shadow-sm hover:opacity-90 transition">
               Sign in
@@ -38,7 +37,7 @@ export default function PublicShell({ children }) {
           <Link href="/privacy" className="hover:text-slate-600 transition">Privacy</Link>
           <Link href="/contact" className="hover:text-slate-600 transition">Contact</Link>
           <Link href="/for-brands" className="hover:text-slate-600 transition">For Brands</Link>
-          <span>\u00A9 {new Date().getFullYear()} HintDrop</span>
+          <span>© {new Date().getFullYear()} HintDrop</span>
         </div>
       </footer>
     </div>
